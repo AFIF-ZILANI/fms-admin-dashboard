@@ -12,6 +12,7 @@ import type { Batch } from "@/pages/batches/types";
 import { BatchPerformanceRow } from "@/pages/analytics/batch-performance-row";
 import { MortalityTrendChart } from "@/pages/analytics/mortality-trend-chart";
 import { FeedTrendChart } from "@/pages/analytics/feed-trend-chart";
+import { BatchComparisonChart } from "@/pages/analytics/batch-comparison-chart";
 import type { BatchPerformance, FarmOverview } from "@/pages/analytics/types";
 
 // ponytail: no trend charts (mortality/feed/price) or per-section CSV
@@ -69,6 +70,14 @@ export function AnalyticsPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <MortalityTrendChart />
         <FeedTrendChart />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <BatchComparisonChart
+          batches={batches?.results ?? []}
+          performances={performances ?? []}
+          isLoading={batchesLoading || performancesLoading}
+        />
       </div>
 
       <Card>
