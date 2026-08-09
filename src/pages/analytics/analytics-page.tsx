@@ -10,7 +10,7 @@ import { useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import { BatchPerformanceRow } from "@/pages/analytics/batch-performance-row";
-import type { FarmOverview } from "@/pages/analytics/types";
+import type { BatchPerformance, FarmOverview } from "@/pages/analytics/types";
 
 // ponytail: no trend charts (mortality/feed/price) or per-section CSV
 // export — every trend is already a filtered list on the module that owns
@@ -25,6 +25,10 @@ export function AnalyticsPage() {
   const { data: batches, isLoading: batchesLoading } = useGetData<Paginated<Batch>>("/batches?limit=100", [
     "batches",
   ]);
+  const { data: performances, isLoading: performancesLoading } = useGetData<BatchPerformance[]>(
+    "/analytics/batches/performance?status=RUNNING",
+    ["analytics", "batches-performance", "RUNNING"],
+  );
 
   const alertLevels = overview?.unresolved_alerts_by_level ?? {};
   const totalUnresolvedAlerts = Object.values(alertLevels).reduce((sum, n) => sum + n, 0);
@@ -68,7 +72,7 @@ export function AnalyticsPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          {!batchesLoading && (batches?.results.length ?? 0) === 0 ? (
+          {!batchesLoading && !performancesLoading && (batches?.results.length ?? 0) === 0 ? (
             <EmptyState icon={Layers} title="No batches yet" description="Batch performance appears here once one exists." />
           ) : (
             <div className="rounded-lg border border-border">
@@ -84,9 +88,11 @@ export function AnalyticsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(batches?.results ?? []).map((b) => (
-                    <BatchPerformanceRow key={b.id} batch={b} />
-                  ))}
+                  {(batches?.results ?? []).map((b) => {
+                    const performance = performances?.find((p) => p.batch_id === b.id);
+                    if (!performance) return null;
+                    return <BatchPerformanceRow key={b.id} batch={b} performance={performance} />;
+                  })}
                 </TableBody>
               </Table>
             </div>
