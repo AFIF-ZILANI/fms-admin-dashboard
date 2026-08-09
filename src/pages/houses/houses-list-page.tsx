@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Home, Plus } from "lucide-react";
+import { Bird, CheckCircle2, Home, Plus, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus } from "@/components/shared/status-tone";
 import { usePageTitle } from "@/components/layout/use-page-title";
@@ -19,9 +20,22 @@ export function HousesListPage() {
   const [typeFilter, setTypeFilter] = useState<HouseType | "ALL">("ALL");
   const [formOpen, setFormOpen] = useState(false);
 
-  const query = new URLSearchParams();
+  // limit=100 (the API max) rather than paging — small enough house counts in
+  // practice that this doubles as "fetch everything" for both the table and the stats below.
+  const query = new URLSearchParams({ limit: "100" });
   if (typeFilter !== "ALL") query.set("type", typeFilter);
   const { data, isLoading } = useGetData<Paginated<House>>(`/houses?${query}`, ["houses", typeFilter]);
+
+  const { data: balances } = useGetData<Paginated<{ quantity: number }>>(
+    "/batch-house-balances?limit=100",
+    ["batch-house-balances", "all"]
+  );
+
+  const houses = data?.results ?? [];
+  const totalHouses = data?.total ?? houses.length;
+  const activeHouses = houses.filter((h) => h.is_active).length;
+  const totalCapacity = houses.reduce((sum, h) => sum + (h.capacity ?? 0), 0);
+  const birdsHoused = (balances?.results ?? []).reduce((sum, b) => sum + b.quantity, 0);
 
   const columns: Column<House>[] = [
     { key: "name", header: "Name", render: (h) => <span className="font-medium">{h.name}</span> },
@@ -40,6 +54,13 @@ export function HousesListPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KPICard label="Total houses" value={totalHouses} icon={Home} />
+        <KPICard label="Active" value={activeHouses} icon={CheckCircle2} />
+        <KPICard label="Total capacity" value={totalCapacity > 0 ? totalCapacity.toLocaleString() : "—"} icon={Warehouse} />
+        <KPICard label="Birds housed" value={birdsHoused.toLocaleString()} icon={Bird} />
+      </div>
+
       <div className="flex items-center justify-between">
         <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as HouseType | "ALL")}>
           <SelectTrigger className="w-40">
