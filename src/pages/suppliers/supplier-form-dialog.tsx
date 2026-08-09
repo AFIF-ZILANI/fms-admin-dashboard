@@ -150,7 +150,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier }: SupplierFor
               render={({ field }) => (
                 <Select value={field.value ?? ""} onValueChange={field.onChange}>
                   <SelectTrigger id="role" className="w-full" aria-invalid={!!errors.role}>
-                    <SelectValue placeholder="Select role" />
+                    <SelectValue>{(value: string) => (value ? humanizeEnum(value) : "Select role")}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {SUPPLIER_ROLES.map((role) => (

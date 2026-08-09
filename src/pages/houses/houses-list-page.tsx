@@ -64,7 +64,7 @@ export function HousesListPage() {
       <div className="flex items-center justify-between">
         <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as HouseType | "ALL")}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="All types" />
+            <SelectValue>{(value: HouseType | "ALL" | "") => (value && value !== "ALL" ? TYPE_LABEL[value] : "All types")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All types</SelectItem>

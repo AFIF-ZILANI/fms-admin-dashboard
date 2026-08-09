@@ -112,7 +112,9 @@ export function HouseFormDialog({ open, onOpenChange, house }: HouseFormDialogPr
                 render={({ field }) => (
                   <Select value={field.value ?? ""} onValueChange={field.onChange}>
                     <SelectTrigger id="type" className="w-full" aria-invalid={!!errors.type}>
-                      <SelectValue placeholder="Select type" />
+                      <SelectValue>
+                        {(value: string) => (value ? value.charAt(0) + value.slice(1).toLowerCase() : "Select type")}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {HOUSE_TYPES.map((type) => (

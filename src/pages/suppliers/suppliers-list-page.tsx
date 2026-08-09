@@ -74,7 +74,9 @@ export function SuppliersListPage() {
       <div className="flex items-center justify-between">
         <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as SupplierRole | "ALL")}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="All roles" />
+            <SelectValue>
+              {(value: SupplierRole | "ALL" | "") => (value && value !== "ALL" ? humanizeEnum(value) : "All roles")}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All roles</SelectItem>

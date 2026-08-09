@@ -114,7 +114,11 @@ export function ItemCatalogTab() {
 
           <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as ResourceCategory | "ALL")}>
             <SelectTrigger className="w-48">
-              <SelectValue placeholder="All categories" />
+              <SelectValue>
+                {(value: ResourceCategory | "ALL" | "") =>
+                  value && value !== "ALL" ? humanizeEnum(value) : "All categories"
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All categories</SelectItem>

@@ -174,7 +174,7 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
                 render={({ field }) => (
                   <Select value={field.value ?? ""} onValueChange={field.onChange}>
                     <SelectTrigger id="category" className="w-full" aria-invalid={!!errors.category}>
-                      <SelectValue placeholder="Select category" />
+                      <SelectValue>{(value: string) => (value ? humanizeEnum(value) : "Select category")}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {RESOURCE_CATEGORIES.map((cat) => (
@@ -197,7 +197,7 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
                 render={({ field }) => (
                   <Select value={field.value ?? ""} onValueChange={field.onChange}>
                     <SelectTrigger id="unit" className="w-full" aria-invalid={!!errors.unit}>
-                      <SelectValue placeholder="Select unit" />
+                      <SelectValue>{(value: string) => (value ? humanizeEnum(value) : "Select unit")}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {UNITS.map((unit) => (
@@ -225,7 +225,11 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
               render={({ field }) => (
                 <Select value={field.value ?? ""} onValueChange={field.onChange}>
                   <SelectTrigger id="organization_id" className="w-full">
-                    <SelectValue placeholder="Select organization" />
+                    <SelectValue>
+                      {(value: string) =>
+                        organizations?.results.find((org) => org.id === value)?.label_name ?? "Select organization"
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {(organizations?.results ?? []).map((org) => (
