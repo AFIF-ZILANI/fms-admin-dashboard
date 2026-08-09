@@ -15,9 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usePatchData, usePostData } from "@/lib/api";
+import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
-import { RESOURCE_CATEGORIES, UNITS, type Item } from "@/pages/inventory/types";
+import { RESOURCE_CATEGORIES, UNITS, type Item, type Organization } from "@/pages/inventory/types";
 
 const itemSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -28,6 +28,7 @@ const itemSchema = z.object({
   lead_time_days: z
     .union([z.coerce.number().int().nonnegative("Must be 0 or more"), z.literal("")])
     .optional(),
+  organization_id: z.string().optional(),
 });
 
 // z.coerce fields make the schema's input type (raw form values) differ from
@@ -60,6 +61,7 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
       reorder_level: "",
       preferred_reorder_qty: "",
       lead_time_days: "",
+      organization_id: "",
     },
   });
 
@@ -74,6 +76,8 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
               reorder_level: item.reorder_level ?? "",
               preferred_reorder_qty: item.preferred_reorder_qty ?? "",
               lead_time_days: item.lead_time_days ?? "",
+              // can't prefill — GET /items/:id doesn't return existing organization links (docs/api.md §6.1)
+              organization_id: "",
             }
           : {
               name: "",
@@ -82,6 +86,7 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
               reorder_level: "",
               preferred_reorder_qty: "",
               lead_time_days: "",
+              organization_id: "",
             }
       );
     }
@@ -91,17 +96,43 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
   const updateItem = usePatchData<Item, ItemFormValues>(`/items/${item?.id}`, ["items"]);
   const mutation = isEdit ? updateItem : createItem;
 
+  const { data: organizations } = useGetData<Paginated<Organization>>("/organizations?limit=100", [
+    "organizations",
+  ]);
+  const linkOrganization = usePostData<unknown, { item_id: string; organization_id: string; role: string }>(
+    "/item-organizations",
+    ["organizations"]
+  );
+
   const onSubmit = (values: ItemFormValues) => {
+    const { organization_id, ...rest } = values;
     const payload = {
-      ...values,
-      reorder_level: values.reorder_level === "" ? undefined : values.reorder_level,
-      preferred_reorder_qty: values.preferred_reorder_qty === "" ? undefined : values.preferred_reorder_qty,
-      lead_time_days: values.lead_time_days === "" ? undefined : values.lead_time_days,
+      ...rest,
+      reorder_level: rest.reorder_level === "" ? undefined : rest.reorder_level,
+      preferred_reorder_qty: rest.preferred_reorder_qty === "" ? undefined : rest.preferred_reorder_qty,
+      lead_time_days: rest.lead_time_days === "" ? undefined : rest.lead_time_days,
     };
     mutation.mutate(payload, {
-      onSuccess: () => {
+      onSuccess: (savedItem) => {
         toast.success(isEdit ? "Item updated" : "Item created");
-        onOpenChange(false);
+        if (!organization_id) {
+          onOpenChange(false);
+          return;
+        }
+        linkOrganization.mutate(
+          { item_id: savedItem.id, organization_id, role: "MANUFACTURER" },
+          {
+            onSuccess: () => onOpenChange(false),
+            onError: (error) => {
+              toast.warning(
+                error.status === 409
+                  ? "Item saved, but it's already linked to that organization."
+                  : `Item saved, but linking the organization failed: ${error.message}`
+              );
+              onOpenChange(false);
+            },
+          }
+        );
       },
       onError: (error) => {
         let hadFieldError = false;
@@ -183,10 +214,33 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
           </div>
 
           <p className="-mt-2 text-xs text-muted-foreground">
-            Pick the unit you actually dispense in day-to-day (e.g. G or ML), not the bulk unit on the invoice
-            (e.g. KG or LITER) — stock, reorder level, and consumption all track in this one unit, and there's no
-            automatic conversion between the two yet. Convert by hand when you record a purchase.
+            Use the unit you dispense in (e.g. G, ML), not the bulk buying unit — no auto-conversion yet.
           </p>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="organization_id">Organization / company (optional)</Label>
+            <Controller
+              control={control}
+              name="organization_id"
+              render={({ field }) => (
+                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                  <SelectTrigger id="organization_id" className="w-full">
+                    <SelectValue placeholder="Select organization" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(organizations?.results ?? []).map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.label_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {(organizations?.results ?? []).length === 0 && (
+              <p className="text-xs text-muted-foreground">No organizations yet — add one in the Organizations tab.</p>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
