@@ -1,5 +1,7 @@
 import { Link } from "react-router";
 import { AlertTriangle, Bird, Home, Layers, Users } from "lucide-react";
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { chartAxisProps, chartTooltipContentStyle } from "@/pages/analytics/chart-theme";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -59,13 +61,31 @@ export function AnalyticsPage() {
           <CardHeader>
             <CardTitle className="text-base">Unresolved alerts by level</CardTitle>
           </CardHeader>
-          <CardContent className="flex gap-6">
-            {Object.entries(alertLevels).map(([level, count]) => (
-              <div key={level} className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">{humanizeEnum(level)}</span>
-                <span className="font-medium tabular-nums">{count}</span>
-              </div>
-            ))}
+          <CardContent>
+            <ResponsiveContainer width="100%" height={Object.keys(alertLevels).length * 44 + 16}>
+              <BarChart
+                data={Object.entries(alertLevels).map(([level, count]) => ({ level, count }))}
+                layout="vertical"
+              >
+                <XAxis type="number" allowDecimals={false} {...chartAxisProps} />
+                <YAxis type="category" dataKey="level" width={80} tickFormatter={humanizeEnum} {...chartAxisProps} />
+                <Tooltip contentStyle={chartTooltipContentStyle} labelFormatter={(label) => humanizeEnum(String(label))} />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                  {Object.keys(alertLevels).map((level) => (
+                    <Cell
+                      key={level}
+                      fill={
+                        level === "CRITICAL"
+                          ? "var(--color-destructive)"
+                          : level === "WARNING"
+                            ? "var(--color-chart-3)"
+                            : "var(--color-chart-1)"
+                      }
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       )}
