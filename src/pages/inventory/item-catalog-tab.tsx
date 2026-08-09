@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Package, Pencil, Plus } from "lucide-react";
+import { Package, Pencil, Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -13,12 +14,22 @@ import { ItemFormDialog } from "@/pages/inventory/item-form-dialog";
 
 export function ItemCatalogTab() {
   const [categoryFilter, setCategoryFilter] = useState<ResourceCategory | "ALL">("ALL");
+  const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | undefined>(undefined);
 
   const query = new URLSearchParams({ limit: "100" });
   if (categoryFilter !== "ALL") query.set("category", categoryFilter);
   const { data, isLoading } = useGetData<Paginated<Item>>(`/items?${query}`, ["items", categoryFilter]);
+
+  // No search endpoint on GET /api/items (docs/api.md §6.1) — but the page already
+  // fetches up to limit=100 (effectively "everything" for a realistic catalog size),
+  // so filtering that in memory is instant and needs no debounce or network round-trip.
+  const allItems = data?.results ?? [];
+  const q = search.trim().toLowerCase();
+  const items = q
+    ? allItems.filter((i) => i.name.toLowerCase().includes(q) || humanizeEnum(i.category).toLowerCase().includes(q))
+    : allItems;
 
   const deactivate = usePostData<Item, string>((id) => `/items/${id}/deactivate`, ["items"]);
   const reactivate = usePostData<Item, string>((id) => `/items/${id}/reactivate`, ["items"]);
@@ -78,20 +89,43 @@ export function ItemCatalogTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as ResourceCategory | "ALL")}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="All categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All categories</SelectItem>
-            {RESOURCE_CATEGORIES.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {humanizeEnum(cat)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-1 items-center gap-3">
+          <div className="relative w-full max-w-xs">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search items by name or category…"
+              className="pl-8"
+              aria-label="Search items"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+
+          <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as ResourceCategory | "ALL")}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All categories</SelectItem>
+              {RESOURCE_CATEGORIES.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {humanizeEnum(cat)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <Button onClick={openCreate}>
           <Plus />
@@ -99,17 +133,27 @@ export function ItemCatalogTab() {
         </Button>
       </div>
 
+      {search && (
+        <p className="text-xs text-muted-foreground">
+          {items.length} {items.length === 1 ? "match" : "matches"} for "{search}"
+        </p>
+      )}
+
       <DataTable
         columns={columns}
-        rows={data?.results ?? []}
+        rows={items}
         rowKey={(i) => i.id}
         isLoading={isLoading}
-        empty={{
-          icon: Package,
-          title: "No items yet",
-          description: "Add your first catalog item.",
-          action: { label: "Add item", onClick: openCreate },
-        }}
+        empty={
+          search
+            ? { icon: Search, title: "No items match your search", description: "Try a different name or category." }
+            : {
+                icon: Package,
+                title: "No items yet",
+                description: "Add your first catalog item.",
+                action: { label: "Add item", onClick: openCreate },
+              }
+        }
       />
 
       <ItemFormDialog open={formOpen} onOpenChange={setFormOpen} item={editingItem} />
