@@ -107,14 +107,23 @@ than improvising hues by hand.
   axis already covers heading emphasis.
 - Admin tables and dense data views default to `text-sm`; reserve base/`lg`
   sizes for page titles and empty states.
+- **Tabular figures**: any numeric column (money, counts, weights, %) uses
+  `font-variant-numeric: tabular-nums` so digits align vertically. This is
+  a non-negotiable for a data console this dense — mismatched columns are
+  the fastest way to make numbers feel untrustworthy.
 
-## 4. Spacing & radius
+## 4. Spacing & radius & layout
 
 - Radius scale is already defined and derived from one base
   (`--radius: 0.625rem`, scaled `sm 0.6× → 4xl 2.6×`). Use the scale
   (`rounded-lg`, `rounded-xl`, …) — never an arbitrary `rounded-[7px]`.
 - Layout spacing follows Tailwind's default 4px grid. No custom spacing
   scale needed for an admin console this size.
+- **Sidebar**: fixed 240px, collapses to a 64px icon-only rail below a
+  1024px viewport. Fixed left, no mega-menus — flat nav for an internal
+  ops tool, not a 40-feature SaaS.
+- **Content area**: max-width 1440px, centered with padding on ultrawide
+  displays. Don't let tables stretch edge-to-edge on a 32" monitor.
 
 ## 5. Components
 
@@ -124,13 +133,25 @@ than improvising hues by hand.
   variant; those states belong on badges/banners, not on actions.
 - **Status badges**: build once (`StatusBadge`, mapping status string →
   semantic token + icon), reuse across Batches/Houses/Inventory/Alerts —
-  don't let each page invent its own badge coloring.
+  don't let each page invent its own badge coloring. Pill-shaped, small.
+- **KPI card**: label (`muted-foreground`, 12px, uppercase tracking) →
+  value (32px, tabular figures) → delta indicator (small, colored ↑/↓ vs
+  previous period, using semantic tokens from §2.3, never raw green/red).
 - **Data tables**: the primary surface across 12+ of the 15 pages. Row
   density over decoration — no zebra-striping with brand color, no heavy
-  borders. Use `muted` backgrounds for hover/selected rows only.
+  borders. Use `muted` backgrounds for hover/selected rows only. Sticky
+  header, right-align numeric columns, sortable columns where the data
+  supports it.
+- **Charts**: minimal gridlines, no 3D or gradient fills, one accent color
+  per chart max, tooltips on hover — see §2.4 for which palette to draw
+  from (grayscale ramp for single-series, dataviz skill for categorical).
 - **Alerts feed / toasts**: `info` / `warning` / `critical` map 1:1 to the
   Alert `level` enum — this is the one place all three semantic colors
   appear together, so the mapping in §2.3 has to be exact.
+- **Empty states**: every list/table needs one — icon + one line of text +
+  action button. Never ship a blank table with no explanation.
+- **Loading states**: skeleton screens for tables and cards, not spinners —
+  spinners give no sense of the layout that's about to appear.
 
 ## 6. Guardrails (do / don't)
 
