@@ -13,6 +13,8 @@ import { BatchesListPage } from "@/pages/batches/batches-list-page";
 import { BatchDetailPage } from "@/pages/batches/batch-detail-page";
 import { PurchasesListPage } from "@/pages/purchases/purchases-list-page";
 import { PurchaseDetailPage } from "@/pages/purchases/purchase-detail-page";
+import { SalesPage } from "@/pages/sales/sales-page";
+import { SaleDetailPage } from "@/pages/sales/sale-detail-page";
 
 function App() {
   return (
@@ -29,7 +31,8 @@ function App() {
         <Route path="suppliers/:id" element={<SupplierDetailPage />} />
         <Route path="customers" element={<CustomersListPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
-        <Route path="sales" element={<ComingSoon title="Sales" />} />
+        <Route path="sales" element={<SalesPage />} />
+        <Route path="sales/:id" element={<SaleDetailPage />} />
         <Route path="purchases" element={<PurchasesListPage />} />
         <Route path="purchases/:id" element={<PurchaseDetailPage />} />
         <Route path="payments" element={<ComingSoon title="Payments" />} />
