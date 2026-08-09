@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from "react-router";
 import { AppShell } from "@/components/layout/app-shell";
-import { ComingSoon } from "@/pages/coming-soon";
 import { HousesListPage } from "@/pages/houses/houses-list-page";
 import { HouseDetailPage } from "@/pages/houses/house-detail-page";
 import { SuppliersListPage } from "@/pages/suppliers/suppliers-list-page";
@@ -22,6 +21,7 @@ import { EmployeeDetailPage } from "@/pages/employees/employee-detail-page";
 import { AnalyticsPage } from "@/pages/analytics/analytics-page";
 import { AlertsPage } from "@/pages/alerts/alerts-page";
 import { AuditLogPage } from "@/pages/audit-log/audit-log-page";
+import { SettingsPage } from "@/pages/settings/settings-page";
 
 function App() {
   return (
@@ -49,7 +49,7 @@ function App() {
         <Route path="admins" element={<AdminsListPage />} />
         <Route path="alerts" element={<AlertsPage />} />
         <Route path="audit-log" element={<AuditLogPage />} />
-        <Route path="settings" element={<ComingSoon title="Settings" />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/analytics" replace />} />
       </Route>
     </Routes>
