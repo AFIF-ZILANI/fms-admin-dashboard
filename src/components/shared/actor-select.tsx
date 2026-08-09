@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGetData, type Paginated } from "@/lib/api";
 
-type ActorOption = { id: string; profile: { name: string } };
+type ActorOption = { id: string; profile: { id: string; name: string } };
 
 type ActorSelectProps = {
   id?: string;
@@ -25,12 +25,13 @@ export function ActorSelect({ id, value, onChange, invalid }: ActorSelectProps) 
       <Select value={value} onValueChange={(v) => onChange(v ?? "")}>
         <SelectTrigger id={id} className="w-full" aria-invalid={invalid}>
           <SelectValue>
-            {(v: string) => admins.find((a) => a.id === v)?.profile.name ?? "Who's recording this?"}
+            {(v: string) => admins.find((a) => a.profile.id === v)?.profile.name ?? "Who's recording this?"}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
+          {/* recorded_by_id/given_by_id foreign-key Profiles.id, not Admins.id — pass the profile's id. */}
           {admins.map((admin) => (
-            <SelectItem key={admin.id} value={admin.id}>
+            <SelectItem key={admin.id} value={admin.profile.id}>
               {admin.profile.name}
             </SelectItem>
           ))}

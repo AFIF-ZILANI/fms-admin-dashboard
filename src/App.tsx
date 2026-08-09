@@ -9,6 +9,8 @@ import { CustomersListPage } from "@/pages/customers/customers-list-page";
 import { CustomerDetailPage } from "@/pages/customers/customer-detail-page";
 import { InventoryPage } from "@/pages/inventory/inventory-page";
 import { AdminsListPage } from "@/pages/admins/admins-list-page";
+import { BatchesListPage } from "@/pages/batches/batches-list-page";
+import { BatchDetailPage } from "@/pages/batches/batch-detail-page";
 
 function App() {
   return (
@@ -16,7 +18,8 @@ function App() {
       <Route element={<AppShell />}>
         <Route index element={<Navigate to="/analytics" replace />} />
         <Route path="analytics" element={<ComingSoon title="Analytics" />} />
-        <Route path="batches" element={<ComingSoon title="Batches" />} />
+        <Route path="batches" element={<BatchesListPage />} />
+        <Route path="batches/:id" element={<BatchDetailPage />} />
         <Route path="houses" element={<HousesListPage />} />
         <Route path="houses/:id" element={<HouseDetailPage />} />
         <Route path="inventory" element={<InventoryPage />} />
