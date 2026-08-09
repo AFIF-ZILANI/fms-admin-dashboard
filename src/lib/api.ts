@@ -69,10 +69,17 @@ function unwrap<T>(raw: Envelope<unknown>): T {
 }
 
 async function apiFetch<T>(endpoint: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
-    ...init,
-    headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${endpoint}`, {
+      ...init,
+      headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers },
+    });
+  } catch {
+    // Network failure (server down, no connection) — not a Response at all, so it
+    // must still surface as an ApiError: every caller relies on that shape (e.g. `.fieldError()`).
+    throw new ApiError(0, "Could not reach the server. Check that it's running and try again.");
+  }
 
   // 429 is plain text, not JSON (docs/api.md §1.2) — must branch before res.json().
   if (res.status === 429) {
