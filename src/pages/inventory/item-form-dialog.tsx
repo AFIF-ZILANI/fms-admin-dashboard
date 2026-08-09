@@ -17,17 +17,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
+import { optionalNumber } from "@/lib/zod-helpers";
 import { RESOURCE_CATEGORIES, UNITS, type Item, type Organization } from "@/pages/inventory/types";
 
 const itemSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   category: z.enum(RESOURCE_CATEGORIES, "Select a category"),
   unit: z.enum(UNITS, "Select a unit"),
-  reorder_level: z.union([z.coerce.number().nonnegative("Must be 0 or more"), z.literal("")]).optional(),
-  preferred_reorder_qty: z.union([z.coerce.number().nonnegative("Must be 0 or more"), z.literal("")]).optional(),
-  lead_time_days: z
-    .union([z.coerce.number().int().nonnegative("Must be 0 or more"), z.literal("")])
-    .optional(),
+  reorder_level: optionalNumber(z.coerce.number().nonnegative("Must be 0 or more")),
+  preferred_reorder_qty: optionalNumber(z.coerce.number().nonnegative("Must be 0 or more")),
+  lead_time_days: optionalNumber(z.coerce.number().int().nonnegative("Must be 0 or more")),
   organization_id: z.string().optional(),
 });
 
@@ -105,13 +104,7 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
   );
 
   const onSubmit = (values: ItemFormValues) => {
-    const { organization_id, ...rest } = values;
-    const payload = {
-      ...rest,
-      reorder_level: rest.reorder_level === "" ? undefined : rest.reorder_level,
-      preferred_reorder_qty: rest.preferred_reorder_qty === "" ? undefined : rest.preferred_reorder_qty,
-      lead_time_days: rest.lead_time_days === "" ? undefined : rest.lead_time_days,
-    };
+    const { organization_id, ...payload } = values;
     mutation.mutate(payload, {
       onSuccess: (savedItem) => {
         toast.success(isEdit ? "Item updated" : "Item created");

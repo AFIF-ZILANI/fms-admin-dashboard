@@ -16,13 +16,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePatchData, usePostData } from "@/lib/api";
+import { optionalNumber } from "@/lib/zod-helpers";
 import { HOUSE_TYPES, type House } from "@/pages/houses/types";
 
 const houseSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   type: z.enum(HOUSE_TYPES, "Select a house type"),
   number: z.coerce.number().int().positive("Must be a positive number"),
-  capacity: z.union([z.coerce.number().int().positive(), z.literal("")]).optional(),
+  capacity: optionalNumber(z.coerce.number().int().positive()),
 });
 
 // z.coerce fields make the schema's input type (raw form values) differ from
@@ -66,8 +67,7 @@ export function HouseFormDialog({ open, onOpenChange, house }: HouseFormDialogPr
   const mutation = isEdit ? updateHouse : createHouse;
 
   const onSubmit = (values: HouseFormValues) => {
-    const payload = { ...values, capacity: values.capacity === "" ? undefined : values.capacity };
-    mutation.mutate(payload, {
+    mutation.mutate(values, {
       onSuccess: () => {
         toast.success(isEdit ? "House updated" : "House created");
         onOpenChange(false);

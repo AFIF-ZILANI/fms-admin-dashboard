@@ -14,6 +14,9 @@ import { BatchCloseDialog } from "@/pages/batches/batch-close-dialog";
 import { OverviewTab } from "@/pages/batches/tabs/overview-tab";
 import { AllocationsTab } from "@/pages/batches/tabs/allocations-tab";
 import { MortalityTab } from "@/pages/batches/tabs/mortality-tab";
+import { WeightTab } from "@/pages/batches/tabs/weight-tab";
+import { FeedingProgramTab } from "@/pages/batches/tabs/feeding-program-tab";
+import { EnvironmentTab } from "@/pages/batches/tabs/environment-tab";
 
 const STATUS_TONE: Record<BatchStatus, Tone> = { RUNNING: "success", CLOSED: "neutral", SOLD: "neutral" };
 
@@ -21,10 +24,9 @@ function ageInDays(startingDate: string): number {
   return Math.floor((Date.now() - new Date(startingDate).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-// ponytail: only Overview/Allocations/Mortality are built this pass — Weight,
-// Feeding Program, and Environment are the same "log a dated entry per house"
-// shape and follow next; Treatments (needs a Doctor picker) and Financials
-// (needs Purchases/Sales/Expenses, none built yet) come after that.
+// ponytail: Treatments (needs a Doctor picker) and Financials (needs
+// Purchases/Sales/Expenses, none built yet) are the only two tabs left out —
+// both depend on other unbuilt pages, unlike the six here.
 export function BatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -86,6 +88,9 @@ export function BatchDetailPage() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="allocations">House Allocations</TabsTrigger>
           <TabsTrigger value="mortality">Mortality</TabsTrigger>
+          <TabsTrigger value="weight">Weight</TabsTrigger>
+          <TabsTrigger value="feeding">Feeding Program</TabsTrigger>
+          <TabsTrigger value="environment">Environment</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
           <OverviewTab batch={batch} />
@@ -95,6 +100,15 @@ export function BatchDetailPage() {
         </TabsContent>
         <TabsContent value="mortality">
           <MortalityTab batch={batch} />
+        </TabsContent>
+        <TabsContent value="weight">
+          <WeightTab batch={batch} />
+        </TabsContent>
+        <TabsContent value="feeding">
+          <FeedingProgramTab batch={batch} />
+        </TabsContent>
+        <TabsContent value="environment">
+          <EnvironmentTab batch={batch} />
         </TabsContent>
       </Tabs>
 

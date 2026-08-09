@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,12 +45,21 @@ export function AllocationFormDialog({ open, onOpenChange, batchId }: Allocation
     control,
     register,
     handleSubmit,
+    reset,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<AllocationFormInput, unknown, AllocationFormValues>({
     resolver: zodResolver(allocationSchema),
     defaultValues: { from_house_id: "", to_house_id: "", quantity: undefined, reason: undefined, recorded_by_id: "" },
   });
+
+  // Dialog stays mounted between opens — without this, a second allocation would
+  // start from whatever was left in the form after the previous submit.
+  useEffect(() => {
+    if (open) {
+      reset({ from_house_id: "", to_house_id: "", quantity: undefined, reason: undefined, recorded_by_id: "" });
+    }
+  }, [open, reset]);
 
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const queryClient = useQueryClient();
