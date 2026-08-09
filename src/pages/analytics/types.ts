@@ -19,3 +19,31 @@ export type BatchPerformance = {
   latest_average_weight_grams: string | null;
   latest_weight_date: string | null;
 };
+
+export type MortalityTrendPoint = {
+  date: string;
+  died: number;
+};
+
+export type FeedTrendPoint = {
+  date: string;
+  unit: string;
+  quantity: string;
+};
+
+export type SalesTrendPoint = {
+  date: string;
+  revenue: string;
+  avg_price_per_kg: string;
+};
+
+export type ExpenseBreakdownRow = {
+  category: string;
+  total: string;
+};
+
+export type RevenueVsExpensesPoint = {
+  month: string;
+  revenue: string;
+  expenses: string;
+};
