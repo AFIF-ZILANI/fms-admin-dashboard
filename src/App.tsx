@@ -20,6 +20,7 @@ import { FinancePage } from "@/pages/finance/finance-page";
 import { EmployeesListPage } from "@/pages/employees/employees-list-page";
 import { EmployeeDetailPage } from "@/pages/employees/employee-detail-page";
 import { AnalyticsPage } from "@/pages/analytics/analytics-page";
+import { AlertsPage } from "@/pages/alerts/alerts-page";
 
 function App() {
   return (
@@ -45,7 +46,7 @@ function App() {
         <Route path="employees" element={<EmployeesListPage />} />
         <Route path="employees/:id" element={<EmployeeDetailPage />} />
         <Route path="admins" element={<AdminsListPage />} />
-        <Route path="alerts" element={<ComingSoon title="Alerts" />} />
+        <Route path="alerts" element={<AlertsPage />} />
         <Route path="audit-log" element={<ComingSoon title="Audit Log" />} />
         <Route path="settings" element={<ComingSoon title="Settings" />} />
         <Route path="*" element={<Navigate to="/analytics" replace />} />
