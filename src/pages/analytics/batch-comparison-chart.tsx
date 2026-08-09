@@ -29,6 +29,7 @@ export function BatchComparisonChart({ batches, performances, isLoading }: Batch
       performances
         .map((p) => ({
           batch_code: batches.find((b) => b.id === p.batch_id)?.batch_code ?? p.batch_id,
+          raw_rate: p.cumulative_mortality_rate,
           mortality_rate: Number((p.cumulative_mortality_rate * 100).toFixed(1)),
         }))
         .sort((a, b) => b.mortality_rate - a.mortality_rate),
@@ -57,7 +58,7 @@ export function BatchComparisonChart({ batches, performances, isLoading }: Batch
               />
               <Bar dataKey="mortality_rate" radius={[0, 4, 4, 0]}>
                 {rows.map((row) => (
-                  <Cell key={row.batch_code} fill={toneColor(row.mortality_rate / 100)} />
+                  <Cell key={row.batch_code} fill={toneColor(row.raw_rate)} />
                 ))}
               </Bar>
             </BarChart>
