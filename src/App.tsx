@@ -11,6 +11,8 @@ import { InventoryPage } from "@/pages/inventory/inventory-page";
 import { AdminsListPage } from "@/pages/admins/admins-list-page";
 import { BatchesListPage } from "@/pages/batches/batches-list-page";
 import { BatchDetailPage } from "@/pages/batches/batch-detail-page";
+import { PurchasesListPage } from "@/pages/purchases/purchases-list-page";
+import { PurchaseDetailPage } from "@/pages/purchases/purchase-detail-page";
 
 function App() {
   return (
@@ -28,7 +30,8 @@ function App() {
         <Route path="customers" element={<CustomersListPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
         <Route path="sales" element={<ComingSoon title="Sales" />} />
-        <Route path="purchases" element={<ComingSoon title="Purchases" />} />
+        <Route path="purchases" element={<PurchasesListPage />} />
+        <Route path="purchases/:id" element={<PurchaseDetailPage />} />
         <Route path="payments" element={<ComingSoon title="Payments" />} />
         <Route path="finance" element={<ComingSoon title="Finance" />} />
         <Route path="employees" element={<ComingSoon title="Employees" />} />
