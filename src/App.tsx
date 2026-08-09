@@ -15,6 +15,7 @@ import { PurchasesListPage } from "@/pages/purchases/purchases-list-page";
 import { PurchaseDetailPage } from "@/pages/purchases/purchase-detail-page";
 import { SalesPage } from "@/pages/sales/sales-page";
 import { SaleDetailPage } from "@/pages/sales/sale-detail-page";
+import { PaymentsPage } from "@/pages/payments/payments-page";
 
 function App() {
   return (
@@ -35,7 +36,7 @@ function App() {
         <Route path="sales/:id" element={<SaleDetailPage />} />
         <Route path="purchases" element={<PurchasesListPage />} />
         <Route path="purchases/:id" element={<PurchaseDetailPage />} />
-        <Route path="payments" element={<ComingSoon title="Payments" />} />
+        <Route path="payments" element={<PaymentsPage />} />
         <Route path="finance" element={<ComingSoon title="Finance" />} />
         <Route path="employees" element={<ComingSoon title="Employees" />} />
         <Route path="admins" element={<AdminsListPage />} />
