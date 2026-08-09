@@ -3,6 +3,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import { ComingSoon } from "@/pages/coming-soon";
 import { HousesListPage } from "@/pages/houses/houses-list-page";
 import { HouseDetailPage } from "@/pages/houses/house-detail-page";
+import { SuppliersListPage } from "@/pages/suppliers/suppliers-list-page";
+import { SupplierDetailPage } from "@/pages/suppliers/supplier-detail-page";
 
 function App() {
   return (
@@ -14,7 +16,8 @@ function App() {
         <Route path="houses" element={<HousesListPage />} />
         <Route path="houses/:id" element={<HouseDetailPage />} />
         <Route path="inventory" element={<ComingSoon title="Inventory" />} />
-        <Route path="suppliers" element={<ComingSoon title="Suppliers" />} />
+        <Route path="suppliers" element={<SuppliersListPage />} />
+        <Route path="suppliers/:id" element={<SupplierDetailPage />} />
         <Route path="customers" element={<ComingSoon title="Customers" />} />
         <Route path="sales" element={<ComingSoon title="Sales" />} />
         <Route path="purchases" element={<ComingSoon title="Purchases" />} />
