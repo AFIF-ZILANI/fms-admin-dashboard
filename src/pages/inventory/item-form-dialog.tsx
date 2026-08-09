@@ -1,0 +1,218 @@
+import { useEffect } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePatchData, usePostData } from "@/lib/api";
+import { humanizeEnum } from "@/lib/utils";
+import { RESOURCE_CATEGORIES, UNITS, type Item } from "@/pages/inventory/types";
+
+const itemSchema = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+  category: z.enum(RESOURCE_CATEGORIES, "Select a category"),
+  unit: z.enum(UNITS, "Select a unit"),
+  reorder_level: z.union([z.coerce.number().nonnegative("Must be 0 or more"), z.literal("")]).optional(),
+  preferred_reorder_qty: z.union([z.coerce.number().nonnegative("Must be 0 or more"), z.literal("")]).optional(),
+  lead_time_days: z
+    .union([z.coerce.number().int().nonnegative("Must be 0 or more"), z.literal("")])
+    .optional(),
+});
+
+// z.coerce fields make the schema's input type (raw form values) differ from
+// its output type (parsed payload) — RHF's 3rd generic carries that through (same pattern as Houses).
+type ItemFormInput = z.input<typeof itemSchema>;
+type ItemFormValues = z.output<typeof itemSchema>;
+
+type ItemFormDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  item?: Item;
+};
+
+export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps) {
+  const isEdit = Boolean(item);
+
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<ItemFormInput, unknown, ItemFormValues>({
+    resolver: zodResolver(itemSchema),
+    defaultValues: {
+      name: "",
+      category: undefined,
+      unit: undefined,
+      reorder_level: "",
+      preferred_reorder_qty: "",
+      lead_time_days: "",
+    },
+  });
+
+  useEffect(() => {
+    if (open) {
+      reset(
+        item
+          ? {
+              name: item.name,
+              category: item.category,
+              unit: item.unit,
+              reorder_level: item.reorder_level ?? "",
+              preferred_reorder_qty: item.preferred_reorder_qty ?? "",
+              lead_time_days: item.lead_time_days ?? "",
+            }
+          : {
+              name: "",
+              category: undefined,
+              unit: undefined,
+              reorder_level: "",
+              preferred_reorder_qty: "",
+              lead_time_days: "",
+            }
+      );
+    }
+  }, [open, item, reset]);
+
+  const createItem = usePostData<Item, ItemFormValues>("/items", ["items"]);
+  const updateItem = usePatchData<Item, ItemFormValues>(`/items/${item?.id}`, ["items"]);
+  const mutation = isEdit ? updateItem : createItem;
+
+  const onSubmit = (values: ItemFormValues) => {
+    const payload = {
+      ...values,
+      reorder_level: values.reorder_level === "" ? undefined : values.reorder_level,
+      preferred_reorder_qty: values.preferred_reorder_qty === "" ? undefined : values.preferred_reorder_qty,
+      lead_time_days: values.lead_time_days === "" ? undefined : values.lead_time_days,
+    };
+    mutation.mutate(payload, {
+      onSuccess: () => {
+        toast.success(isEdit ? "Item updated" : "Item created");
+        onOpenChange(false);
+      },
+      onError: (error) => {
+        let hadFieldError = false;
+        for (const key of ["name", "category", "unit", "reorder_level", "preferred_reorder_qty", "lead_time_days"] as const) {
+          const message = error.fieldError(key);
+          if (message) {
+            setError(key, { message });
+            hadFieldError = true;
+          }
+        }
+        if (!hadFieldError) toast.error(error.message);
+      },
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? "Edit item" : "Add item"}</DialogTitle>
+          <DialogDescription>
+            {isEdit ? "Update this catalog item." : "Add a new item to the catalog."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" placeholder="e.g. Starter Feed" {...register("name")} aria-invalid={!!errors.name} />
+            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="category">Category</Label>
+              <Controller
+                control={control}
+                name="category"
+                render={({ field }) => (
+                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <SelectTrigger id="category" className="w-full" aria-invalid={!!errors.category}>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RESOURCE_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {humanizeEnum(cat)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.category && <p className="text-xs text-destructive">{errors.category.message}</p>}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="unit">Unit</Label>
+              <Controller
+                control={control}
+                name="unit"
+                render={({ field }) => (
+                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <SelectTrigger id="unit" className="w-full" aria-invalid={!!errors.unit}>
+                      <SelectValue placeholder="Select unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UNITS.map((unit) => (
+                        <SelectItem key={unit} value={unit}>
+                          {humanizeEnum(unit)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.unit && <p className="text-xs text-destructive">{errors.unit.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="reorder_level">Reorder level (optional)</Label>
+              <Input id="reorder_level" type="number" step="0.001" {...register("reorder_level")} />
+              {errors.reorder_level && <p className="text-xs text-destructive">{errors.reorder_level.message}</p>}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="preferred_reorder_qty">Reorder qty (optional)</Label>
+              <Input id="preferred_reorder_qty" type="number" step="0.001" {...register("preferred_reorder_qty")} />
+              {errors.preferred_reorder_qty && (
+                <p className="text-xs text-destructive">{errors.preferred_reorder_qty.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="lead_time_days">Lead time in days (optional)</Label>
+            <Input id="lead_time_days" type="number" step="1" {...register("lead_time_days")} />
+            {errors.lead_time_days && <p className="text-xs text-destructive">{errors.lead_time_days.message}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isEdit ? "Save changes" : "Create item"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

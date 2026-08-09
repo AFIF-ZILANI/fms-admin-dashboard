@@ -7,6 +7,7 @@ import { SuppliersListPage } from "@/pages/suppliers/suppliers-list-page";
 import { SupplierDetailPage } from "@/pages/suppliers/supplier-detail-page";
 import { CustomersListPage } from "@/pages/customers/customers-list-page";
 import { CustomerDetailPage } from "@/pages/customers/customer-detail-page";
+import { InventoryPage } from "@/pages/inventory/inventory-page";
 
 function App() {
   return (
@@ -17,7 +18,7 @@ function App() {
         <Route path="batches" element={<ComingSoon title="Batches" />} />
         <Route path="houses" element={<HousesListPage />} />
         <Route path="houses/:id" element={<HouseDetailPage />} />
-        <Route path="inventory" element={<ComingSoon title="Inventory" />} />
+        <Route path="inventory" element={<InventoryPage />} />
         <Route path="suppliers" element={<SuppliersListPage />} />
         <Route path="suppliers/:id" element={<SupplierDetailPage />} />
         <Route path="customers" element={<CustomersListPage />} />
