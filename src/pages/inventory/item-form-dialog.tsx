@@ -182,6 +182,12 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
             </div>
           </div>
 
+          <p className="-mt-2 text-xs text-muted-foreground">
+            Pick the unit you actually dispense in day-to-day (e.g. G or ML), not the bulk unit on the invoice
+            (e.g. KG or LITER) — stock, reorder level, and consumption all track in this one unit, and there's no
+            automatic conversion between the two yet. Convert by hand when you record a purchase.
+          </p>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="reorder_level">Reorder level (optional)</Label>
