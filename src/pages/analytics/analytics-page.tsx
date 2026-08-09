@@ -10,6 +10,7 @@ import { useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import { BatchPerformanceRow } from "@/pages/analytics/batch-performance-row";
+import { MortalityTrendChart } from "@/pages/analytics/mortality-trend-chart";
 import type { BatchPerformance, FarmOverview } from "@/pages/analytics/types";
 
 // ponytail: no trend charts (mortality/feed/price) or per-section CSV
@@ -63,6 +64,10 @@ export function AnalyticsPage() {
           </CardContent>
         </Card>
       )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <MortalityTrendChart />
+      </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
