@@ -19,13 +19,14 @@ import { PaymentsPage } from "@/pages/payments/payments-page";
 import { FinancePage } from "@/pages/finance/finance-page";
 import { EmployeesListPage } from "@/pages/employees/employees-list-page";
 import { EmployeeDetailPage } from "@/pages/employees/employee-detail-page";
+import { AnalyticsPage } from "@/pages/analytics/analytics-page";
 
 function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<Navigate to="/analytics" replace />} />
-        <Route path="analytics" element={<ComingSoon title="Analytics" />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="batches" element={<BatchesListPage />} />
         <Route path="batches/:id" element={<BatchDetailPage />} />
         <Route path="houses" element={<HousesListPage />} />
