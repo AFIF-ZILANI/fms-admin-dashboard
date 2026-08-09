@@ -15,6 +15,7 @@ import { FeedTrendChart } from "@/pages/analytics/feed-trend-chart";
 import { BatchComparisonChart } from "@/pages/analytics/batch-comparison-chart";
 import { SalesPriceTrendChart } from "@/pages/analytics/sales-price-trend-chart";
 import { RevenueExpenseChart } from "@/pages/analytics/revenue-expense-chart";
+import { ExpenseBreakdownChart } from "@/pages/analytics/expense-breakdown-chart";
 import type { BatchPerformance, FarmOverview } from "@/pages/analytics/types";
 
 // ponytail: no trend charts (mortality/feed/price) or per-section CSV
@@ -85,6 +86,7 @@ export function AnalyticsPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <RevenueExpenseChart />
+        <ExpenseBreakdownChart />
       </div>
 
       <Card>
