@@ -18,9 +18,9 @@ type BatchComparisonChartProps = {
  * reading (good/warning/critical), the same three-way split
  * BatchPerformanceRow already uses for its badge. */
 function toneColor(rate: number) {
-  if (rate > 0.05) return "var(--color-destructive)";
-  if (rate > 0.02) return "var(--chart-3)";
-  return "var(--chart-1)";
+  if (rate > 0.05) return "var(--color-critical)";
+  if (rate > 0.02) return "var(--color-warning)";
+  return "var(--color-success)";
 }
 
 export function BatchComparisonChart({ batches, performances, isLoading }: BatchComparisonChartProps) {
