@@ -1,11 +1,22 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Wallet } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import type { TooltipValueType } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
+import {
+  CATEGORICAL_COLORS,
+  CHART_HEIGHT,
+  chartAxisProps,
+  chartGridProps,
+  chartTooltipContentStyle,
+  OTHER_COLOR,
+} from "@/pages/analytics/chart-theme";
 import type { FinancialDashboard } from "@/pages/finance/types";
 
 export function OverviewTab() {
@@ -16,6 +27,15 @@ export function OverviewTab() {
     "financial",
     month,
   ]);
+
+  const instrumentRows = useMemo(() => {
+    const rows = data?.cash_by_instrument ?? [];
+    const top = rows.slice(0, 4);
+    const rest = rows.slice(4);
+    const otherTotal = rest.reduce((sum, r) => sum + parseFloat(r.balance), 0);
+    const withOther = otherTotal !== 0 ? [...top, { instrument_id: "other", label: "Other", balance: String(otherTotal) }] : top;
+    return withOther.map((r) => ({ label: r.label, balance: parseFloat(r.balance) }));
+  }, [data]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -34,6 +54,12 @@ export function OverviewTab() {
           icon={Wallet}
           isLoading={isLoading}
         />
+        <KPICard
+          label="Outstanding receivables"
+          value={data ? formatMoney(data.outstanding_receivables) : "—"}
+          icon={Wallet}
+          isLoading={isLoading}
+        />
         <KPICard label="Cash position" value={data ? formatMoney(data.cash_position) : "—"} icon={Wallet} isLoading={isLoading} />
       </div>
 
@@ -41,17 +67,29 @@ export function OverviewTab() {
         <CardHeader>
           <CardTitle className="text-base">Cash by instrument</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+        <CardContent>
+          {isLoading && <Skeleton style={{ height: CHART_HEIGHT }} className="w-full" />}
           {!isLoading && (data?.cash_by_instrument.length ?? 0) === 0 && (
             <p className="text-sm text-muted-foreground">No payment instruments yet.</p>
           )}
-          {data?.cash_by_instrument.map((i) => (
-            <div key={i.instrument_id} className="flex items-center justify-between text-sm">
-              <span>{i.label}</span>
-              <span className="tabular-nums font-medium">{formatMoney(i.balance)}</span>
-            </div>
-          ))}
+          {!isLoading && (data?.cash_by_instrument.length ?? 0) > 0 && (
+            <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+              <BarChart data={instrumentRows} layout="vertical">
+                <CartesianGrid {...chartGridProps} vertical horizontal={false} />
+                <XAxis type="number" {...chartAxisProps} />
+                <YAxis type="category" dataKey="label" width={120} {...chartAxisProps} />
+                <Tooltip
+                  contentStyle={chartTooltipContentStyle}
+                  formatter={(v: TooltipValueType | undefined) => formatMoney(typeof v === "number" ? v : Number(v))}
+                />
+                <Bar dataKey="balance" radius={[0, 4, 4, 0]}>
+                  {instrumentRows.map((row, i) => (
+                    <Cell key={row.label} fill={row.label === "Other" ? OTHER_COLOR : CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>
