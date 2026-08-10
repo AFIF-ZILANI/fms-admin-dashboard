@@ -1,17 +1,31 @@
+import { useState } from "react";
 import { TrendingDown } from "lucide-react";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { AssetDepreciation } from "@/pages/finance/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import type { FinanceAsset } from "@/pages/finance/types";
 
 // Read-only — rows are only ever written by BatchService.close()'s
 // depreciation trigger, never posted from the UI (asset-depreciation.service.ts).
 export function DepreciationTab() {
-  const { data, isLoading } = useGetData<Paginated<AssetDepreciation>>("/asset-depreciations?limit=100", [
+  const [assetId, setAssetId] = useState("ALL");
+  const [batchId, setBatchId] = useState("ALL");
+
+  const query = new URLSearchParams({ limit: "100" });
+  if (assetId !== "ALL") query.set("asset_id", assetId);
+  if (batchId !== "ALL") query.set("batch_id", batchId);
+
+  const { data, isLoading } = useGetData<Paginated<AssetDepreciation>>(`/asset-depreciations?${query}`, [
     "asset-depreciations",
+    assetId,
+    batchId,
   ]);
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
+  const { data: assets } = useGetData<Paginated<FinanceAsset>>("/assets?limit=100", ["assets"]);
   const batchCode = (id: string) => batches?.results.find((b) => b.id === id)?.batch_code ?? "—";
 
   const depreciations = data?.results ?? [];
@@ -27,6 +41,44 @@ export function DepreciationTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Label>Asset</Label>
+          <Select value={assetId} onValueChange={(v) => setAssetId(v ?? "ALL")}>
+            <SelectTrigger className="w-48">
+              <SelectValue>
+                {(v: string) => (v === "ALL" ? "All assets" : assets?.results.find((a) => a.id === v)?.name ?? "—")}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All assets</SelectItem>
+              {(assets?.results ?? []).map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Batch</Label>
+          <Select value={batchId} onValueChange={(v) => setBatchId(v ?? "ALL")}>
+            <SelectTrigger className="w-40">
+              <SelectValue>
+                {(v: string) => (v === "ALL" ? "All batches" : batches?.results.find((b) => b.id === v)?.batch_code ?? "—")}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All batches</SelectItem>
+              {(batches?.results ?? []).map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.batch_code}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <p className="text-xs text-muted-foreground">
         Depreciation rows are computed automatically when a batch closes — one per asset, per batch. Nothing to
         record here.
