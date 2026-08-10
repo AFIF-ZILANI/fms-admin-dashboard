@@ -49,7 +49,7 @@ export function BatchComparisonChart({ batches, performances, isLoading }: Batch
         {!isLoading && rows.length > 0 && (
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <BarChart data={rows} layout="vertical">
-              <CartesianGrid {...chartGridProps} horizontal={false} />
+              <CartesianGrid {...chartGridProps} vertical horizontal={false} />
               <XAxis type="number" unit="%" {...chartAxisProps} />
               <YAxis type="category" dataKey="batch_code" width={100} {...chartAxisProps} />
               <Tooltip

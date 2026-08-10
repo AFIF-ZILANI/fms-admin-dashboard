@@ -44,7 +44,7 @@ export function ExpenseBreakdownChart() {
         {!isLoading && rows.length > 0 && (
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <BarChart data={rows} layout="vertical">
-              <CartesianGrid {...chartGridProps} horizontal={false} />
+              <CartesianGrid {...chartGridProps} vertical horizontal={false} />
               <XAxis type="number" {...chartAxisProps} />
               <YAxis type="category" dataKey="category" width={100} tickFormatter={humanizeEnum} {...chartAxisProps} />
               <Tooltip contentStyle={chartTooltipContentStyle} formatter={(v: TooltipValueType | undefined) => formatMoney(typeof v === "number" ? v : Number(v))} labelFormatter={(label) => humanizeEnum(String(label))} />
