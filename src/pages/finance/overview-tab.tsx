@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
@@ -33,7 +34,7 @@ export function OverviewTab() {
     const top = rows.slice(0, 4);
     const rest = rows.slice(4);
     const otherTotal = rest.reduce((sum, r) => sum + parseFloat(r.balance), 0);
-    const withOther = otherTotal !== 0 ? [...top, { instrument_id: "other", label: "Other", balance: String(otherTotal) }] : top;
+    const withOther = rest.length > 0 ? [...top, { instrument_id: "other", label: "Other", balance: String(otherTotal) }] : top;
     return withOther.map((r) => ({ label: r.label, balance: parseFloat(r.balance) }));
   }, [data]);
 
@@ -70,7 +71,7 @@ export function OverviewTab() {
         <CardContent>
           {isLoading && <Skeleton style={{ height: CHART_HEIGHT }} className="w-full" />}
           {!isLoading && (data?.cash_by_instrument.length ?? 0) === 0 && (
-            <p className="text-sm text-muted-foreground">No payment instruments yet.</p>
+            <EmptyState icon={Wallet} title="No payment instruments yet" />
           )}
           {!isLoading && (data?.cash_by_instrument.length ?? 0) > 0 && (
             <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
