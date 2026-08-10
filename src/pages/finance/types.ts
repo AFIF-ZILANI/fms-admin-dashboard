@@ -49,8 +49,14 @@ export type FinancialDashboard = {
   expenses: string;
   gross_profit: string;
   outstanding_payables: string;
+  outstanding_receivables: string;
   cash_position: string;
   cash_by_instrument: { instrument_id: string; label: string; balance: string }[];
+};
+
+export type FinanceAsset = {
+  id: string;
+  name: string;
 };
 
 export type BatchPnl = {
