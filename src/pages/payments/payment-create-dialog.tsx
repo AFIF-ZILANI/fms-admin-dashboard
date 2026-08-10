@@ -19,6 +19,8 @@ import { ActorSelect } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
+import type { Employee, PayrollRecord } from "@/pages/employees/types";
+import type { Expense } from "@/pages/finance/types";
 import type { Purchase } from "@/pages/purchases/types";
 import type { Sale, BirdSale } from "@/pages/sales/types";
 import {
@@ -61,7 +63,7 @@ function blankPayment(): PaymentFormInput {
 }
 
 // Every ref type a payment can target has a different shape for label + due
-// amount — this is the one place that has to know all three.
+// amount — this is the one place that has to know all five.
 type RefOption = { id: string; label: string; due: number };
 
 function useRefOptions(refType: PaymentRefType | undefined): RefOption[] {
@@ -76,6 +78,15 @@ function useRefOptions(refType: PaymentRefType | undefined): RefOption[] {
   });
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"], {
     enabled: refType === "BIRD_SALE",
+  });
+  const { data: expenses } = useGetData<Paginated<Expense>>("/expenses?limit=100", ["expenses"], {
+    enabled: refType === "EXPENSE",
+  });
+  const { data: payrollRecords } = useGetData<Paginated<PayrollRecord>>("/payroll-records?limit=100", ["payroll-records"], {
+    enabled: refType === "PAYROLL",
+  });
+  const { data: employees } = useGetData<Paginated<Employee>>("/employees?limit=100", ["employees"], {
+    enabled: refType === "PAYROLL",
   });
 
   if (refType === "PURCHASE") {
@@ -104,6 +115,24 @@ function useRefOptions(refType: PaymentRefType | undefined): RefOption[] {
         label: `${batches?.results.find((batch) => batch.id === b.batch_id)?.batch_code ?? "Bird sale"} · ${new Date(b.sale_date).toLocaleDateString()}`,
         due: parseFloat(b.due_amount),
       }));
+  }
+  // Expense/PayrollRecord don't store their own due_amount (append-only,
+  // no partial-payment snapshot) -- every row is a valid target, and the
+  // "Remaining due" line below (driven by /payments/total-paid) is what
+  // actually tells the user how much of it is left, not this filter.
+  if (refType === "EXPENSE") {
+    return (expenses?.results ?? []).map((e) => ({
+      id: e.id,
+      label: `${humanizeEnum(e.category)} · ${new Date(e.date).toLocaleDateString()}`,
+      due: parseFloat(e.amount),
+    }));
+  }
+  if (refType === "PAYROLL") {
+    return (payrollRecords?.results ?? []).map((p) => ({
+      id: p.id,
+      label: `${employees?.results.find((e) => e.id === p.employee_id)?.profile.name ?? "Employee"} · ${new Date(p.month).toLocaleDateString(undefined, { year: "numeric", month: "long" })}`,
+      due: parseFloat(p.final_salary),
+    }));
   }
   return [];
 }
@@ -195,7 +224,8 @@ export function PaymentCreateDialog({ open, onOpenChange }: PaymentCreateDialogP
                     onValueChange={(v) => {
                       field.onChange(v);
                       setValue("ref_id", "");
-                      setValue("direction", v === "PURCHASE" ? "OUTGOING" : "INCOMING");
+                      const outgoing = v === "PURCHASE" || v === "EXPENSE" || v === "PAYROLL";
+                      setValue("direction", outgoing ? "OUTGOING" : "INCOMING");
                     }}
                   >
                     <SelectTrigger id="ref_type" className="w-full" aria-invalid={!!errors.ref_type}>

@@ -1,10 +1,7 @@
 export const PAYMENT_DIRECTIONS = ["INCOMING", "OUTGOING"] as const;
 export type PaymentDirection = (typeof PAYMENT_DIRECTIONS)[number];
 
-// Payment.ref_type also allows EXPENSE/PAYROLL server-side, but those pages
-// don't exist yet — only offer the 3 refs a payment can actually be recorded
-// against today. Widen this list as Finance/Payroll ship.
-export const PAYMENT_REF_TYPES = ["SALE", "BIRD_SALE", "PURCHASE"] as const;
+export const PAYMENT_REF_TYPES = ["SALE", "BIRD_SALE", "PURCHASE", "EXPENSE", "PAYROLL"] as const;
 export type PaymentRefType = (typeof PAYMENT_REF_TYPES)[number];
 
 export const PAYMENT_METHODS = ["CASH", "BANK_TRANSFER", "MFS"] as const;
@@ -21,7 +18,7 @@ export type Payment = {
   amount: string;
   payment_date: string;
   direction: PaymentDirection;
-  ref_type: PaymentRefType | "EXPENSE" | "PAYROLL";
+  ref_type: PaymentRefType;
   ref_id: string;
   from_instrument_id: string;
   to_instrument_id: string | null;
