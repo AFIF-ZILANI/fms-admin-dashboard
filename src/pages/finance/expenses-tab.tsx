@@ -1,18 +1,40 @@
 import { useState } from "react";
 import { Plus, Receipt, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import { ExpenseCreateDialog } from "@/pages/finance/expense-create-dialog";
-import type { Expense } from "@/pages/finance/types";
+import { COST_TYPES, EXPENSE_CATEGORIES, type Expense } from "@/pages/finance/types";
 
 export function ExpensesTab() {
   const [createOpen, setCreateOpen] = useState(false);
+  const [category, setCategory] = useState<string>("ALL");
+  const [costType, setCostType] = useState<string>("ALL");
+  const [batchId, setBatchId] = useState<string>("ALL");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  const { data, isLoading } = useGetData<Paginated<Expense>>("/expenses?limit=100", ["expenses"]);
+  const query = new URLSearchParams({ limit: "100" });
+  if (category !== "ALL") query.set("category", category);
+  if (costType !== "ALL") query.set("cost_type", costType);
+  if (batchId !== "ALL") query.set("batch_id", batchId);
+  if (dateFrom) query.set("date_from", dateFrom);
+  if (dateTo) query.set("date_to", dateTo);
+
+  const { data, isLoading } = useGetData<Paginated<Expense>>(`/expenses?${query}`, [
+    "expenses",
+    category,
+    costType,
+    batchId,
+    dateFrom,
+    dateTo,
+  ]);
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
   const batchCode = (id: string | null) => (id ? batches?.results.find((b) => b.id === id)?.batch_code ?? "—" : "Farm-wide");
 
@@ -42,6 +64,82 @@ export function ExpensesTab() {
           <Plus />
           Record expense
         </Button>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Label>Category</Label>
+          <Select value={category} onValueChange={(v) => setCategory(v ?? "ALL")}>
+            <SelectTrigger className="w-40">
+              <SelectValue>{(v: string) => (v === "ALL" ? "All categories" : humanizeEnum(v))}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All categories</SelectItem>
+              {EXPENSE_CATEGORIES.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {humanizeEnum(c)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Cost type</Label>
+          <Select value={costType} onValueChange={(v) => setCostType(v ?? "ALL")}>
+            <SelectTrigger className="w-40">
+              <SelectValue>{(v: string) => (v === "ALL" ? "All cost types" : humanizeEnum(v))}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All cost types</SelectItem>
+              {COST_TYPES.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {humanizeEnum(c)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Batch</Label>
+          <Select value={batchId} onValueChange={(v) => setBatchId(v ?? "ALL")}>
+            <SelectTrigger className="w-40">
+              <SelectValue>
+                {(v: string) => (v === "ALL" ? "All batches" : batches?.results.find((b) => b.id === v)?.batch_code ?? "—")}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All batches</SelectItem>
+              {(batches?.results ?? []).map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.batch_code}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="date-from">From</Label>
+          <Input id="date-from" type="date" className="w-40" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="date-to">To</Label>
+          <Input id="date-to" type="date" className="w-40" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        </div>
+        {(category !== "ALL" || costType !== "ALL" || batchId !== "ALL" || dateFrom || dateTo) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setCategory("ALL");
+              setCostType("ALL");
+              setBatchId("ALL");
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            Clear filters
+          </Button>
+        )}
       </div>
 
       <DataTable
