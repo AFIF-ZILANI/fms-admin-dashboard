@@ -53,24 +53,11 @@ export function ExpensesTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Total expenses" value={data?.total ?? expenses.length} icon={Receipt} isLoading={isLoading} />
-        <KPICard label="Total amount" value={formatMoney(total)} icon={Wallet} isLoading={isLoading} />
-        <KPICard label="Direct (batch) amount" value={formatMoney(directTotal)} icon={Wallet} isLoading={isLoading} />
-      </div>
-
-      <div className="flex justify-end">
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus />
-          Record expense
-        </Button>
-      </div>
-
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1.5">
-          <Label>Category</Label>
+          <Label htmlFor="expense-category-filter">Category</Label>
           <Select value={category} onValueChange={(v) => setCategory(v ?? "ALL")}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger id="expense-category-filter" className="w-40">
               <SelectValue>{(v: string) => (v === "ALL" ? "All categories" : humanizeEnum(v))}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -84,9 +71,9 @@ export function ExpensesTab() {
           </Select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label>Cost type</Label>
+          <Label htmlFor="expense-cost-type-filter">Cost type</Label>
           <Select value={costType} onValueChange={(v) => setCostType(v ?? "ALL")}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger id="expense-cost-type-filter" className="w-40">
               <SelectValue>{(v: string) => (v === "ALL" ? "All cost types" : humanizeEnum(v))}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -100,9 +87,9 @@ export function ExpensesTab() {
           </Select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label>Batch</Label>
+          <Label htmlFor="expense-batch-filter">Batch</Label>
           <Select value={batchId} onValueChange={(v) => setBatchId(v ?? "ALL")}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger id="expense-batch-filter" className="w-40">
               <SelectValue>
                 {(v: string) => (v === "ALL" ? "All batches" : batches?.results.find((b) => b.id === v)?.batch_code ?? "—")}
               </SelectValue>
@@ -140,6 +127,19 @@ export function ExpensesTab() {
             Clear filters
           </Button>
         )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <KPICard label="Total expenses" value={data?.total ?? expenses.length} icon={Receipt} isLoading={isLoading} />
+        <KPICard label="Total amount" value={formatMoney(total)} icon={Wallet} isLoading={isLoading} />
+        <KPICard label="Direct (batch) amount" value={formatMoney(directTotal)} icon={Wallet} isLoading={isLoading} />
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus />
+          Record expense
+        </Button>
       </div>
 
       <DataTable
