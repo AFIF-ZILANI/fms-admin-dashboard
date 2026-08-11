@@ -7,9 +7,15 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { useGetData, usePatchData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
-import type { Batch, BatchFeedingProgram } from "@/pages/batches/types";
+import type { Batch, BatchFeedingProgram, Consumption } from "@/pages/batches/types";
 import type { Item } from "@/pages/inventory/types";
 import { FeedingProgramFormDialog } from "@/pages/batches/tabs/feeding-program-form-dialog";
+
+function daysFromStart(startingDate: string, dayOffset: number): Date {
+  const d = new Date(startingDate);
+  d.setUTCDate(d.getUTCDate() + dayOffset);
+  return d;
+}
 
 function EndProgramDialog({
   row,
@@ -73,11 +79,37 @@ export function FeedingProgramTab({ batch }: { batch: Batch }) {
   const { data: feedItems } = useGetData<Paginated<Item>>("/items?category=FEED&limit=100", ["items", "FEED"]);
   const itemName = (id: string) => feedItems?.results.find((i) => i.id === id)?.name ?? id;
 
+  const { data: consumptions } = useGetData<Paginated<Consumption>>(
+    `/consumptions?batch_id=${batch.id}&limit=100`,
+    ["consumptions", batch.id]
+  );
+
+  const actualConsumed = (program: BatchFeedingProgram): number => {
+    const windowStart = daysFromStart(batch.starting_date, program.start_day);
+    const windowEnd = program.end_day != null ? daysFromStart(batch.starting_date, program.end_day + 1) : new Date();
+    return (consumptions?.results ?? [])
+      .filter((c) => c.item_id === program.item_id)
+      .filter((c) => {
+        const d = new Date(c.date);
+        return d >= windowStart && d < windowEnd;
+      })
+      .reduce((sum, c) => sum + parseFloat(c.quantity), 0);
+  };
+
   const columns: Column<BatchFeedingProgram>[] = [
     { key: "feed_type", header: "Feed type", render: (p) => humanizeEnum(p.feed_type) },
     { key: "item", header: "Item", render: (p) => itemName(p.item_id) },
     { key: "start", header: "Start day", render: (p) => p.start_day, numeric: true },
     { key: "end", header: "End day", render: (p) => p.end_day ?? "—", numeric: true },
+    {
+      key: "actual",
+      header: "Actual consumed",
+      render: (p) => {
+        const item = feedItems?.results.find((i) => i.id === p.item_id);
+        return `${actualConsumed(p).toLocaleString()} ${item ? humanizeEnum(item.unit) : ""}`.trim();
+      },
+      numeric: true,
+    },
     {
       key: "actions",
       header: "",
