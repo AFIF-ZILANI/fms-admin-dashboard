@@ -16,18 +16,21 @@ export function DoctorSelect({ id, value, onChange }: DoctorSelectProps) {
   const doctors = data?.results ?? [];
 
   return (
-    <Select value={value} onValueChange={(v) => onChange(v ?? "")}>
-      <SelectTrigger id={id} className="w-full">
-        <SelectValue>{(v: string) => doctors.find((d) => d.id === v)?.profile.name ?? "None"}</SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {doctors.map((doctor) => (
-          <SelectItem key={doctor.id} value={doctor.id}>
-            {doctor.profile.name}
-            {doctor.specialty ? ` — ${doctor.specialty}` : ""}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="flex flex-col gap-1">
+      <Select value={value} onValueChange={(v) => onChange(v ?? "")}>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue>{(v: string) => doctors.find((d) => d.id === v)?.profile.name ?? "None"}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {doctors.map((doctor) => (
+            <SelectItem key={doctor.id} value={doctor.id}>
+              {doctor.profile.name}
+              {doctor.specialty ? ` — ${doctor.specialty}` : ""}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {doctors.length === 0 && <p className="text-xs text-muted-foreground">No doctors on file yet.</p>}
+    </div>
   );
 }

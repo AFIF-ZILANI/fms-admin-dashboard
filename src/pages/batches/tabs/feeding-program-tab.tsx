@@ -134,6 +134,13 @@ export function FeedingProgramTab({ batch }: { batch: Batch }) {
         </Button>
       </div>
 
+      {consumptions && consumptions.total > consumptions.results.length && (
+        <p className="text-xs text-muted-foreground">
+          Showing the latest {consumptions.results.length} of {consumptions.total} consumption records — "Actual
+          consumed" may undercount early-cycle rows.
+        </p>
+      )}
+
       <DataTable
         columns={columns}
         rows={(data?.results ?? []).sort((a, b) => a.start_day - b.start_day)}

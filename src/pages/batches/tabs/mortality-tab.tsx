@@ -70,6 +70,13 @@ export function MortalityTab({ batch }: { batch: Batch }) {
         </CardContent>
       </Card>
 
+      {data && data.total > data.results.length && (
+        <p className="text-xs text-muted-foreground">
+          Showing the latest {data.results.length} of {data.total} mortality logs — the chart may not reflect full
+          cumulative history.
+        </p>
+      )}
+
       <div className="flex justify-end">
         <Button size="sm" onClick={() => setFormOpen(true)}>
           <Plus />

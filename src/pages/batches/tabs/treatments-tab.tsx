@@ -21,11 +21,27 @@ export function TreatmentsTab({ batch }: { batch: Batch }) {
     ["vaccinations", batch.id],
   );
 
+  const { data: admins } = useGetData<Paginated<{ id: string; profile: { id: string; name: string } }>>(
+    "/admins?limit=100",
+    ["admins"],
+  );
+  const { data: doctors } = useGetData<Paginated<{ id: string; profile: { id: string; name: string } }>>(
+    "/doctors?limit=100",
+    ["doctors"],
+  );
+
+  const adminName = (profileId: string) =>
+    admins?.results.find((a) => a.profile.id === profileId)?.profile.name ?? "—";
+  const doctorName = (doctorId: string | null) =>
+    doctorId ? (doctors?.results.find((d) => d.id === doctorId)?.profile.name ?? "—") : "—";
+
   const medicationColumns: Column<Medication>[] = [
     { key: "date", header: "Date", render: (m) => new Date(m.date).toLocaleDateString() },
     { key: "medicine", header: "Medicine", render: (m) => m.medicine_name },
     { key: "dosage", header: "Dosage", render: (m) => m.dosage },
     { key: "cause", header: "Cause", render: (m) => m.cause ?? "—" },
+    { key: "administered_by", header: "Administered by", render: (m) => adminName(m.administered_by_id) },
+    { key: "doctor", header: "Doctor", render: (m) => doctorName(m.doctor_id) },
     { key: "remarks", header: "Remarks", render: (m) => m.remarks ?? "—" },
   ];
 
@@ -34,6 +50,8 @@ export function TreatmentsTab({ batch }: { batch: Batch }) {
     { key: "vaccine", header: "Vaccine", render: (v) => v.vaccine_name },
     { key: "dosage", header: "Dosage", render: (v) => v.dosage, numeric: true },
     { key: "cause", header: "Cause", render: (v) => v.cause ?? "—" },
+    { key: "administered_by", header: "Administered by", render: (v) => adminName(v.administered_by_id) },
+    { key: "doctor", header: "Doctor", render: (v) => doctorName(v.doctor_id) },
     { key: "remarks", header: "Remarks", render: (v) => v.remarks ?? "—" },
   ];
 
