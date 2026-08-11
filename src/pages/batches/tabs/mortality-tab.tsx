@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Skull } from "lucide-react";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import type { TooltipValueType } from "recharts";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { useGetData, type Paginated } from "@/lib/api";
 import type { Batch, MortalityLog } from "@/pages/batches/types";
 import { MortalityFormDialog } from "@/pages/batches/tabs/mortality-form-dialog";
+import { CHART_HEIGHT, chartAxisProps, chartGridProps, chartTooltipContentStyle, SINGLE_SERIES_STROKE } from "@/pages/analytics/chart-theme";
 
 export function MortalityTab({ batch }: { batch: Batch }) {
   const [formOpen, setFormOpen] = useState(false);
@@ -23,8 +28,48 @@ export function MortalityTab({ batch }: { batch: Batch }) {
     { key: "cause", header: "Cause", render: (m) => m.cause_note ?? "—" },
   ];
 
+  const cumulativeSeries = useMemo(() => {
+    const byDate = new Map<string, number>();
+    for (const log of data?.results ?? []) {
+      const key = log.date.slice(0, 10);
+      byDate.set(key, (byDate.get(key) ?? 0) + log.count_died);
+    }
+    const sortedDates = Array.from(byDate.keys()).sort();
+    let running = 0;
+    return sortedDates.map((date) => {
+      running += byDate.get(date)!;
+      return { date, cumulative: running };
+    });
+  }, [data]);
+
   return (
     <div className="flex flex-col gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Cumulative mortality</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading && <Skeleton style={{ height: CHART_HEIGHT }} className="w-full" />}
+          {!isLoading && cumulativeSeries.length === 0 && (
+            <p className="text-sm text-muted-foreground">No mortality logged yet.</p>
+          )}
+          {!isLoading && cumulativeSeries.length > 0 && (
+            <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+              <LineChart data={cumulativeSeries}>
+                <CartesianGrid {...chartGridProps} />
+                <XAxis dataKey="date" {...chartAxisProps} />
+                <YAxis {...chartAxisProps} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={chartTooltipContentStyle}
+                  formatter={(v: TooltipValueType | undefined) => [String(v), "Cumulative died"]}
+                />
+                <Line type="monotone" dataKey="cumulative" name="Cumulative died" stroke={SINGLE_SERIES_STROKE} strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="flex justify-end">
         <Button size="sm" onClick={() => setFormOpen(true)}>
           <Plus />
