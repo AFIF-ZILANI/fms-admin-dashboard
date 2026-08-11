@@ -99,3 +99,40 @@ export type EnvironmentRecord = {
 export function liveBirdCount(batch: Pick<Batch, "houseBalances">): number {
   return batch.houseBalances.reduce((sum, b) => sum + b.quantity, 0);
 }
+
+export type Medication = {
+  id: string;
+  batch_id: string;
+  consumption_id: string | null;
+  medicine_name: string;
+  dosage: string;
+  cause: string | null;
+  period: string | null;
+  administered_by_id: string;
+  doctor_id: string | null;
+  remarks: string | null;
+  date: string;
+};
+
+export type Vaccination = {
+  id: string;
+  batch_id: string;
+  consumption_id: string | null;
+  vaccine_name: string;
+  dosage: number;
+  cause: string | null;
+  period: string | null;
+  administered_by_id: string;
+  doctor_id: string | null;
+  remarks: string | null;
+  date: string;
+};
+
+export type Consumption = {
+  id: string;
+  batch_id: string | null;
+  house_id: string;
+  item_id: string;
+  quantity: string;
+  date: string;
+};
