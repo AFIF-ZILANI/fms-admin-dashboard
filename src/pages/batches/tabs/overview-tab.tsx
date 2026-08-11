@@ -2,7 +2,7 @@ import { Bird, Calendar, Home, Skull, TrendingUp } from "lucide-react";
 import { KPICard } from "@/components/shared/kpi-card";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { useGetData, type Paginated } from "@/lib/api";
-import { humanizeEnum } from "@/lib/utils";
+import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { liveBirdCount, type Batch, type HouseBalance, type MortalityLog, type WeightRecord } from "@/pages/batches/types";
 
 function ageInDays(startingDate: string): number {
@@ -52,7 +52,7 @@ export function OverviewTab({ batch }: { batch: Batch }) {
         />
         <KPICard
           label="Latest avg weight"
-          value={latestWeight ? `${latestWeight.average_wt_grams} g` : "—"}
+          value={latestWeight ? `${formatMoney(latestWeight.average_wt_grams)} g` : "—"}
           icon={TrendingUp}
         />
       </div>

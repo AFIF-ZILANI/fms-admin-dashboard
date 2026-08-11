@@ -22,13 +22,18 @@ export function WeightTab({ batch }: { batch: Batch }) {
 
   const houseName = (id: string) => batch.houseBalances.find((b) => b.house_id === id)?.house.name ?? id;
 
-  const growthSeries = useMemo(
-    () =>
-      (data?.results ?? [])
-        .map((w) => ({ date: w.date.slice(0, 10), weight: parseFloat(w.average_wt_grams) }))
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [data],
-  );
+  const growthSeries = useMemo(() => {
+    const byDate = new Map<string, number[]>();
+    for (const w of data?.results ?? []) {
+      const key = w.date.slice(0, 10);
+      const list = byDate.get(key) ?? [];
+      list.push(parseFloat(w.average_wt_grams));
+      byDate.set(key, list);
+    }
+    return Array.from(byDate.entries())
+      .map(([date, weights]) => ({ date, weight: weights.reduce((sum, w) => sum + w, 0) / weights.length }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [data]);
 
   const columns: Column<WeightRecord>[] = [
     { key: "date", header: "Date", render: (w) => new Date(w.date).toLocaleDateString() },

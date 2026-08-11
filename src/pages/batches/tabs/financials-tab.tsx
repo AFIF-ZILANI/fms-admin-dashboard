@@ -6,14 +6,18 @@ import type { Batch } from "@/pages/batches/types";
 import type { BatchPnl } from "@/pages/finance/types";
 
 export function FinancialsTab({ batch }: { batch: Batch }) {
-  const { data: pnl, isLoading } = useGetData<BatchPnl>(`/analytics/batches/${batch.id}/pnl`, [
+  const { data: pnl, isLoading, isError } = useGetData<BatchPnl>(`/analytics/batches/${batch.id}/pnl`, [
     "analytics",
     "pnl",
     batch.id,
   ]);
 
-  if (isLoading || !pnl) {
+  if (isLoading) {
     return <Skeleton className="h-64 w-full" />;
+  }
+
+  if (isError || !pnl) {
+    return <p className="text-sm text-muted-foreground">Couldn't load financials for this batch.</p>;
   }
 
   return (
