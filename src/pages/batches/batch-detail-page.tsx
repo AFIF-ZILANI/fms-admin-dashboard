@@ -18,6 +18,7 @@ import { WeightTab } from "@/pages/batches/tabs/weight-tab";
 import { FeedingProgramTab } from "@/pages/batches/tabs/feeding-program-tab";
 import { EnvironmentTab } from "@/pages/batches/tabs/environment-tab";
 import { TreatmentsTab } from "@/pages/batches/tabs/treatments-tab";
+import { FinancialsTab } from "@/pages/batches/tabs/financials-tab";
 
 const STATUS_TONE: Record<BatchStatus, Tone> = { RUNNING: "success", CLOSED: "neutral", SOLD: "neutral" };
 
@@ -25,8 +26,7 @@ function ageInDays(startingDate: string): number {
   return Math.floor((Date.now() - new Date(startingDate).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-// ponytail: Financials is the only tab left out — it needs
-// Purchases/Sales/Expenses, none built yet.
+// See docs/batches-redesign-design.md for the full page design.
 export function BatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -92,6 +92,7 @@ export function BatchDetailPage() {
           <TabsTrigger value="feeding">Feeding Program</TabsTrigger>
           <TabsTrigger value="treatments">Treatments</TabsTrigger>
           <TabsTrigger value="environment">Environment</TabsTrigger>
+          <TabsTrigger value="financials">Financials</TabsTrigger>
         </TabsList>
         <TabsContent value="overview">
           <OverviewTab batch={batch} />
@@ -113,6 +114,9 @@ export function BatchDetailPage() {
         </TabsContent>
         <TabsContent value="environment">
           <EnvironmentTab batch={batch} />
+        </TabsContent>
+        <TabsContent value="financials">
+          <FinancialsTab batch={batch} />
         </TabsContent>
       </Tabs>
 
