@@ -7,6 +7,7 @@ import { WarehousesTab } from "@/pages/inventory/warehouses-tab";
 import { OrganizationsTab } from "@/pages/inventory/organizations-tab";
 import { AdjustmentsTab } from "@/pages/inventory/adjustments-tab";
 import { StockLedgerTab } from "@/pages/inventory/stock-ledger-tab";
+import { ConsumptionLogTab } from "@/pages/inventory/consumption-log-tab";
 
 export function InventoryPage() {
   usePageTitle("Inventory");
@@ -22,6 +23,7 @@ export function InventoryPage() {
           <TabsTrigger value="stock-ledger">Stock Ledger</TabsTrigger>
           <TabsTrigger value="warehouses">Warehouses</TabsTrigger>
           <TabsTrigger value="organizations">Organizations</TabsTrigger>
+          <TabsTrigger value="consumption-log">Consumption Log</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="items">
@@ -41,6 +43,9 @@ export function InventoryPage() {
       </TabsContent>
       <TabsContent value="organizations">
         <OrganizationsTab />
+      </TabsContent>
+      <TabsContent value="consumption-log">
+        <ConsumptionLogTab />
       </TabsContent>
     </Tabs>
   );
