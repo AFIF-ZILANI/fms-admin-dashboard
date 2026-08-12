@@ -79,7 +79,11 @@ export function DataTable<T>({ columns, rows, rowKey, isLoading, onRowClick, emp
                   {col.sortValue ? (
                     <button
                       type="button"
-                      onClick={() => tanstackCol?.toggleSorting(sortDir === "asc")}
+                      onClick={() => {
+                        if (sortDir === "asc") tanstackCol?.toggleSorting(true);
+                        else if (sortDir === "desc") tanstackCol?.clearSorting();
+                        else tanstackCol?.toggleSorting(false);
+                      }}
                       className={cn(
                         "inline-flex items-center gap-1 hover:text-foreground",
                         col.numeric && "flex-row-reverse"
