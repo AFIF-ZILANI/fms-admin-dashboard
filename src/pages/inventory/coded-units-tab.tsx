@@ -10,6 +10,7 @@ import { humanizeEnum } from "@/lib/utils";
 import { STOCK_UNIT_STATUSES, type StockUnit, type StockUnitStatus } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
 import { ProvisionCodesDialog } from "@/pages/inventory/provision-codes-dialog";
+import { BindCodeDialog } from "@/pages/inventory/bind-code-dialog";
 
 const STATUS_TONE: Record<StockUnitStatus, Tone> = {
   UNASSIGNED: "info",
@@ -27,6 +28,7 @@ export function CodedUnitsTab() {
   const [categoryFilter, setCategoryFilter] = useState<(typeof CODED_CATEGORIES)[number] | "ALL">("ALL");
   const [houseFilter, setHouseFilter] = useState<string>("ALL");
   const [provisionOpen, setProvisionOpen] = useState(false);
+  const [bindOpen, setBindOpen] = useState(false);
 
   const query = new URLSearchParams({ limit: "100" });
   if (statusFilter !== "ALL") query.set("status", statusFilter);
@@ -81,7 +83,10 @@ export function CodedUnitsTab() {
         <KPICard label="Disposed" value={counts.DISPOSED ?? 0} icon={XCircle} />
       </div>
 
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="outline" onClick={() => setBindOpen(true)}>
+          Bind code
+        </Button>
         <Button onClick={() => setProvisionOpen(true)}>
           <Plus />
           Provision blank codes
@@ -149,6 +154,7 @@ export function CodedUnitsTab() {
       />
 
       <ProvisionCodesDialog open={provisionOpen} onOpenChange={setProvisionOpen} />
+      <BindCodeDialog open={bindOpen} onOpenChange={setBindOpen} />
     </div>
   );
 }
