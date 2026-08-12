@@ -3,6 +3,24 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+/* Print-isolation for "Provision blank codes" (web/src/pages/inventory/provision-codes-dialog.tsx) --
+   visibility-based so it survives the dialog's own fixed positioning, unlike display:none toggles. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-codes,
+  #printable-codes * {
+    visibility: visible;
+  }
+  #printable-codes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

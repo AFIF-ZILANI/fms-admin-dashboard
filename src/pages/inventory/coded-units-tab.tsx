@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { CheckCircle2, Clock, QrCode as QrCodeIcon, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Plus, QrCode as QrCodeIcon, XCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge, type Tone } from "@/components/shared/status-badge";
@@ -8,6 +9,7 @@ import { useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { STOCK_UNIT_STATUSES, type StockUnit, type StockUnitStatus } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
+import { ProvisionCodesDialog } from "@/pages/inventory/provision-codes-dialog";
 
 const STATUS_TONE: Record<StockUnitStatus, Tone> = {
   UNASSIGNED: "info",
@@ -24,6 +26,7 @@ export function CodedUnitsTab() {
   const [statusFilter, setStatusFilter] = useState<StockUnitStatus | "ALL">("ALL");
   const [categoryFilter, setCategoryFilter] = useState<(typeof CODED_CATEGORIES)[number] | "ALL">("ALL");
   const [houseFilter, setHouseFilter] = useState<string>("ALL");
+  const [provisionOpen, setProvisionOpen] = useState(false);
 
   const query = new URLSearchParams({ limit: "100" });
   if (statusFilter !== "ALL") query.set("status", statusFilter);
@@ -76,6 +79,13 @@ export function CodedUnitsTab() {
         <KPICard label="In stock" value={counts.IN_STOCK ?? 0} icon={CheckCircle2} />
         <KPICard label="In use" value={counts.IN_USE ?? 0} icon={Clock} />
         <KPICard label="Disposed" value={counts.DISPOSED ?? 0} icon={XCircle} />
+      </div>
+
+      <div className="flex items-center justify-end">
+        <Button onClick={() => setProvisionOpen(true)}>
+          <Plus />
+          Provision blank codes
+        </Button>
       </div>
 
       <div className="flex items-center gap-2">
@@ -134,8 +144,11 @@ export function CodedUnitsTab() {
           icon: QrCodeIcon,
           title: "No coded units yet",
           description: "Provision blank codes to start tracking medicine, vaccine, and equipment units.",
+          action: { label: "Provision blank codes", onClick: () => setProvisionOpen(true) },
         }}
       />
+
+      <ProvisionCodesDialog open={provisionOpen} onOpenChange={setProvisionOpen} />
     </div>
   );
 }
