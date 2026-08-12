@@ -5,6 +5,7 @@ import { ItemCatalogTab } from "@/pages/inventory/item-catalog-tab";
 import { LowStockTab } from "@/pages/inventory/low-stock-tab";
 import { WarehousesTab } from "@/pages/inventory/warehouses-tab";
 import { OrganizationsTab } from "@/pages/inventory/organizations-tab";
+import { AdjustmentsTab } from "@/pages/inventory/adjustments-tab";
 
 export function InventoryPage() {
   usePageTitle("Inventory");
@@ -16,6 +17,7 @@ export function InventoryPage() {
         <TabsList>
           <TabsTrigger value="items">Item Catalog</TabsTrigger>
           <TabsTrigger value="low-stock">Low-Stock</TabsTrigger>
+          <TabsTrigger value="adjustments">Adjustments</TabsTrigger>
           <TabsTrigger value="warehouses">Warehouses</TabsTrigger>
           <TabsTrigger value="organizations">Organizations</TabsTrigger>
         </TabsList>
@@ -25,6 +27,9 @@ export function InventoryPage() {
       </TabsContent>
       <TabsContent value="low-stock">
         <LowStockTab />
+      </TabsContent>
+      <TabsContent value="adjustments">
+        <AdjustmentsTab />
       </TabsContent>
       <TabsContent value="warehouses">
         <WarehousesTab />
