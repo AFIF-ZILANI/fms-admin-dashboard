@@ -115,7 +115,7 @@ export type Asset = {
   status: AssetStatus;
   created_at: string;
   stock_unit?: StockUnit;
-  depreciations: AssetDepreciation[];
+  depreciations?: AssetDepreciation[];
 };
 
 export type StockUnit = {
@@ -129,7 +129,7 @@ export type StockUnit = {
   bound_by_id: string | null;
   bound_at: string | null;
   created_at: string;
-  purchase_item: PurchaseItemOption | null;
+  purchase_item: PurchaseItemLine | null;
   house: House | null;
   asset: Asset | null;
 };
