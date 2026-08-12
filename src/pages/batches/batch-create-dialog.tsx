@@ -118,8 +118,8 @@ export function BatchCreateDialog({
   }, [startingDate]);
 
   const { data: houses } = useGetData<Paginated<House>>(
-    "/houses?is_active=true&isavailable=true&limit=100",
-    ["houses", "active"],
+    "/houses?is_active=true&is_available=true&type=BROODER&limit=100",
+    ["houses", "available", "brooder"],
   );
 
   const createBatch = usePostData<Batch, BatchFormValues>("/batches", [
@@ -327,6 +327,11 @@ export function BatchCreateDialog({
             {errors.house_id && (
               <p className="text-xs text-destructive">
                 {errors.house_id.message}
+              </p>
+            )}
+            {houses && houses.results.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                No brooder houses available — all are occupied by a running batch.
               </p>
             )}
           </div>
