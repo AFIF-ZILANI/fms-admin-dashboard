@@ -11,8 +11,9 @@ import { STOCK_UNIT_STATUSES, type StockUnit, type StockUnitStatus } from "@/pag
 import type { House } from "@/pages/houses/types";
 import { ProvisionCodesDialog } from "@/pages/inventory/provision-codes-dialog";
 import { BindCodeDialog } from "@/pages/inventory/bind-code-dialog";
+import { StockUnitDetailSheet } from "@/pages/inventory/stock-unit-detail-sheet";
 
-const STATUS_TONE: Record<StockUnitStatus, Tone> = {
+export const STATUS_TONE: Record<StockUnitStatus, Tone> = {
   UNASSIGNED: "info",
   IN_STOCK: "success",
   IN_USE: "info",
@@ -29,6 +30,7 @@ export function CodedUnitsTab() {
   const [houseFilter, setHouseFilter] = useState<string>("ALL");
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [bindOpen, setBindOpen] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState<StockUnit | null>(null);
 
   const query = new URLSearchParams({ limit: "100" });
   if (statusFilter !== "ALL") query.set("status", statusFilter);
@@ -145,6 +147,7 @@ export function CodedUnitsTab() {
         rows={units}
         rowKey={(u) => u.id}
         isLoading={isLoading}
+        onRowClick={(u) => setSelectedUnit(u)}
         empty={{
           icon: QrCodeIcon,
           title: "No coded units yet",
@@ -155,6 +158,7 @@ export function CodedUnitsTab() {
 
       <ProvisionCodesDialog open={provisionOpen} onOpenChange={setProvisionOpen} />
       <BindCodeDialog open={bindOpen} onOpenChange={setBindOpen} />
+      <StockUnitDetailSheet unit={selectedUnit} onOpenChange={(open) => !open && setSelectedUnit(null)} />
     </div>
   );
 }
