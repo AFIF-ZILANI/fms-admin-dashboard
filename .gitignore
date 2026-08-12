@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 /graphify-out
+
+# local worktrees for isolated agent work
+.worktrees
