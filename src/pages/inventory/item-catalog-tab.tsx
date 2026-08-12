@@ -1,18 +1,19 @@
 import { useState } from "react";
-import { Package, Pencil, Plus, Search, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Package, Pencil, Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus } from "@/components/shared/status-tone";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
-import { RESOURCE_CATEGORIES, type Item, type ResourceCategory } from "@/pages/inventory/types";
+import { RESOURCE_CATEGORIES, type Item, type LowStockItem, type ResourceCategory } from "@/pages/inventory/types";
 import { ItemFormDialog } from "@/pages/inventory/item-form-dialog";
 
-export function ItemCatalogTab() {
+export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void }) {
   const [categoryFilter, setCategoryFilter] = useState<ResourceCategory | "ALL">("ALL");
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
@@ -30,6 +31,14 @@ export function ItemCatalogTab() {
   const items = q
     ? allItems.filter((i) => i.name.toLowerCase().includes(q) || humanizeEnum(i.category).toLowerCase().includes(q))
     : allItems;
+
+  const totalItems = data?.total ?? allItems.length;
+  const activeCount = allItems.filter((i) => i.is_active).length;
+  const { data: lowStockItems, isLoading: lowStockLoading } = useGetData<LowStockItem[]>(
+    "/items/low-stock",
+    ["items", "low-stock"]
+  );
+  const lowStockCount = lowStockItems?.length ?? 0;
 
   const deactivate = usePostData<Item, string>((id) => `/items/${id}/deactivate`, ["items"]);
   const reactivate = usePostData<Item, string>((id) => `/items/${id}/reactivate`, ["items"]);
@@ -89,6 +98,14 @@ export function ItemCatalogTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <KPICard label="Total items" value={totalItems} icon={Package} isLoading={isLoading} />
+        <KPICard label="Active" value={activeCount} icon={CheckCircle2} isLoading={isLoading} />
+        <button type="button" onClick={onViewLowStock} className="text-left">
+          <KPICard label="Below reorder level" value={lowStockCount} icon={AlertTriangle} isLoading={lowStockLoading} />
+        </button>
+      </div>
+
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-3">
           <div className="relative w-full max-w-xs">
