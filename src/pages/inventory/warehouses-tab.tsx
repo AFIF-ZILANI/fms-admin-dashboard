@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pencil, Plus, Warehouse as WarehouseIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
 import type { Warehouse } from "@/pages/inventory/types";
 import { WarehouseFormDialog } from "@/pages/inventory/warehouse-form-dialog";
@@ -11,6 +12,7 @@ export function WarehousesTab() {
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | undefined>(undefined);
 
   const { data, isLoading } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
+  const totalWarehouses = data?.total ?? data?.results.length ?? 0;
 
   const openCreate = () => {
     setEditingWarehouse(undefined);
@@ -40,6 +42,10 @@ export function WarehousesTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <KPICard label="Total warehouses" value={totalWarehouses} icon={WarehouseIcon} isLoading={isLoading} />
+      </div>
+
       <div className="flex items-center justify-end">
         <Button onClick={openCreate}>
           <Plus />

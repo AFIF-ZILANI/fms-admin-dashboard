@@ -1,5 +1,6 @@
-import { CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { LowStockItem } from "@/pages/inventory/types";
@@ -33,16 +34,22 @@ export function LowStockTab() {
   ];
 
   return (
-    <DataTable
-      columns={columns}
-      rows={items}
-      rowKey={(i) => i.id}
-      isLoading={isLoading}
-      empty={{
-        icon: CheckCircle2,
-        title: "Nothing below reorder level right now",
-        description: "Every tracked item has enough stock.",
-      }}
-    />
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <KPICard label="Below reorder level" value={items.length} icon={AlertTriangle} isLoading={isLoading} />
+      </div>
+
+      <DataTable
+        columns={columns}
+        rows={items}
+        rowKey={(i) => i.id}
+        isLoading={isLoading}
+        empty={{
+          icon: CheckCircle2,
+          title: "Nothing below reorder level right now",
+          description: "Every tracked item has enough stock.",
+        }}
+      />
+    </div>
   );
 }

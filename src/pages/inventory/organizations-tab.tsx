@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Building2, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
 import type { Organization } from "@/pages/inventory/types";
 import { OrganizationFormDialog } from "@/pages/inventory/organization-form-dialog";
@@ -11,6 +12,7 @@ export function OrganizationsTab() {
   const [editingOrganization, setEditingOrganization] = useState<Organization | undefined>(undefined);
 
   const { data, isLoading } = useGetData<Paginated<Organization>>("/organizations?limit=100", ["organizations"]);
+  const totalOrganizations = data?.total ?? data?.results.length ?? 0;
 
   const openCreate = () => {
     setEditingOrganization(undefined);
@@ -40,6 +42,10 @@ export function OrganizationsTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <KPICard label="Total organizations" value={totalOrganizations} icon={Building2} isLoading={isLoading} />
+      </div>
+
       <div className="flex items-center justify-end">
         <Button onClick={openCreate}>
           <Plus />

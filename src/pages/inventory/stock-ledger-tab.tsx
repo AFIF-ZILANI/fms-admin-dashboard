@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { BookText, Plus } from "lucide-react";
+import { BookText, PackageMinus, PackagePlus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
@@ -27,6 +28,17 @@ export function StockLedgerTab() {
   ]);
 
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
+
+  // KPI counts always reflect the unfiltered full set, not the currently-filtered view --
+  // fetched separately so applying a filter doesn't make the tiles change (same pattern as Coded Units).
+  const { data: allEntries, isLoading: allEntriesLoading } = useGetData<Paginated<StockLedgerEntry>>(
+    "/stock-ledger?limit=100",
+    ["stock-ledger", "ALL", "ALL", "ALL"]
+  );
+  const allEntryResults = allEntries?.results ?? [];
+  const totalEntries = allEntries?.total ?? allEntryResults.length;
+  const inCount = allEntryResults.filter((e) => e.direction === "IN").length;
+  const outCount = allEntryResults.filter((e) => e.direction === "OUT").length;
 
   const columns: Column<StockLedgerEntry>[] = [
     {
@@ -54,6 +66,12 @@ export function StockLedgerTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <KPICard label="Total entries" value={totalEntries} icon={BookText} isLoading={allEntriesLoading} />
+        <KPICard label="In movements" value={inCount} icon={PackagePlus} isLoading={allEntriesLoading} />
+        <KPICard label="Out movements" value={outCount} icon={PackageMinus} isLoading={allEntriesLoading} />
+      </div>
+
       <div className="flex items-center justify-end">
         <Button onClick={() => setOpeningBalanceOpen(true)}>
           <Plus />

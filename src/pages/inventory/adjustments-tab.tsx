@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ClipboardEdit, Plus } from "lucide-react";
+import { ClipboardEdit, Plus, TrendingDown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { InventoryAdjustment } from "@/pages/inventory/types";
@@ -13,6 +14,10 @@ export function AdjustmentsTab() {
   const { data, isLoading } = useGetData<Paginated<InventoryAdjustment>>("/inventory-adjustments?limit=100", [
     "inventory-adjustments",
   ]);
+  const adjustments = data?.results ?? [];
+  const totalAdjustments = data?.total ?? adjustments.length;
+  const increaseCount = adjustments.filter((a) => parseFloat(a.adjustment_quantity) > 0).length;
+  const decreaseCount = adjustments.filter((a) => parseFloat(a.adjustment_quantity) < 0).length;
 
   const columns: Column<InventoryAdjustment>[] = [
     {
@@ -46,6 +51,12 @@ export function AdjustmentsTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <KPICard label="Total adjustments" value={totalAdjustments} icon={ClipboardEdit} isLoading={isLoading} />
+        <KPICard label="Increases" value={increaseCount} icon={TrendingUp} isLoading={isLoading} />
+        <KPICard label="Decreases" value={decreaseCount} icon={TrendingDown} isLoading={isLoading} />
+      </div>
+
       <div className="flex items-center justify-end">
         <Button onClick={() => setFormOpen(true)}>
           <Plus />
@@ -55,7 +66,7 @@ export function AdjustmentsTab() {
 
       <DataTable
         columns={columns}
-        rows={data?.results ?? []}
+        rows={adjustments}
         rowKey={(a) => a.id}
         isLoading={isLoading}
         empty={{

@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { ListTree } from "lucide-react";
+import { ListTree, QrCode as QrCodeIcon, Wheat } from "lucide-react";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
 import type { Consumption, Item } from "@/pages/inventory/types";
 import type { Batch } from "@/pages/batches/types";
@@ -34,6 +35,17 @@ export function ConsumptionLogTab() {
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
 
+  // KPI counts always reflect the unfiltered full set, not the currently-filtered view --
+  // fetched separately so applying a filter doesn't make the tiles change (same pattern as Coded Units).
+  const { data: allConsumptions, isLoading: allConsumptionsLoading } = useGetData<Paginated<Consumption>>(
+    "/consumptions?limit=100",
+    ["consumptions", "ALL", "ALL", "ALL", "", ""]
+  );
+  const allConsumptionResults = allConsumptions?.results ?? [];
+  const totalConsumptions = allConsumptions?.total ?? allConsumptionResults.length;
+  const codedCount = allConsumptionResults.filter((c) => c.stock_unit_id !== null).length;
+  const aggregateCount = allConsumptionResults.filter((c) => c.stock_unit_id === null).length;
+
   const columns: Column<Consumption>[] = [
     {
       key: "date",
@@ -54,6 +66,17 @@ export function ConsumptionLogTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <KPICard label="Total draws" value={totalConsumptions} icon={ListTree} isLoading={allConsumptionsLoading} />
+        <KPICard
+          label="From coded units"
+          value={codedCount}
+          icon={QrCodeIcon}
+          isLoading={allConsumptionsLoading}
+        />
+        <KPICard label="Aggregate draws" value={aggregateCount} icon={Wheat} isLoading={allConsumptionsLoading} />
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         <Select value={batchFilter} onValueChange={(v) => setBatchFilter(v ?? "ALL")}>
           <SelectTrigger className="w-40">
