@@ -1,9 +1,12 @@
-import { Boxes, CheckCircle2, Wallet, XCircle } from "lucide-react";
+import { useState } from "react";
+import { Boxes, CheckCircle2, Plus, Wallet, XCircle } from "lucide-react";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge, type Tone } from "@/components/shared/status-badge";
+import { Button } from "@/components/ui/button";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { AssetCreateDialog } from "@/pages/inventory/asset-create-dialog";
 import type { Asset, AssetStatus } from "@/pages/inventory/types";
 
 const STATUS_TONE: Record<AssetStatus, Tone> = { ACTIVE: "success", RETIRED: "neutral", DISPOSED: "neutral" };
@@ -14,6 +17,7 @@ function bookValue(asset: Asset): number {
 }
 
 export function AssetsTab() {
+  const [createOpen, setCreateOpen] = useState(false);
   const { data, isLoading } = useGetData<Paginated<Asset>>("/assets?limit=100", ["assets"]);
   const assets = data?.results ?? [];
 
@@ -35,6 +39,13 @@ export function AssetsTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-end">
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus />
+          Add asset
+        </Button>
+      </div>
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Active" value={activeCount} icon={CheckCircle2} isLoading={isLoading} />
         <KPICard label="Retired / disposed" value={retiredOrDisposedCount} icon={XCircle} isLoading={isLoading} />
@@ -50,8 +61,11 @@ export function AssetsTab() {
           icon: Boxes,
           title: "No assets yet",
           description: "Register equipment as an asset to track its depreciation.",
+          action: { label: "Add asset", onClick: () => setCreateOpen(true) },
         }}
       />
+
+      <AssetCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }
