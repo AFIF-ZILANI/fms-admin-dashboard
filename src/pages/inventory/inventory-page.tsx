@@ -23,8 +23,8 @@ export function InventoryPage() {
           <TabsTrigger value="low-stock">Low-Stock</TabsTrigger>
           <TabsTrigger value="coded-units">Coded Units</TabsTrigger>
           <TabsTrigger value="assets">Assets</TabsTrigger>
-          <TabsTrigger value="adjustments">Adjustments</TabsTrigger>
           <TabsTrigger value="stock-ledger">Stock Ledger</TabsTrigger>
+          <TabsTrigger value="adjustments">Adjustments</TabsTrigger>
           <TabsTrigger value="warehouses">Warehouses</TabsTrigger>
           <TabsTrigger value="organizations">Organizations</TabsTrigger>
           <TabsTrigger value="consumption-log">Consumption Log</TabsTrigger>
@@ -42,11 +42,11 @@ export function InventoryPage() {
       <TabsContent value="assets">
         <AssetsTab />
       </TabsContent>
-      <TabsContent value="adjustments">
-        <AdjustmentsTab />
-      </TabsContent>
       <TabsContent value="stock-ledger">
         <StockLedgerTab />
+      </TabsContent>
+      <TabsContent value="adjustments">
+        <AdjustmentsTab />
       </TabsContent>
       <TabsContent value="warehouses">
         <WarehousesTab />
