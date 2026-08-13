@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { AssetCreateDialog } from "@/pages/inventory/asset-create-dialog";
+import { AssetDetailSheet } from "@/pages/inventory/asset-detail-sheet";
 import type { Asset, AssetStatus } from "@/pages/inventory/types";
 
 const STATUS_TONE: Record<AssetStatus, Tone> = { ACTIVE: "success", RETIRED: "neutral", DISPOSED: "neutral" };
@@ -18,6 +19,7 @@ function bookValue(asset: Asset): number {
 
 export function AssetsTab() {
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const { data, isLoading } = useGetData<Paginated<Asset>>("/assets?limit=100", ["assets"]);
   const assets = data?.results ?? [];
 
@@ -57,6 +59,7 @@ export function AssetsTab() {
         rows={assets}
         rowKey={(a) => a.id}
         isLoading={isLoading}
+        onRowClick={(a) => setSelectedAssetId(a.id)}
         empty={{
           icon: Boxes,
           title: "No assets yet",
@@ -66,6 +69,7 @@ export function AssetsTab() {
       />
 
       <AssetCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <AssetDetailSheet assetId={selectedAssetId} onOpenChange={(open) => !open && setSelectedAssetId(null)} />
     </div>
   );
 }
