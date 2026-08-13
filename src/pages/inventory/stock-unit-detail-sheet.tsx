@@ -18,8 +18,8 @@ import { usePostData, useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Consumption, StockUnit } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
-// Reuse the one STATUS_TONE mapping for StockUnitStatus rather than keeping a second copy in sync (see coded-units-tab.tsx).
-import { STATUS_TONE } from "@/pages/inventory/coded-units-tab";
+// Reuse the one STOCK_UNIT_STATUS_TONE mapping rather than keeping a second copy in sync (see status-tone.ts).
+import { STOCK_UNIT_STATUS_TONE } from "@/components/shared/status-tone";
 
 type StockUnitDetailSheetProps = {
   unit: StockUnit | null;
@@ -86,7 +86,7 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
           <QrCode value={unit.code} size={140} />
 
           <div className="flex items-center justify-center gap-2">
-            <StatusBadge tone={STATUS_TONE[unit.status]} label={humanizeEnum(unit.status)} />
+            <StatusBadge tone={STOCK_UNIT_STATUS_TONE[unit.status]} label={humanizeEnum(unit.status)} />
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm">

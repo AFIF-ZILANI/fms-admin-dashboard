@@ -1,14 +1,13 @@
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { StatusBadge, type Tone } from "@/components/shared/status-badge";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { ASSET_STATUS_TONE } from "@/components/shared/status-tone";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { useGetData, usePatchData } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Asset, AssetDepreciation, AssetStatus } from "@/pages/inventory/types";
 import { History } from "lucide-react";
-
-const STATUS_TONE: Record<AssetStatus, Tone> = { ACTIVE: "success", RETIRED: "neutral", DISPOSED: "neutral" };
 
 type AssetDetailSheetProps = {
   assetId: string | null;
@@ -51,7 +50,7 @@ export function AssetDetailSheet({ assetId, onOpenChange }: AssetDetailSheetProp
           </SheetHeader>
 
           <div className="flex items-center gap-2">
-            <StatusBadge tone={STATUS_TONE[asset.status]} label={humanizeEnum(asset.status)} />
+            <StatusBadge tone={ASSET_STATUS_TONE[asset.status]} label={humanizeEnum(asset.status)} />
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm">

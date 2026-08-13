@@ -4,7 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
-import { StatusBadge, type Tone } from "@/components/shared/status-badge";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { STOCK_UNIT_STATUS_TONE } from "@/components/shared/status-tone";
 import { useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { STOCK_UNIT_STATUSES, type StockUnit, type StockUnitStatus } from "@/pages/inventory/types";
@@ -12,14 +13,6 @@ import type { House } from "@/pages/houses/types";
 import { ProvisionCodesDialog } from "@/pages/inventory/provision-codes-dialog";
 import { BindCodeDialog } from "@/pages/inventory/bind-code-dialog";
 import { StockUnitDetailSheet } from "@/pages/inventory/stock-unit-detail-sheet";
-
-export const STATUS_TONE: Record<StockUnitStatus, Tone> = {
-  UNASSIGNED: "info",
-  IN_STOCK: "success",
-  IN_USE: "info",
-  CONSUMED: "neutral",
-  DISPOSED: "neutral",
-};
 
 // Only medicine/vaccine/equipment get per-unit QR codes (docs/PRD.md §6.4 Notes) -- filter offers just those.
 const CODED_CATEGORIES = ["MEDICINE", "VACCINE", "EQUIPMENT"] as const;
@@ -65,7 +58,7 @@ export function CodedUnitsTab() {
     {
       key: "status",
       header: "Status",
-      render: (u) => <StatusBadge tone={STATUS_TONE[u.status]} label={humanizeEnum(u.status)} />,
+      render: (u) => <StatusBadge tone={STOCK_UNIT_STATUS_TONE[u.status]} label={humanizeEnum(u.status)} />,
     },
     { key: "house", header: "House", render: (u) => u.house?.name ?? "—" },
     {

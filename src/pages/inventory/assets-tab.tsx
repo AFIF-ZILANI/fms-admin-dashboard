@@ -2,15 +2,14 @@ import { useState } from "react";
 import { Boxes, CheckCircle2, Plus, Wallet, XCircle } from "lucide-react";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
-import { StatusBadge, type Tone } from "@/components/shared/status-badge";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { ASSET_STATUS_TONE } from "@/components/shared/status-tone";
 import { Button } from "@/components/ui/button";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { AssetCreateDialog } from "@/pages/inventory/asset-create-dialog";
 import { AssetDetailSheet } from "@/pages/inventory/asset-detail-sheet";
-import type { Asset, AssetStatus } from "@/pages/inventory/types";
-
-const STATUS_TONE: Record<AssetStatus, Tone> = { ACTIVE: "success", RETIRED: "neutral", DISPOSED: "neutral" };
+import type { Asset } from "@/pages/inventory/types";
 
 function bookValue(asset: Asset): number {
   const depreciated = (asset.depreciations ?? []).reduce((sum, d) => sum + parseFloat(d.amount), 0);
@@ -34,7 +33,7 @@ export function AssetsTab() {
     {
       key: "status",
       header: "Status",
-      render: (a) => <StatusBadge tone={STATUS_TONE[a.status]} label={humanizeEnum(a.status)} />,
+      render: (a) => <StatusBadge tone={ASSET_STATUS_TONE[a.status]} label={humanizeEnum(a.status)} />,
     },
     { key: "book_value", header: "Book value", render: (a) => formatMoney(bookValue(a)), numeric: true },
   ];
