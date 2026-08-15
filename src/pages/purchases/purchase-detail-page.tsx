@@ -27,7 +27,7 @@ export function PurchaseDetailPage() {
   // Purchase's own `supplier` relation has no name (see types.ts) — look it up separately.
   const { data: suppliers } = useGetData<Paginated<Supplier>>("/suppliers?limit=100", ["suppliers"]);
   const supplierName = suppliers?.results.find((s) => s.id === purchase?.supplier_id)?.profile.name;
-  const { trueAmounts } = useOutstanding("PURCHASE");
+  const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("PURCHASE");
 
   const columns: Column<PurchaseItemLine>[] = [
     { key: "item", header: "Item", render: (l) => l.item.name },
@@ -42,7 +42,7 @@ export function PurchaseDetailPage() {
     },
   ];
 
-  if (isLoading || !purchase) {
+  if (isLoading || outstandingLoading || !purchase) {
     return (
       <div className="flex flex-col gap-4">
         <Skeleton className="h-8 w-64" />

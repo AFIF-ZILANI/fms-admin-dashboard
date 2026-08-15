@@ -14,6 +14,7 @@ import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Supplier } from "@/pages/suppliers/types";
 import { SupplierFormDialog } from "@/pages/suppliers/supplier-form-dialog";
+import { useOutstanding } from "@/pages/sales/use-outstanding";
 
 type Purchase = {
   id: string;
@@ -49,19 +50,33 @@ export function SupplierDetailPage() {
     });
   };
 
+  const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("PURCHASE");
   const purchaseRows = purchases?.results ?? [];
   const totalPurchased = purchaseRows.reduce((sum, p) => sum + parseFloat(p.total_amount), 0);
-  const totalDue = purchaseRows.reduce((sum, p) => sum + parseFloat(p.due_amount), 0);
+  const totalDue = purchaseRows.reduce(
+    (sum, p) => sum + parseFloat(trueAmounts(p.id, p.paid_amount, p.due_amount).due),
+    0
+  );
 
   const purchaseColumns: Column<Purchase>[] = [
     { key: "date", header: "Date", render: (p) => new Date(p.purchase_date).toLocaleDateString() },
     { key: "invoice", header: "Invoice", render: (p) => p.invoice_no ?? "—" },
     { key: "total", header: "Total", render: (p) => formatMoney(p.total_amount), numeric: true },
-    { key: "paid", header: "Paid", render: (p) => formatMoney(p.paid_amount), numeric: true },
-    { key: "due", header: "Due", render: (p) => formatMoney(p.due_amount), numeric: true },
+    {
+      key: "paid",
+      header: "Paid",
+      render: (p) => formatMoney(trueAmounts(p.id, p.paid_amount, p.due_amount).paid),
+      numeric: true,
+    },
+    {
+      key: "due",
+      header: "Due",
+      render: (p) => formatMoney(trueAmounts(p.id, p.paid_amount, p.due_amount).due),
+      numeric: true,
+    },
   ];
 
-  if (isLoading || !supplier) {
+  if (isLoading || outstandingLoading || !supplier) {
     return (
       <div className="flex flex-col gap-4">
         <Skeleton className="h-8 w-64" />

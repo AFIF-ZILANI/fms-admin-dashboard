@@ -16,12 +16,14 @@ export function TopOutstandingSuppliersCard() {
     isLoading: purchasesLoading,
     isError: purchasesError,
   } = useGetData<Paginated<Purchase>>("/purchases?limit=100", ["purchases"]);
-  const { data: suppliers, isLoading: suppliersLoading } = useGetData<Paginated<Supplier>>("/suppliers?limit=100", [
-    "suppliers",
-  ]);
+  const {
+    data: suppliers,
+    isLoading: suppliersLoading,
+    isError: suppliersError,
+  } = useGetData<Paginated<Supplier>>("/suppliers?limit=100", ["suppliers"]);
   const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("PURCHASE");
   const isLoading = purchasesLoading || suppliersLoading || outstandingLoading;
-  const isError = purchasesError;
+  const isError = purchasesError || suppliersError;
 
   const dueBySupplier = new Map<string, number>();
   for (const p of purchases?.results ?? []) {
