@@ -15,6 +15,7 @@ import type { Purchase } from "@/pages/purchases/types";
 import type { Supplier } from "@/pages/suppliers/types";
 import { PurchaseCreateDialog } from "@/pages/purchases/purchase-create-dialog";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
+import { ReorderSuggestionsPanel } from "@/pages/purchases/reorder-suggestions-panel";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
 
 export function PurchaseHistoryTab() {
@@ -104,6 +105,8 @@ export function PurchaseHistoryTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <ReorderSuggestionsPanel onRecordPurchase={() => setCreateOpen(true)} />
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard
           label="Total purchases"
