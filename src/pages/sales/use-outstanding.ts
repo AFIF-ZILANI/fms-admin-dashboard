@@ -11,13 +11,13 @@ function sumByRef(payments: PaymentLite[]): Map<string, number> {
   return map;
 }
 
-/** Sale/BirdSale's own paid_amount/due_amount are create-time snapshots
- * (server/src/services/payment.service.ts) -- Payment rows recorded
- * afterward never mutate them. This nets actual payments against the
- * snapshot so every paid/due figure on the Sales page reflects reality,
- * matching the same convention PaymentCreateDialog's own "Remaining due"
- * display already uses (GET /payments/total-paid). */
-export function useOutstanding(refType: Extract<PaymentRefType, "SALE" | "BIRD_SALE">) {
+/** Sale/BirdSale/Purchase's own paid_amount/due_amount are create-time
+ * snapshots (server/src/services/payment.service.ts) -- Payment rows
+ * recorded afterward never mutate them. This nets actual payments against
+ * the snapshot so every paid/due figure reflects reality, matching the
+ * same convention PaymentCreateDialog's own "Remaining due" display
+ * already uses (GET /payments/total-paid). */
+export function useOutstanding(refType: Extract<PaymentRefType, "SALE" | "BIRD_SALE" | "PURCHASE">) {
   const { data, isLoading } = useGetData<Paginated<PaymentLite>>(`/payments?ref_type=${refType}&limit=100`, [
     "payments",
     refType,

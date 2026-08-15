@@ -58,3 +58,13 @@ export type GradeDistributionRow = {
   birds_count: number;
   revenue: string;
 };
+
+export type PurchasesByCategoryRow = {
+  category: string;
+  total: string;
+};
+
+export type PurchasesTrendPoint = {
+  date: string;
+  total: string;
+};
