@@ -13,6 +13,7 @@ import { formatMoney } from "@/lib/utils";
 import { paymentStatus, type Sale, type SaleItemLine } from "@/pages/sales/types";
 import type { Customer } from "@/pages/customers/types";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
+import { useOutstanding } from "@/pages/sales/use-outstanding";
 
 export function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ export function SaleDetailPage() {
   // Sale's own `customer` relation has no name (see types.ts) — look it up separately.
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
   const customerName = customers?.results.find((c) => c.id === sale?.customer_id)?.profile.name;
+  const { trueAmounts } = useOutstanding("SALE");
 
   const columns: Column<SaleItemLine>[] = [
     { key: "item", header: "Item", render: (l) => l.item.name },
@@ -42,7 +44,8 @@ export function SaleDetailPage() {
     );
   }
 
-  const status = paymentStatus(sale.paid_amount, sale.due_amount);
+  const amounts = trueAmounts(sale.id, sale.paid_amount, sale.due_amount);
+  const status = paymentStatus(amounts.paid, amounts.due);
 
   return (
     <div className="flex flex-col gap-6">
@@ -72,8 +75,8 @@ export function SaleDetailPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Total" value={formatMoney(sale.total)} icon={Receipt} />
-        <KPICard label="Paid" value={formatMoney(sale.paid_amount)} icon={Receipt} />
-        <KPICard label="Due" value={formatMoney(sale.due_amount)} icon={Receipt} />
+        <KPICard label="Paid" value={formatMoney(amounts.paid)} icon={Receipt} />
+        <KPICard label="Due" value={formatMoney(amounts.due)} icon={Receipt} />
       </div>
 
       <Card>

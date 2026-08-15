@@ -14,6 +14,7 @@ import { paymentStatus, type Sale } from "@/pages/sales/types";
 import type { Customer } from "@/pages/customers/types";
 import { SaleCreateDialog } from "@/pages/sales/sale-create-dialog";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
+import { useOutstanding } from "@/pages/sales/use-outstanding";
 
 export function RegularSalesTab() {
   const navigate = useNavigate();
@@ -46,23 +47,33 @@ export function RegularSalesTab() {
   // Sale's own `customer` relation has no name (see types.ts) — look it up separately.
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
   const customerName = (id: string | null) => customers?.results.find((c) => c.id === id)?.profile.name ?? "—";
+  const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("SALE");
 
   const sales = data?.results ?? [];
   const allResults = allSales?.results ?? [];
   const totalRevenue = allResults.reduce((sum, s) => sum + parseFloat(s.total), 0);
-  const totalDue = allResults.reduce((sum, s) => sum + parseFloat(s.due_amount), 0);
+  const totalDue = allResults.reduce(
+    (sum, s) => sum + parseFloat(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
+    0
+  );
 
   const columns: Column<Sale>[] = [
     { key: "date", header: "Date", render: (s) => new Date(s.sale_date).toLocaleDateString() },
     { key: "customer", header: "Customer", render: (s) => customerName(s.customer_id) },
     { key: "items", header: "Lines", render: (s) => s.items.length, numeric: true },
     { key: "total", header: "Total", render: (s) => formatMoney(s.total), numeric: true },
-    { key: "due", header: "Due", render: (s) => formatMoney(s.due_amount), numeric: true },
+    {
+      key: "due",
+      header: "Due",
+      render: (s) => formatMoney(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
+      numeric: true,
+    },
     {
       key: "payment_status",
       header: "Payment",
       render: (s) => {
-        const status = paymentStatus(s.paid_amount, s.due_amount);
+        const amounts = trueAmounts(s.id, s.paid_amount, s.due_amount);
+        const status = paymentStatus(amounts.paid, amounts.due);
         return <StatusBadge tone={status.tone} label={status.label} />;
       },
     },
@@ -98,7 +109,12 @@ export function RegularSalesTab() {
           isLoading={allSalesLoading}
         />
         <KPICard label="Total revenue" value={formatMoney(totalRevenue)} icon={Wallet} isLoading={allSalesLoading} />
-        <KPICard label="Outstanding due" value={formatMoney(totalDue)} icon={Wallet} isLoading={allSalesLoading} />
+        <KPICard
+          label="Outstanding due"
+          value={formatMoney(totalDue)}
+          icon={Wallet}
+          isLoading={allSalesLoading || outstandingLoading}
+        />
       </div>
 
       <div className="flex items-center justify-between gap-2">

@@ -47,11 +47,18 @@ const paymentSchema = z.object({
 type PaymentFormInput = z.input<typeof paymentSchema>;
 type PaymentFormValues = z.output<typeof paymentSchema>;
 
+const OUTGOING_REF_TYPES: readonly PaymentRefType[] = ["PURCHASE", "EXPENSE", "PAYROLL"];
+
 function blankPayment(defaults?: { ref_type?: PaymentRefType; ref_id?: string }): PaymentFormInput {
+  const ref_type = (defaults?.ref_type ?? undefined) as unknown as PaymentFormInput["ref_type"];
+  const direction =
+    defaults?.ref_type === undefined
+      ? (undefined as unknown as PaymentFormInput["direction"])
+      : ((OUTGOING_REF_TYPES.includes(defaults.ref_type) ? "OUTGOING" : "INCOMING") as unknown as PaymentFormInput["direction"]);
   return {
-    ref_type: (defaults?.ref_type ?? undefined) as unknown as PaymentFormInput["ref_type"],
+    ref_type,
     ref_id: defaults?.ref_id ?? "",
-    direction: undefined as unknown as PaymentFormInput["direction"],
+    direction,
     amount: undefined,
     payment_date: new Date().toISOString().slice(0, 10),
     from_instrument_id: "",
@@ -66,7 +73,7 @@ function blankPayment(defaults?: { ref_type?: PaymentRefType; ref_id?: string })
 // amount — this is the one place that has to know all five.
 type RefOption = { id: string; label: string; due: number };
 
-function useRefOptions(refType: PaymentRefType | undefined): RefOption[] {
+function useRefOptions(refType: PaymentRefType | undefined, keepRefId?: string): RefOption[] {
   const { data: purchases } = useGetData<Paginated<Purchase>>("/purchases?limit=100", ["purchases"], {
     enabled: refType === "PURCHASE",
   });
@@ -91,7 +98,7 @@ function useRefOptions(refType: PaymentRefType | undefined): RefOption[] {
 
   if (refType === "PURCHASE") {
     return (purchases?.results ?? [])
-      .filter((p) => parseFloat(p.due_amount) > 0)
+      .filter((p) => parseFloat(p.due_amount) > 0 || p.id === keepRefId)
       .map((p) => ({
         id: p.id,
         label: `${p.invoice_no ?? "No invoice"} · ${new Date(p.purchase_date).toLocaleDateString()}`,
@@ -100,7 +107,7 @@ function useRefOptions(refType: PaymentRefType | undefined): RefOption[] {
   }
   if (refType === "SALE") {
     return (sales?.results ?? [])
-      .filter((s) => parseFloat(s.due_amount) > 0)
+      .filter((s) => parseFloat(s.due_amount) > 0 || s.id === keepRefId)
       .map((s) => ({
         id: s.id,
         label: `Sale · ${new Date(s.sale_date).toLocaleDateString()}`,
@@ -109,7 +116,7 @@ function useRefOptions(refType: PaymentRefType | undefined): RefOption[] {
   }
   if (refType === "BIRD_SALE") {
     return (birdSales?.results ?? [])
-      .filter((b) => parseFloat(b.due_amount) > 0)
+      .filter((b) => parseFloat(b.due_amount) > 0 || b.id === keepRefId)
       .map((b) => ({
         id: b.id,
         label: `${batches?.results.find((batch) => batch.id === b.batch_id)?.batch_code ?? "Bird sale"} · ${new Date(b.sale_date).toLocaleDateString()}`,
@@ -163,7 +170,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
 
   const refType = useWatch({ control, name: "ref_type" });
   const refId = useWatch({ control, name: "ref_id" });
-  const refOptions = useRefOptions(refType);
+  const refOptions = useRefOptions(refType, defaultRefId);
   const selectedRef = refOptions.find((r) => r.id === refId);
 
   const { data: totalPaid } = useGetData<{ total_paid: string }>(

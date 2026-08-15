@@ -14,6 +14,7 @@ import type { Customer } from "@/pages/customers/types";
 import type { House } from "@/pages/houses/types";
 import { paymentStatus, type BirdSale } from "@/pages/sales/types";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
+import { useOutstanding } from "@/pages/sales/use-outstanding";
 
 export function BirdSaleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +27,7 @@ export function BirdSaleDetailPage() {
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
+  const { trueAmounts } = useOutstanding("BIRD_SALE");
 
   const batchCode = batches?.results.find((b) => b.id === sale?.batch_id)?.batch_code;
   const houseName = houses?.results.find((h) => h.id === sale?.house_id)?.name;
@@ -40,7 +42,8 @@ export function BirdSaleDetailPage() {
     );
   }
 
-  const status = paymentStatus(sale.paid_amount, sale.due_amount);
+  const amounts = trueAmounts(sale.id, sale.paid_amount, sale.due_amount);
+  const status = paymentStatus(amounts.paid, amounts.due);
 
   return (
     <div className="flex flex-col gap-6">
@@ -72,8 +75,8 @@ export function BirdSaleDetailPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Total" value={formatMoney(sale.total_amount)} icon={Bird} />
-        <KPICard label="Paid" value={formatMoney(sale.paid_amount)} icon={Bird} />
-        <KPICard label="Due" value={formatMoney(sale.due_amount)} icon={Bird} />
+        <KPICard label="Paid" value={formatMoney(amounts.paid)} icon={Bird} />
+        <KPICard label="Due" value={formatMoney(amounts.due)} icon={Bird} />
       </div>
 
       <Card>

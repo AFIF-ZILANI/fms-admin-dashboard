@@ -15,6 +15,7 @@ import type { House } from "@/pages/houses/types";
 import { BirdSaleCreateDialog } from "@/pages/sales/bird-sale-create-dialog";
 import { BIRD_GRADES, paymentStatus, type BirdGrade, type BirdSale } from "@/pages/sales/types";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
+import { useOutstanding } from "@/pages/sales/use-outstanding";
 
 const GRADE_TONE = { HIGH: "success", LOW: "warning", CULL: "critical" } as const;
 
@@ -47,6 +48,7 @@ export function BirdSalesTab() {
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
+  const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("BIRD_SALE");
 
   const batchCode = (id: string) => batches?.results.find((b) => b.id === id)?.batch_code ?? "—";
   const houseName = (id: string) => houses?.results.find((h) => h.id === id)?.name ?? "—";
@@ -55,7 +57,10 @@ export function BirdSalesTab() {
   const birdSales = data?.results ?? [];
   const allResults = allBirdSales?.results ?? [];
   const totalRevenue = allResults.reduce((sum, s) => sum + parseFloat(s.total_amount), 0);
-  const totalDue = allResults.reduce((sum, s) => sum + parseFloat(s.due_amount), 0);
+  const totalDue = allResults.reduce(
+    (sum, s) => sum + parseFloat(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
+    0
+  );
   const totalBirds = allResults.reduce((sum, s) => sum + s.birds_count, 0);
 
   const columns: Column<BirdSale>[] = [
@@ -67,12 +72,18 @@ export function BirdSalesTab() {
     { key: "birds", header: "Birds", render: (s) => s.birds_count, numeric: true },
     { key: "net_weight", header: "Net wt (kg)", render: (s) => s.net_weight, numeric: true },
     { key: "total", header: "Total", render: (s) => formatMoney(s.total_amount), numeric: true },
-    { key: "due", header: "Due", render: (s) => formatMoney(s.due_amount), numeric: true },
+    {
+      key: "due",
+      header: "Due",
+      render: (s) => formatMoney(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
+      numeric: true,
+    },
     {
       key: "payment_status",
       header: "Payment",
       render: (s) => {
-        const status = paymentStatus(s.paid_amount, s.due_amount);
+        const amounts = trueAmounts(s.id, s.paid_amount, s.due_amount);
+        const status = paymentStatus(amounts.paid, amounts.due);
         return <StatusBadge tone={status.tone} label={status.label} />;
       },
     },
@@ -108,7 +119,12 @@ export function BirdSalesTab() {
           icon={Wallet}
           isLoading={allBirdSalesLoading}
         />
-        <KPICard label="Outstanding due" value={formatMoney(totalDue)} icon={Wallet} isLoading={allBirdSalesLoading} />
+        <KPICard
+          label="Outstanding due"
+          value={formatMoney(totalDue)}
+          icon={Wallet}
+          isLoading={allBirdSalesLoading || outstandingLoading}
+        />
       </div>
 
       <div className="flex items-center justify-between gap-2">

@@ -10,6 +10,7 @@ import type { BirdSale, Sale } from "@/pages/sales/types";
 import { RevenueByProductLineChart } from "@/pages/sales/revenue-by-product-line-chart";
 import { GradeDistributionChart } from "@/pages/sales/grade-distribution-chart";
 import { TopOutstandingCustomersCard } from "@/pages/sales/top-outstanding-customers-card";
+import { useOutstanding } from "@/pages/sales/use-outstanding";
 
 export function OverviewTab() {
   const [days, setDays] = useState(30);
@@ -26,6 +27,8 @@ export function OverviewTab() {
   const { data: birdSales, isLoading: birdSalesLoading } = useGetData<Paginated<BirdSale>>("/bird-sales?limit=100", [
     "bird-sales",
   ]);
+  const { trueAmounts: trueSaleAmounts, isLoading: saleOutstandingLoading } = useOutstanding("SALE");
+  const { trueAmounts: trueBirdSaleAmounts, isLoading: birdSaleOutstandingLoading } = useOutstanding("BIRD_SALE");
 
   const totalRevenue = (byProductLine ?? []).reduce((sum, r) => sum + parseFloat(r.revenue), 0);
   const birdsSold = (gradeDistribution ?? []).reduce((sum, r) => sum + r.birds_count, 0);
@@ -37,10 +40,22 @@ export function OverviewTab() {
   const avgPricePerKg = periodNetWeight > 0 ? periodBirdRevenue / periodNetWeight : 0;
 
   const outstandingDue =
-    (sales?.results ?? []).reduce((sum, s) => sum + parseFloat(s.due_amount), 0) +
-    (birdSales?.results ?? []).reduce((sum, s) => sum + parseFloat(s.due_amount), 0);
+    (sales?.results ?? []).reduce(
+      (sum, s) => sum + parseFloat(trueSaleAmounts(s.id, s.paid_amount, s.due_amount).due),
+      0
+    ) +
+    (birdSales?.results ?? []).reduce(
+      (sum, s) => sum + parseFloat(trueBirdSaleAmounts(s.id, s.paid_amount, s.due_amount).due),
+      0
+    );
 
-  const kpiLoading = byProductLineLoading || gradeDistributionLoading || salesLoading || birdSalesLoading;
+  const kpiLoading =
+    byProductLineLoading ||
+    gradeDistributionLoading ||
+    salesLoading ||
+    birdSalesLoading ||
+    saleOutstandingLoading ||
+    birdSaleOutstandingLoading;
 
   return (
     <div className="flex flex-col gap-4">

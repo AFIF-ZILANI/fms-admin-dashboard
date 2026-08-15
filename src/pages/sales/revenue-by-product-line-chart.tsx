@@ -1,4 +1,4 @@
-import { BarChart3 } from "lucide-react";
+import { AlertCircle, BarChart3 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TooltipValueType } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,12 +19,10 @@ import type { SalesByProductLineRow } from "@/pages/analytics/types";
 type RevenueByProductLineChartProps = { days: number };
 
 export function RevenueByProductLineChart({ days }: RevenueByProductLineChartProps) {
-  const { data, isLoading } = useGetData<SalesByProductLineRow[]>(`/analytics/sales/by-product-line?days=${days}`, [
-    "analytics",
-    "sales",
-    "by-product-line",
-    days,
-  ]);
+  const { data, isLoading, isError } = useGetData<SalesByProductLineRow[]>(
+    `/analytics/sales/by-product-line?days=${days}`,
+    ["analytics", "sales", "by-product-line", days]
+  );
   const rows = (data ?? []).map((r) => ({ category: r.category, revenue: parseFloat(r.revenue) }));
 
   return (
@@ -34,14 +32,17 @@ export function RevenueByProductLineChart({ days }: RevenueByProductLineChartPro
       </CardHeader>
       <CardContent>
         {isLoading && <Skeleton style={{ height: CHART_HEIGHT }} className="w-full" />}
-        {!isLoading && rows.length === 0 && (
+        {!isLoading && isError && (
+          <EmptyState icon={AlertCircle} title="Couldn't load this chart" description="Try refreshing the page." />
+        )}
+        {!isLoading && !isError && rows.length === 0 && (
           <EmptyState
             icon={BarChart3}
             title="No sales yet"
             description={`Nothing recorded in the last ${days} days.`}
           />
         )}
-        {!isLoading && rows.length > 0 && (
+        {!isLoading && !isError && rows.length > 0 && (
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <BarChart data={rows} layout="vertical">
               <CartesianGrid {...chartGridProps} vertical horizontal={false} />
