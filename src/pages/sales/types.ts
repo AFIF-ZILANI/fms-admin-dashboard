@@ -54,3 +54,15 @@ export type BirdSale = {
   // getAll/getById return the flat BirdSale row — no batch/house/customer
   // relations included. Look names up separately, same pattern as Purchases.
 };
+
+export type PaymentStatusInfo = { tone: "success" | "warning" | "neutral"; label: string };
+
+/** Paid/Partial/Unpaid is computed client-side from paid/due, never stored --
+ * both Sale and BirdSale are append-only records with no status enum of their own. */
+export function paymentStatus(paid: string, due: string): PaymentStatusInfo {
+  const dueNum = parseFloat(due);
+  const paidNum = parseFloat(paid);
+  if (dueNum <= 0) return { tone: "success", label: "Paid" };
+  if (paidNum > 0) return { tone: "warning", label: "Partial" };
+  return { tone: "neutral", label: "Unpaid" };
+}

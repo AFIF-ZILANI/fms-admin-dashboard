@@ -47,3 +47,14 @@ export type RevenueVsExpensesPoint = {
   revenue: string;
   expenses: string;
 };
+
+export type SalesByProductLineRow = {
+  category: string;
+  revenue: string;
+};
+
+export type GradeDistributionRow = {
+  grade: string;
+  birds_count: number;
+  revenue: string;
+};

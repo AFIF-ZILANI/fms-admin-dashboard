@@ -15,6 +15,7 @@ export const RESOURCE_CATEGORIES = [
   "TRANSPORTATION",
   "MAINTENANCE",
   "CLEANING_SUPPLIES",
+  "WASTE",
   "OTHER",
 ] as const;
 export type ResourceCategory = (typeof RESOURCE_CATEGORIES)[number];
