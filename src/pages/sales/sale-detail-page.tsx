@@ -1,19 +1,23 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Receipt } from "lucide-react";
+import { ArrowLeft, CreditCard, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
-import type { Sale, SaleItemLine } from "@/pages/sales/types";
+import { paymentStatus, type Sale, type SaleItemLine } from "@/pages/sales/types";
 import type { Customer } from "@/pages/customers/types";
+import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
 
 export function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   const { data: sale, isLoading } = useGetData<Sale>(`/sales/${id}`, ["sales", id]);
   usePageTitle("Sale");
@@ -38,6 +42,8 @@ export function SaleDetailPage() {
     );
   }
 
+  const status = paymentStatus(sale.paid_amount, sale.due_amount);
+
   return (
     <div className="flex flex-col gap-6">
       <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate("/sales")}>
@@ -46,9 +52,18 @@ export function SaleDetailPage() {
       </Button>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Sale · {new Date(sale.sale_date).toLocaleDateString()}</CardTitle>
-          <p className="text-sm text-muted-foreground">{customerName ?? "No customer on file"}</p>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-xl">Sale · {new Date(sale.sale_date).toLocaleDateString()}</CardTitle>
+            <p className="text-sm text-muted-foreground">{customerName ?? "No customer on file"}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <StatusBadge tone={status.tone} label={status.label} />
+            <Button variant="outline" size="sm" onClick={() => setPaymentOpen(true)}>
+              <CreditCard />
+              Record payment
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="text-xs text-muted-foreground">
           Sales are append-only — a correction is a new sale, not an edit.
@@ -74,6 +89,8 @@ export function SaleDetailPage() {
           />
         </CardContent>
       </Card>
+
+      <PaymentCreateDialog open={paymentOpen} onOpenChange={setPaymentOpen} defaultRefType="SALE" defaultRefId={sale.id} />
     </div>
   );
 }
