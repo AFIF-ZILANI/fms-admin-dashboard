@@ -16,7 +16,6 @@ import { BatchPerformanceRow } from "@/pages/analytics/batch-performance-row";
 import { MortalityTrendChart } from "@/pages/analytics/mortality-trend-chart";
 import { FeedTrendChart } from "@/pages/analytics/feed-trend-chart";
 import { BatchComparisonChart } from "@/pages/analytics/batch-comparison-chart";
-import { SalesPriceTrendChart } from "@/pages/analytics/sales-price-trend-chart";
 import { RevenueExpenseChart } from "@/pages/analytics/revenue-expense-chart";
 import { ExpenseBreakdownChart } from "@/pages/analytics/expense-breakdown-chart";
 import type { BatchPerformance, FarmOverview } from "@/pages/analytics/types";
@@ -91,14 +90,11 @@ export function AnalyticsPage() {
         <FeedTrendChart />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <BatchComparisonChart
-          batches={batches?.results ?? []}
-          performances={performances ?? []}
-          isLoading={batchesLoading || performancesLoading}
-        />
-        <SalesPriceTrendChart />
-      </div>
+      <BatchComparisonChart
+        batches={batches?.results ?? []}
+        performances={performances ?? []}
+        isLoading={batchesLoading || performancesLoading}
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <RevenueExpenseChart />
