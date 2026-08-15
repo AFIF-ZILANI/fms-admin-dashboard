@@ -21,6 +21,7 @@ import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
 import type { Item, PurchaseItemOption, StockUnit } from "@/pages/inventory/types";
+import type { PurchaseItemLine } from "@/pages/purchases/types";
 
 const bindSchema = z.object({
   purchase_item_id: z.string().min(1, "Select a purchase lot"),
@@ -30,9 +31,17 @@ const bindSchema = z.object({
 type BindFormInput = z.input<typeof bindSchema>;
 type BindFormValues = z.output<typeof bindSchema>;
 
-type BindCodeDialogProps = { open: boolean; onOpenChange: (open: boolean) => void };
+type BindCodeDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** When set, skips the item→lot two-step picker and offers only these
+   * lots directly — used by the post-purchase "bind codes" prompt, where
+   * the lots are already known (the just-created purchase's own line
+   * items) instead of needing a fresh item/purchase-lot search. */
+  scopedLots?: PurchaseItemLine[];
+};
 
-export function BindCodeDialog({ open, onOpenChange }: BindCodeDialogProps) {
+export function BindCodeDialog({ open, onOpenChange, scopedLots }: BindCodeDialogProps) {
   const [code, setCode] = useState("");
   const [lookupCode, setLookupCode] = useState<string | null>(null);
   const [itemFilter, setItemFilter] = useState("");
@@ -54,16 +63,25 @@ export function BindCodeDialog({ open, onOpenChange }: BindCodeDialogProps) {
     { enabled: !!lookupCode, retry: false }
   );
 
-  const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
+  const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"], { enabled: !scopedLots });
   const { data: purchaseItems } = useGetData<Paginated<PurchaseItemOption>>(
     itemFilter ? `/purchase-items?item_id=${itemFilter}&limit=50` : "/purchase-items?limit=0",
     ["purchase-items", itemFilter],
-    { enabled: !!itemFilter }
+    { enabled: !!itemFilter && !scopedLots }
   );
 
   const bind = usePostData<StockUnit, BindFormValues>(() => `/stock-units/${foundUnit?.id}/bind`, ["stock-units"]);
 
   const canBind = foundUnit?.status === "UNASSIGNED";
+
+  // In scoped mode the lots are already known (the just-created purchase's
+  // own line items) -- no item→lot search needed, just pick from these.
+  const lotOptions: { id: string; label: string }[] = scopedLots
+    ? scopedLots.map((lot) => ({ id: lot.id, label: `${lot.item.name} — qty ${lot.quantity} ${lot.unit}` }))
+    : (purchaseItems?.results ?? []).map((lot) => ({
+        id: lot.id,
+        label: `${new Date(lot.purchase.purchase_date).toLocaleDateString()} — qty ${lot.quantity}`,
+      }));
 
   const onSubmit = (values: BindFormValues) => {
     if (!foundUnit) return;
@@ -134,23 +152,25 @@ export function BindCodeDialog({ open, onOpenChange }: BindCodeDialogProps) {
 
           {canBind && (
             <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="item_filter">Item</Label>
-                <Select value={itemFilter} onValueChange={(v) => setItemFilter(v ?? "")}>
-                  <SelectTrigger id="item_filter" className="w-full">
-                    <SelectValue>
-                      {(v: string) => items?.results.find((i) => i.id === v)?.name ?? "Select item"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(items?.results ?? []).map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!scopedLots && (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="item_filter">Item</Label>
+                  <Select value={itemFilter} onValueChange={(v) => setItemFilter(v ?? "")}>
+                    <SelectTrigger id="item_filter" className="w-full">
+                      <SelectValue>
+                        {(v: string) => items?.results.find((i) => i.id === v)?.name ?? "Select item"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(items?.results ?? []).map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="purchase_item_id">Purchase lot</Label>
@@ -161,18 +181,13 @@ export function BindCodeDialog({ open, onOpenChange }: BindCodeDialogProps) {
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger id="purchase_item_id" className="w-full" aria-invalid={!!errors.purchase_item_id}>
                         <SelectValue>
-                          {(v: string) => {
-                            const lot = purchaseItems?.results.find((p) => p.id === v);
-                            return lot
-                              ? `${new Date(lot.purchase.purchase_date).toLocaleDateString()} — qty ${lot.quantity}`
-                              : "Select lot";
-                          }}
+                          {(v: string) => lotOptions.find((lot) => lot.id === v)?.label ?? "Select lot"}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {(purchaseItems?.results ?? []).map((lot) => (
+                        {lotOptions.map((lot) => (
                           <SelectItem key={lot.id} value={lot.id}>
-                            {new Date(lot.purchase.purchase_date).toLocaleDateString()} — qty {lot.quantity}
+                            {lot.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -182,7 +197,7 @@ export function BindCodeDialog({ open, onOpenChange }: BindCodeDialogProps) {
                 {errors.purchase_item_id && (
                   <p className="text-xs text-destructive">{errors.purchase_item_id.message}</p>
                 )}
-                {itemFilter && (purchaseItems?.results ?? []).length === 0 && (
+                {!scopedLots && itemFilter && lotOptions.length === 0 && (
                   <p className="text-xs text-muted-foreground">No purchase lots for this item yet.</p>
                 )}
               </div>

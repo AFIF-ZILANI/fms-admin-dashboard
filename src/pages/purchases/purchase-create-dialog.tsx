@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,6 +24,9 @@ import { optionalNumber } from "@/lib/zod-helpers";
 import { UNITS, type Item } from "@/pages/inventory/types";
 import type { Supplier } from "@/pages/suppliers/types";
 import type { Purchase } from "@/pages/purchases/types";
+import { BindCodesPrompt } from "@/pages/purchases/bind-codes-prompt";
+
+const CODED_CATEGORIES = ["MEDICINE", "VACCINE", "EQUIPMENT"];
 
 const lineSchema = z.object({
   item_id: z.string().min(1, "Select an item"),
@@ -76,6 +79,7 @@ type PurchaseCreateDialogProps = { open: boolean; onOpenChange: (open: boolean) 
 
 export function PurchaseCreateDialog({ open, onOpenChange }: PurchaseCreateDialogProps) {
   const navigate = useNavigate();
+  const [bindPromptPurchase, setBindPromptPurchase] = useState<Purchase | null>(null);
   const {
     control,
     register,
@@ -124,7 +128,12 @@ export function PurchaseCreateDialog({ open, onOpenChange }: PurchaseCreateDialo
       onSuccess: (purchase) => {
         toast.success("Purchase recorded");
         onOpenChange(false);
-        navigate(`/purchases/${purchase.id}`);
+        const hasCodedItems = purchase.items.some((line) => CODED_CATEGORIES.includes(line.item.category));
+        if (hasCodedItems) {
+          setBindPromptPurchase(purchase);
+        } else {
+          navigate(`/purchases/${purchase.id}`);
+        }
       },
       onError: (error) => {
         const message =
@@ -135,6 +144,7 @@ export function PurchaseCreateDialog({ open, onOpenChange }: PurchaseCreateDialo
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
@@ -338,5 +348,14 @@ export function PurchaseCreateDialog({ open, onOpenChange }: PurchaseCreateDialo
         </form>
       </DialogContent>
     </Dialog>
+
+      <BindCodesPrompt
+        purchase={bindPromptPurchase}
+        onDone={() => {
+          if (bindPromptPurchase) navigate(`/purchases/${bindPromptPurchase.id}`);
+          setBindPromptPurchase(null);
+        }}
+      />
+    </>
   );
 }
