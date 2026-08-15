@@ -47,10 +47,10 @@ const paymentSchema = z.object({
 type PaymentFormInput = z.input<typeof paymentSchema>;
 type PaymentFormValues = z.output<typeof paymentSchema>;
 
-function blankPayment(): PaymentFormInput {
+function blankPayment(defaults?: { ref_type?: PaymentRefType; ref_id?: string }): PaymentFormInput {
   return {
-    ref_type: undefined as unknown as PaymentFormInput["ref_type"],
-    ref_id: "",
+    ref_type: (defaults?.ref_type ?? undefined) as unknown as PaymentFormInput["ref_type"],
+    ref_id: defaults?.ref_id ?? "",
     direction: undefined as unknown as PaymentFormInput["direction"],
     amount: undefined,
     payment_date: new Date().toISOString().slice(0, 10),
@@ -137,9 +137,14 @@ function useRefOptions(refType: PaymentRefType | undefined): RefOption[] {
   return [];
 }
 
-type PaymentCreateDialogProps = { open: boolean; onOpenChange: (open: boolean) => void };
+type PaymentCreateDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  defaultRefType?: PaymentRefType;
+  defaultRefId?: string;
+};
 
-export function PaymentCreateDialog({ open, onOpenChange }: PaymentCreateDialogProps) {
+export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaultRefId }: PaymentCreateDialogProps) {
   const {
     control,
     register,
@@ -149,12 +154,12 @@ export function PaymentCreateDialog({ open, onOpenChange }: PaymentCreateDialogP
     formState: { errors, isSubmitting },
   } = useForm<PaymentFormInput, unknown, PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
-    defaultValues: blankPayment(),
+    defaultValues: blankPayment({ ref_type: defaultRefType, ref_id: defaultRefId }),
   });
 
   useEffect(() => {
-    if (open) reset(blankPayment());
-  }, [open, reset]);
+    if (open) reset(blankPayment({ ref_type: defaultRefType, ref_id: defaultRefId }));
+  }, [open, reset, defaultRefType, defaultRefId]);
 
   const refType = useWatch({ control, name: "ref_type" });
   const refId = useWatch({ control, name: "ref_id" });
