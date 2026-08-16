@@ -16,8 +16,13 @@ function sumByRef(payments: PaymentLite[]): Map<string, number> {
  * recorded afterward never mutate them. This nets actual payments against
  * the snapshot so every paid/due figure reflects reality, matching the
  * same convention PaymentCreateDialog's own "Remaining due" display
- * already uses (GET /payments/total-paid). */
-export function useOutstanding(refType: Extract<PaymentRefType, "SALE" | "BIRD_SALE" | "PURCHASE">) {
+ * already uses (GET /payments/total-paid).
+ *
+ * PAYROLL has no snapshot of its own (PayrollRecord stores only
+ * final_salary) -- callers pass snapshotPaid="0" and snapshotDue=final_salary
+ * so the whole record starts as due, same as PaymentCreateDialog's ref
+ * options already treat it. */
+export function useOutstanding(refType: Extract<PaymentRefType, "SALE" | "BIRD_SALE" | "PURCHASE" | "PAYROLL">) {
   const { data, isLoading } = useGetData<Paginated<PaymentLite>>(`/payments?ref_type=${refType}&limit=100`, [
     "payments",
     refType,

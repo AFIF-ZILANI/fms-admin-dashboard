@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Award, Banknote, Pencil, Plus, Wallet } from "lucide-react";
+import { ArrowLeft, Award, Banknote, CreditCard, Pencil, Plus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,10 +11,13 @@ import { activeStatus } from "@/components/shared/status-tone";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { EmployeeActivityTimeline } from "@/pages/employees/employee-activity-timeline";
 import { EmployeeFormDialog } from "@/pages/employees/employee-form-dialog";
 import { ScoreEntryDialog } from "@/pages/employees/score-entry-dialog";
 import { PayrollRunDialog } from "@/pages/employees/payroll-run-dialog";
 import type { Employee, PayrollRecord, PerformanceScoreEntry } from "@/pages/employees/types";
+import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
+import { useOutstanding } from "@/pages/sales/use-outstanding";
 
 export function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +25,7 @@ export function EmployeeDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [scoreOpen, setScoreOpen] = useState(false);
   const [payrollOpen, setPayrollOpen] = useState(false);
+  const [paymentPayrollId, setPaymentPayrollId] = useState<string | null>(null);
 
   const { data: employee, isLoading } = useGetData<Employee>(`/employees/${id}`, ["employees", id]);
   usePageTitle(employee?.profile.name ?? "Employee");
@@ -34,6 +38,7 @@ export function EmployeeDetailPage() {
     `/payroll-records?employee_id=${id}&limit=100`,
     ["payroll-records", id]
   );
+  const { trueAmounts } = useOutstanding("PAYROLL");
 
   const entries = scoreEntries?.results ?? [];
   const records = payrollRecords?.results ?? [];
@@ -73,6 +78,19 @@ export function EmployeeDetailPage() {
     { key: "score_sum", header: "Score sum", render: (p) => p.score_sum, numeric: true },
     { key: "adjustment", header: "Adjustment", render: (p) => `${parseFloat(p.adjustment_percent) > 0 ? "+" : ""}${p.adjustment_percent}%`, numeric: true },
     { key: "final", header: "Final salary", render: (p) => formatMoney(p.final_salary), numeric: true },
+    { key: "due", header: "Due", render: (p) => formatMoney(trueAmounts(p.id, "0", p.final_salary).due), numeric: true },
+    {
+      key: "actions",
+      header: "",
+      render: (p) => (
+        <div className="flex justify-end">
+          <Button variant="ghost" size="icon-sm" aria-label="Record payment" onClick={() => setPaymentPayrollId(p.id)}>
+            <CreditCard />
+          </Button>
+        </div>
+      ),
+      className: "text-right",
+    },
   ];
 
   if (isLoading || !employee) {
@@ -117,6 +135,8 @@ export function EmployeeDetailPage() {
         <KPICard label="MTD score sum" value={mtdSum > 0 ? `+${mtdSum}` : mtdSum} icon={Award} />
         <KPICard label="Rating" value={employee.rating ? `★ ${employee.rating.toFixed(1)}` : "—"} icon={Award} />
       </div>
+
+      <EmployeeActivityTimeline scoreEntries={entries} payrollRecords={records} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -165,6 +185,12 @@ export function EmployeeDetailPage() {
           scoreEntries={entries}
         />
       )}
+      <PaymentCreateDialog
+        open={paymentPayrollId !== null}
+        onOpenChange={(open) => !open && setPaymentPayrollId(null)}
+        defaultRefType="PAYROLL"
+        defaultRefId={paymentPayrollId ?? undefined}
+      />
     </div>
   );
 }
