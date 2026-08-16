@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { ItemCatalogTab } from "@/pages/inventory/item-catalog-tab";
+import { InventoryAnalyticsTab } from "@/pages/inventory/inventory-analytics-tab";
 import { LowStockTab } from "@/pages/inventory/low-stock-tab";
 import { CodedUnitsTab } from "@/pages/inventory/coded-units-tab";
 import { AssetsTab } from "@/pages/inventory/assets-tab";
@@ -13,12 +14,13 @@ import { ConsumptionLogTab } from "@/pages/inventory/consumption-log-tab";
 
 export function InventoryPage() {
   usePageTitle("Inventory");
-  const [tab, setTab] = useState("items");
+  const [tab, setTab] = useState("analytics");
 
   return (
-    <Tabs value={tab} onValueChange={(value) => setTab(value ?? "items")}>
+    <Tabs value={tab} onValueChange={(value) => setTab(value ?? "analytics")}>
       <div className="overflow-x-auto">
         <TabsList>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="items">Item Catalog</TabsTrigger>
           <TabsTrigger value="low-stock">Low-Stock</TabsTrigger>
           <TabsTrigger value="coded-units">Coded Units</TabsTrigger>
@@ -30,6 +32,9 @@ export function InventoryPage() {
           <TabsTrigger value="consumption-log">Consumption Log</TabsTrigger>
         </TabsList>
       </div>
+      <TabsContent value="analytics">
+        <InventoryAnalyticsTab />
+      </TabsContent>
       <TabsContent value="items">
         <ItemCatalogTab onViewLowStock={() => setTab("low-stock")} />
       </TabsContent>

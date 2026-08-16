@@ -9,12 +9,8 @@ import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { AssetCreateDialog } from "@/pages/inventory/asset-create-dialog";
 import { AssetDetailSheet } from "@/pages/inventory/asset-detail-sheet";
+import { bookValue } from "@/pages/inventory/asset-utils";
 import type { Asset } from "@/pages/inventory/types";
-
-function bookValue(asset: Asset): number {
-  const depreciated = (asset.depreciations ?? []).reduce((sum, d) => sum + parseFloat(d.amount), 0);
-  return parseFloat(asset.purchase_cost) - depreciated;
-}
 
 export function AssetsTab() {
   const [createOpen, setCreateOpen] = useState(false);
