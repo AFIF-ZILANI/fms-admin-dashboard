@@ -68,3 +68,29 @@ export type PurchasesTrendPoint = {
   date: string;
   total: string;
 };
+
+export type StockValueByCategoryRow = {
+  category: string;
+  total: string;
+};
+
+export type StockMovementTrendPoint = {
+  date: string;
+  in: string;
+  out: string;
+};
+
+export type ConsumptionByCategoryRow = {
+  category: string;
+  total: string;
+};
+
+export type ConsumptionTrendPoint = {
+  date: string;
+  total: string;
+};
+
+export type WastageByCategoryRow = {
+  category: string;
+  total: string;
+};
