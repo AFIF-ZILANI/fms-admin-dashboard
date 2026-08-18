@@ -38,7 +38,7 @@ type ExpenseFormValues = z.output<typeof expenseSchema>;
 function blankExpense(): ExpenseFormInput {
   return {
     batch_id: "",
-    category: undefined as unknown as ExpenseFormInput["category"],
+    category: "",
     cost_type: undefined as unknown as ExpenseFormInput["cost_type"],
     amount: undefined,
     date: new Date().toISOString().slice(0, 10),
