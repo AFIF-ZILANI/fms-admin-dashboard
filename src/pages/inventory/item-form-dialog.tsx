@@ -18,12 +18,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
-import { RESOURCE_CATEGORIES, UNITS, type Item, type Organization } from "@/pages/inventory/types";
+import type { Item, Organization } from "@/pages/inventory/types";
+import type { LookupRow } from "@/pages/settings/lookup-types";
 
 const itemSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
-  category: z.enum(RESOURCE_CATEGORIES, "Select a category"),
-  unit: z.enum(UNITS, "Select a unit"),
+  category: z.string().min(1, "Select a category"),
+  unit: z.string().min(1, "Select a unit"),
   reorder_level: optionalNumber(z.coerce.number().nonnegative("Must be 0 or more")),
   preferred_reorder_qty: optionalNumber(z.coerce.number().nonnegative("Must be 0 or more")),
   lead_time_days: optionalNumber(z.coerce.number().int().nonnegative("Must be 0 or more")),
@@ -98,6 +99,11 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
   const { data: organizations } = useGetData<Paginated<Organization>>("/organizations?limit=100", [
     "organizations",
   ]);
+  const { data: categories } = useGetData<Paginated<LookupRow>>(
+    "/item-categories?active=true&limit=100",
+    ["item-categories", "active"]
+  );
+  const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
   const linkOrganization = usePostData<unknown, { item_id: string; organization_id: string; role: string }>(
     "/item-organizations",
     ["organizations"]
@@ -167,12 +173,18 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
                 render={({ field }) => (
                   <Select value={field.value ?? ""} onValueChange={field.onChange}>
                     <SelectTrigger id="category" className="w-full" aria-invalid={!!errors.category}>
-                      <SelectValue>{(value: string) => (value ? humanizeEnum(value) : "Select category")}</SelectValue>
+                      <SelectValue>
+                        {(value: string) =>
+                          value
+                            ? (categories?.results.find((cat) => cat.code === value)?.label ?? humanizeEnum(value))
+                            : "Select category"
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {RESOURCE_CATEGORIES.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {humanizeEnum(cat)}
+                      {(categories?.results ?? []).map((cat) => (
+                        <SelectItem key={cat.code} value={cat.code}>
+                          {cat.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -190,12 +202,18 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
                 render={({ field }) => (
                   <Select value={field.value ?? ""} onValueChange={field.onChange}>
                     <SelectTrigger id="unit" className="w-full" aria-invalid={!!errors.unit}>
-                      <SelectValue>{(value: string) => (value ? humanizeEnum(value) : "Select unit")}</SelectValue>
+                      <SelectValue>
+                        {(value: string) =>
+                          value
+                            ? (units?.results.find((u) => u.code === value)?.label ?? humanizeEnum(value))
+                            : "Select unit"
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {UNITS.map((unit) => (
-                        <SelectItem key={unit} value={unit}>
-                          {humanizeEnum(unit)}
+                      {(units?.results ?? []).map((unit) => (
+                        <SelectItem key={unit.code} value={unit.code}>
+                          {unit.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
