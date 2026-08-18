@@ -1,30 +1,6 @@
 import type { House } from "@/pages/houses/types";
 import type { PurchaseItemLine } from "@/pages/purchases/types";
 
-// ponytail: Unit stays a narrow union -- PurchaseItemLine.unit and
-// SaleItemLine.unit (src/pages/purchases/types.ts, src/pages/sales/types.ts)
-// still import and use it, so it isn't dead even though Item.unit below is
-// now a live admin-editable string. Widening those too is out of scope for
-// this fix wave; flagged for the reviewer rather than guessed at.
-export const UNITS = [
-  "BIRD",
-  "KG",
-  "LITER",
-  "BAG",
-  "BOX",
-  "UNIT",
-  "SACHETS",
-  "BOTTLE",
-  "ML",
-  "L",
-  "G",
-  "PCS",
-  "VIAL",
-  "DOSE",
-  "OTHER",
-] as const;
-export type Unit = (typeof UNITS)[number];
-
 export const ORGANIZATION_ROLES = ["MANUFACTURER", "IMPORTER", "MARKETER", "DISTRIBUTOR"] as const;
 export type OrganizationRole = (typeof ORGANIZATION_ROLES)[number];
 

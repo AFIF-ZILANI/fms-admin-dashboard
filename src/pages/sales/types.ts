@@ -1,5 +1,3 @@
-import type { Unit } from "@/pages/inventory/types";
-
 export const BIRD_GRADES = ["HIGH", "LOW", "CULL"] as const;
 export type BirdGrade = (typeof BIRD_GRADES)[number];
 
@@ -8,10 +6,10 @@ export type SaleItemLine = {
   sale_id: string;
   item_id: string;
   quantity: string;
-  unit: Unit;
+  unit: string;
   unit_price: string;
   total_price: string;
-  item: { id: string; name: string; category: string; unit: Unit };
+  item: { id: string; name: string; category: string; unit: string };
 };
 
 export type Sale = {
