@@ -1,25 +1,11 @@
 import type { House } from "@/pages/houses/types";
 import type { PurchaseItemLine } from "@/pages/purchases/types";
 
-export const RESOURCE_CATEGORIES = [
-  "FEED",
-  "MEDICINE",
-  "VACCINE",
-  "SUPPLEMENT",
-  "BIOSECURITY",
-  "CHICKS",
-  "HUSK",
-  "EQUIPMENT",
-  "UTILITIES",
-  "SALARY",
-  "TRANSPORTATION",
-  "MAINTENANCE",
-  "CLEANING_SUPPLIES",
-  "WASTE",
-  "OTHER",
-] as const;
-export type ResourceCategory = (typeof RESOURCE_CATEGORIES)[number];
-
+// ponytail: Unit stays a narrow union -- PurchaseItemLine.unit and
+// SaleItemLine.unit (src/pages/purchases/types.ts, src/pages/sales/types.ts)
+// still import and use it, so it isn't dead even though Item.unit below is
+// now a live admin-editable string. Widening those too is out of scope for
+// this fix wave; flagged for the reviewer rather than guessed at.
 export const UNITS = [
   "BIRD",
   "KG",
@@ -46,8 +32,8 @@ export type Item = {
   id: string;
   name: string;
   normalized_key: string;
-  category: ResourceCategory;
-  unit: Unit;
+  category: string;
+  unit: string;
   reorder_level: string | null;
   preferred_reorder_qty: string | null;
   lead_time_days: number | null;

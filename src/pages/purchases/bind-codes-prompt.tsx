@@ -11,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { BindCodeDialog } from "@/pages/inventory/bind-code-dialog";
 import type { Purchase } from "@/pages/purchases/types";
 
+// ponytail: these are live ItemCategory.code values a user can rename via
+// Settings, which silently breaks this "which lines need codes" check with
+// no error -- needs a stable-key mechanism (e.g. an is_system flag) if
+// renaming these specific categories becomes a real risk.
 const CODED_CATEGORIES = ["MEDICINE", "VACCINE", "EQUIPMENT"];
 
 type BindCodesPromptProps = {

@@ -27,6 +27,10 @@ import type { Supplier } from "@/pages/suppliers/types";
 import type { Purchase } from "@/pages/purchases/types";
 import { BindCodesPrompt } from "@/pages/purchases/bind-codes-prompt";
 
+// ponytail: these are live ItemCategory.code values a user can rename via
+// Settings, which silently breaks this "show bind-codes prompt" check with
+// no error -- needs a stable-key mechanism (e.g. an is_system flag) if
+// renaming these specific categories becomes a real risk.
 const CODED_CATEGORIES = ["MEDICINE", "VACCINE", "EQUIPMENT"];
 
 const lineSchema = z.object({

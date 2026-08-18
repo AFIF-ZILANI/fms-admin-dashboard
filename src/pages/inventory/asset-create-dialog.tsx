@@ -50,6 +50,10 @@ export function AssetCreateDialog({ open, onOpenChange }: AssetCreateDialogProps
   });
 
   // Eligible = an EQUIPMENT-category coded unit that's in stock and isn't already an asset.
+  // ponytail: "EQUIPMENT" is a live ItemCategory.code a user can rename via
+  // Settings, which silently breaks this query with no error -- needs a
+  // stable-key mechanism (e.g. an is_system flag) if renaming this
+  // specific category becomes a real risk.
   const { data: eligibleUnits } = useGetData<Paginated<StockUnit>>(
     "/stock-units?status=IN_STOCK&category=EQUIPMENT&limit=100",
     ["stock-units", "eligible-for-asset"]
