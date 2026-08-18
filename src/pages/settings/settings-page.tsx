@@ -1,3 +1,4 @@
+import { Layers, Package, Ruler, Truck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePageTitle } from "@/components/layout/use-page-title";
@@ -5,6 +6,7 @@ import { WarehousesTab } from "@/pages/inventory/warehouses-tab";
 import { OrganizationsTab } from "@/pages/inventory/organizations-tab";
 import { InstrumentsTab } from "@/pages/payments/instruments-tab";
 import { StockUnitProvisionCard } from "@/pages/settings/stock-unit-provision-card";
+import { LookupManagerCard } from "@/pages/settings/lookup-manager-card";
 
 // Every tab here reuses the shared component its owning page already built
 // (Warehouses/Organizations from Inventory, Instruments from Payments) —
@@ -19,6 +21,7 @@ export function SettingsPage() {
         <TabsTrigger value="instruments">Payment Instruments</TabsTrigger>
         <TabsTrigger value="organizations">Organizations</TabsTrigger>
         <TabsTrigger value="coded-units">Coded Units</TabsTrigger>
+        <TabsTrigger value="categories-units">Categories & Units</TabsTrigger>
         <TabsTrigger value="system">System</TabsTrigger>
       </TabsList>
       <TabsContent value="warehouses">
@@ -32,6 +35,20 @@ export function SettingsPage() {
       </TabsContent>
       <TabsContent value="coded-units">
         <StockUnitProvisionCard />
+      </TabsContent>
+      <TabsContent value="categories-units">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <LookupManagerCard title="Item Categories" singular="Item Category" endpoint="/item-categories" queryKey="item-categories" icon={Package} />
+          <LookupManagerCard title="Units" singular="Unit" endpoint="/units" queryKey="units" icon={Ruler} />
+          <LookupManagerCard title="Expense Categories" singular="Expense Category" endpoint="/expense-categories" queryKey="expense-categories" icon={Layers} />
+          <LookupManagerCard
+            title="Supplier Supply Categories"
+            singular="Supplier Supply Category"
+            endpoint="/supplier-supply-categories"
+            queryKey="supplier-supply-categories"
+            icon={Truck}
+          />
+        </div>
       </TabsContent>
       <TabsContent value="system">
         <Card>
