@@ -19,11 +19,12 @@ import { ActorSelect } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
-import { COST_TYPES, EXPENSE_CATEGORIES, type Expense } from "@/pages/finance/types";
+import { COST_TYPES, type Expense } from "@/pages/finance/types";
+import type { LookupRow } from "@/pages/settings/lookup-types";
 
 const expenseSchema = z.object({
   batch_id: z.string().optional(),
-  category: z.enum(EXPENSE_CATEGORIES, "Select a category"),
+  category: z.string().min(1, "Select a category"),
   cost_type: z.enum(COST_TYPES, "Select a cost type"),
   amount: z.coerce.number().positive("Must be positive"),
   date: z.string().min(1, "Date is required"),
@@ -65,6 +66,10 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
   }, [open, reset]);
 
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
+  const { data: categories } = useGetData<Paginated<LookupRow>>(
+    "/expense-categories?active=true&limit=100",
+    ["expense-categories", "active"]
+  );
   const createExpense = usePostData<Expense, ExpenseFormValues>("/expenses", ["expenses"]);
 
   const onSubmit = (values: ExpenseFormValues) => {
@@ -105,12 +110,16 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
                 render={({ field }) => (
                   <Select value={field.value ?? ""} onValueChange={field.onChange}>
                     <SelectTrigger id="category" className="w-full" aria-invalid={!!errors.category}>
-                      <SelectValue>{(v: string) => (v ? humanizeEnum(v) : "Select category")}</SelectValue>
+                      <SelectValue>
+                        {(v: string) =>
+                          v ? (categories?.results.find((c) => c.code === v)?.label ?? humanizeEnum(v)) : "Select category"
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {EXPENSE_CATEGORIES.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {humanizeEnum(c)}
+                      {(categories?.results ?? []).map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
