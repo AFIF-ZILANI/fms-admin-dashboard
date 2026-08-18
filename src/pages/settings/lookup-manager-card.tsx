@@ -38,12 +38,13 @@ function filterLabelInput(value: string): string {
 
 type LookupManagerCardProps = {
   title: string;
+  singular: string;
   endpoint: string;
   queryKey: string;
   icon: LucideIcon;
 };
 
-export function LookupManagerCard({ title, endpoint, queryKey, icon: Icon }: LookupManagerCardProps) {
+export function LookupManagerCard({ title, singular, endpoint, queryKey, icon: Icon }: LookupManagerCardProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<LookupRow | undefined>(undefined);
   const [label, setLabel] = useState("");
@@ -76,7 +77,7 @@ export function LookupManagerCard({ title, endpoint, queryKey, icon: Icon }: Loo
         { id: editingRow.id, label },
         {
           onSuccess: () => {
-            toast.success(`${title.replace(/s$/, "")} updated`);
+            toast.success(`${singular} updated`);
             setFormOpen(false);
           },
           onError: (error) => toast.error(error.message),
@@ -87,7 +88,7 @@ export function LookupManagerCard({ title, endpoint, queryKey, icon: Icon }: Loo
         { label },
         {
           onSuccess: () => {
-            toast.success(`${title.replace(/s$/, "")} added`);
+            toast.success(`${singular} added`);
             setFormOpen(false);
           },
           onError: (error) => toast.error(error.message),
@@ -165,7 +166,7 @@ export function LookupManagerCard({ title, endpoint, queryKey, icon: Icon }: Loo
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{editingRow ? `Edit ${title.replace(/s$/, "")}` : `Add ${title.replace(/s$/, "")}`}</DialogTitle>
+            <DialogTitle>{editingRow ? `Edit ${singular}` : `Add ${singular}`}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="lookup-label">Label</Label>
