@@ -127,7 +127,7 @@ export function LookupManagerCard({ title, singular, endpoint, queryKey, icon: I
     },
     {
       key: "actions",
-      header: "",
+      header: "Actions",
       render: (r) => (
         <div className="flex justify-end gap-1">
           <Button variant="ghost" size="icon-sm" aria-label={`Edit ${r.label}`} onClick={() => openEdit(r)}>
