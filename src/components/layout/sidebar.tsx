@@ -1,7 +1,11 @@
 import { NavLink } from "react-router";
-import { Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { OPERATIONAL_NAV, SYSTEM_NAV, type NavItem } from "@/components/layout/nav-config";
+import {
+  OPERATIONAL_NAV,
+  SYSTEM_NAV,
+  type NavItem,
+} from "@/components/layout/nav-config";
+import { useTheme, type UseThemeProps } from "next-themes";
 
 function NavGroup({ items }: { items: NavItem[] }) {
   return (
@@ -16,7 +20,7 @@ function NavGroup({ items }: { items: NavItem[] }) {
               "lg:justify-start justify-center",
               isActive
                 ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )
           }
         >
@@ -28,12 +32,19 @@ function NavGroup({ items }: { items: NavItem[] }) {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({theme}: {theme: UseThemeProps}) {
+  const isDark =
+    theme.theme === "dark" ||
+    (theme.theme === "system" && theme.systemTheme === "dark");
   return (
     <aside className="fixed inset-y-0 left-0 z-20 flex w-16 flex-col gap-4 border-r border-border bg-sidebar px-2 py-4 lg:w-60 lg:px-3">
-      <div className="flex items-center gap-2 px-1 lg:px-2">
-        <Sprout className="size-6 shrink-0 text-brand" />
-        <span className="hidden text-sm font-semibold tracking-tight lg:inline">ZeroD Farms</span>
+      <div className="flex flex-col px-2">
+        <img
+          src={isDark ? "/logo-dark.svg" : "/logo-light.svg"}
+          alt="FMS Logo"
+          className="w-22 shrink-0"
+        />
+        <span className="text-xs">FMS Admin Dashboard</span>
       </div>
       <nav className="flex flex-1 flex-col justify-between overflow-y-auto">
         <NavGroup items={OPERATIONAL_NAV} />
