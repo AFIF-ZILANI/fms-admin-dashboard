@@ -41,7 +41,7 @@ export function SettingsPage() {
           Renaming FEED, MEDICINE, VACCINE, or EQUIPMENT may affect other features (feeding programs, asset
           creation, coded-unit binding) that reference those specific categories.
         </p>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4">
           <LookupManagerCard title="Item Categories" singular="Item Category" endpoint="/item-categories" queryKey="item-categories" icon={Package} />
           <LookupManagerCard title="Units" singular="Unit" endpoint="/units" queryKey="units" icon={Ruler} />
           <LookupManagerCard title="Expense Categories" singular="Expense Category" endpoint="/expense-categories" queryKey="expense-categories" icon={Layers} />
