@@ -10,7 +10,8 @@ import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import { ExpenseCreateDialog } from "@/pages/finance/expense-create-dialog";
-import { COST_TYPES, EXPENSE_CATEGORIES, type Expense } from "@/pages/finance/types";
+import { COST_TYPES, type Expense } from "@/pages/finance/types";
+import type { LookupRow } from "@/pages/settings/lookup-types";
 
 export function ExpensesTab() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -36,6 +37,10 @@ export function ExpensesTab() {
     dateTo,
   ]);
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
+  const { data: categories } = useGetData<Paginated<LookupRow>>(
+    "/expense-categories?active=true&limit=100",
+    ["expense-categories", "active"]
+  );
   const batchCode = (id: string | null) => (id ? batches?.results.find((b) => b.id === id)?.batch_code ?? "—" : "Farm-wide");
 
   const expenses = data?.results ?? [];
@@ -58,13 +63,17 @@ export function ExpensesTab() {
           <Label htmlFor="expense-category-filter">Category</Label>
           <Select value={category} onValueChange={(v) => setCategory(v ?? "ALL")}>
             <SelectTrigger id="expense-category-filter" className="w-40">
-              <SelectValue>{(v: string) => (v === "ALL" ? "All categories" : humanizeEnum(v))}</SelectValue>
+              <SelectValue>
+                {(v: string) =>
+                  v === "ALL" ? "All categories" : (categories?.results.find((c) => c.code === v)?.label ?? humanizeEnum(v))
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All categories</SelectItem>
-              {EXPENSE_CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {humanizeEnum(c)}
+              {(categories?.results ?? []).map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.label}
                 </SelectItem>
               ))}
             </SelectContent>

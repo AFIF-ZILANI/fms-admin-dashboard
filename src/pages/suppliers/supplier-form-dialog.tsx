@@ -16,9 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usePatchData, usePostData } from "@/lib/api";
+import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
-import { SUPPLIER_ROLES, SUPPLY_CATEGORIES, type Supplier } from "@/pages/suppliers/types";
+import { SUPPLIER_ROLES, type Supplier } from "@/pages/suppliers/types";
+import type { LookupRow } from "@/pages/settings/lookup-types";
 
 const supplierSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -26,7 +27,7 @@ const supplierSchema = z.object({
   email: z.string().trim().optional(),
   address: z.string().trim().optional(),
   role: z.enum(SUPPLIER_ROLES, "Select a role"),
-  supplies: z.array(z.enum(SUPPLY_CATEGORIES)).min(1, "Select at least one supply category"),
+  supplies: z.array(z.string()).min(1, "Select at least one supply category"),
   company: z.string().trim().optional(),
 });
 
@@ -71,6 +72,10 @@ export function SupplierFormDialog({ open, onOpenChange, supplier }: SupplierFor
     }
   }, [open, supplier, reset]);
 
+  const { data: supplyCategories } = useGetData<Paginated<LookupRow>>(
+    "/supplier-supply-categories?active=true&limit=100",
+    ["supplier-supply-categories", "active"]
+  );
   const createSupplier = usePostData<Supplier, SupplierFormValues>("/suppliers", ["suppliers"]);
   const updateSupplier = usePatchData<Supplier, SupplierFormValues>(`/suppliers/${supplier?.id}`, ["suppliers"]);
   const mutation = isEdit ? updateSupplier : createSupplier;
@@ -172,20 +177,20 @@ export function SupplierFormDialog({ open, onOpenChange, supplier }: SupplierFor
               name="supplies"
               render={({ field }) => (
                 <div className="grid grid-cols-2 gap-2 rounded-lg border border-border p-3">
-                  {SUPPLY_CATEGORIES.map((category) => {
-                    const checked = field.value?.includes(category) ?? false;
+                  {(supplyCategories?.results ?? []).map((category) => {
+                    const checked = field.value?.includes(category.code) ?? false;
                     return (
-                      <label key={category} className="flex items-center gap-2 text-sm">
+                      <label key={category.code} className="flex items-center gap-2 text-sm">
                         <Checkbox
                           checked={checked}
                           onCheckedChange={(isChecked) => {
                             const next = isChecked
-                              ? [...(field.value ?? []), category]
-                              : (field.value ?? []).filter((c) => c !== category);
+                              ? [...(field.value ?? []), category.code]
+                              : (field.value ?? []).filter((c) => c !== category.code);
                             field.onChange(next);
                           }}
                         />
-                        {humanizeEnum(category)}
+                        {category.label}
                       </label>
                     );
                   })}

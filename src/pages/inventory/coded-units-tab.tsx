@@ -15,6 +15,10 @@ import { BindCodeDialog } from "@/pages/inventory/bind-code-dialog";
 import { StockUnitDetailSheet } from "@/pages/inventory/stock-unit-detail-sheet";
 
 // Only medicine/vaccine/equipment get per-unit QR codes (docs/PRD.md §6.4 Notes) -- filter offers just those.
+// ponytail: these are live ItemCategory.code values a user can rename via
+// Settings, which silently breaks this filter dropdown with no error --
+// needs a stable-key mechanism (e.g. an is_system flag) if renaming these
+// specific categories becomes a real risk.
 const CODED_CATEGORIES = ["MEDICINE", "VACCINE", "EQUIPMENT"] as const;
 
 export function CodedUnitsTab() {

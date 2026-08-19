@@ -21,18 +21,23 @@ import { ActorSelect } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
-import { UNITS, type Item } from "@/pages/inventory/types";
+import type { Item } from "@/pages/inventory/types";
+import type { LookupRow } from "@/pages/settings/lookup-types";
 import type { Supplier } from "@/pages/suppliers/types";
 import type { Purchase } from "@/pages/purchases/types";
 import { BindCodesPrompt } from "@/pages/purchases/bind-codes-prompt";
 
+// ponytail: these are live ItemCategory.code values a user can rename via
+// Settings, which silently breaks this "show bind-codes prompt" check with
+// no error -- needs a stable-key mechanism (e.g. an is_system flag) if
+// renaming these specific categories becomes a real risk.
 const CODED_CATEGORIES = ["MEDICINE", "VACCINE", "EQUIPMENT"];
 
 const lineSchema = z.object({
   item_id: z.string().min(1, "Select an item"),
   batch_id: z.string().optional(),
   quantity: z.coerce.number().positive("Must be positive"),
-  unit: z.enum(UNITS, "Select a unit"),
+  unit: z.string().min(1, "Select a unit"),
   unit_price: z.coerce.number().positive("Must be positive"),
   mfg_date: z.string().optional(),
   expiration_date: z.string().optional(),
@@ -102,6 +107,7 @@ export function PurchaseCreateDialog({ open, onOpenChange }: PurchaseCreateDialo
 
   const { data: suppliers } = useGetData<Paginated<Supplier>>("/suppliers?limit=100", ["suppliers"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
+  const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
 
   const createPurchase = usePostData<Purchase, PurchaseFormValues>("/purchases", ["purchases"]);
 
@@ -258,12 +264,16 @@ export function PurchaseCreateDialog({ open, onOpenChange }: PurchaseCreateDialo
                     render={({ field: f }) => (
                       <Select value={f.value ?? ""} onValueChange={f.onChange}>
                         <SelectTrigger className="w-full" aria-invalid={!!errors.items?.[index]?.unit}>
-                          <SelectValue>{(v: string) => v || "Select unit"}</SelectValue>
+                          <SelectValue>
+                            {(v: string) =>
+                              v ? (units?.results.find((u) => u.code === v)?.label ?? v) : "Select unit"
+                            }
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          {UNITS.map((unit) => (
-                            <SelectItem key={unit} value={unit}>
-                              {unit}
+                          {(units?.results ?? []).map((unit) => (
+                            <SelectItem key={unit.code} value={unit.code}>
+                              {unit.label}
                             </SelectItem>
                           ))}
                         </SelectContent>

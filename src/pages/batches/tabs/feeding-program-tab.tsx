@@ -76,6 +76,10 @@ export function FeedingProgramTab({ batch }: { batch: Batch }) {
     `/batch-feeding-programs?batch_id=${batch.id}&limit=100`,
     ["batch-feeding-programs", batch.id]
   );
+  // ponytail: "FEED" is a live ItemCategory.code a user can rename via
+  // Settings, which silently breaks this query with no error -- needs a
+  // stable-key mechanism (e.g. an is_system flag) if renaming this
+  // specific category becomes a real risk.
   const { data: feedItems } = useGetData<Paginated<Item>>("/items?category=FEED&limit=100", ["items", "FEED"]);
   const itemName = (id: string) => feedItems?.results.find((i) => i.id === id)?.name ?? id;
 

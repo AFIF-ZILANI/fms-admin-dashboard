@@ -9,9 +9,9 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
-import { RESOURCE_CATEGORIES, type ResourceCategory } from "@/pages/inventory/types";
 import { paymentStatus } from "@/pages/sales/types";
 import type { Purchase } from "@/pages/purchases/types";
+import type { LookupRow } from "@/pages/settings/lookup-types";
 import type { Supplier } from "@/pages/suppliers/types";
 import { PurchaseCreateDialog } from "@/pages/purchases/purchase-create-dialog";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
@@ -23,7 +23,7 @@ export function PurchaseHistoryTab() {
   const [createOpen, setCreateOpen] = useState(false);
   const [paymentPurchaseId, setPaymentPurchaseId] = useState<string | null>(null);
   const [supplierFilter, setSupplierFilter] = useState<string>("ALL");
-  const [categoryFilter, setCategoryFilter] = useState<ResourceCategory | "ALL">("ALL");
+  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -50,6 +50,10 @@ export function PurchaseHistoryTab() {
   // Purchase's own `supplier` relation has no name (see types.ts) — look it up separately.
   const { data: suppliers } = useGetData<Paginated<Supplier>>("/suppliers?limit=100", ["suppliers"]);
   const supplierName = (id: string | null) => suppliers?.results.find((s) => s.id === id)?.profile.name ?? "—";
+  const { data: categories } = useGetData<Paginated<LookupRow>>("/item-categories?active=true&limit=100", [
+    "item-categories",
+    "active",
+  ]);
   const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("PURCHASE");
 
   const purchases = data?.results ?? [];
@@ -144,18 +148,21 @@ export function PurchaseHistoryTab() {
               ))}
             </SelectContent>
           </Select>
-          <Select
-            value={categoryFilter}
-            onValueChange={(v) => setCategoryFilter((v ?? "ALL") as ResourceCategory | "ALL")}
-          >
+          <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v ?? "ALL")}>
             <SelectTrigger className="w-40">
-              <SelectValue>{(v: string) => (v && v !== "ALL" ? humanizeEnum(v) : "All categories")}</SelectValue>
+              <SelectValue>
+                {(v: string) =>
+                  v && v !== "ALL"
+                    ? (categories?.results.find((cat) => cat.code === v)?.label ?? humanizeEnum(v))
+                    : "All categories"
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All categories</SelectItem>
-              {RESOURCE_CATEGORIES.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {humanizeEnum(category)}
+              {(categories?.results ?? []).map((category) => (
+                <SelectItem key={category.code} value={category.code}>
+                  {category.label}
                 </SelectItem>
               ))}
             </SelectContent>

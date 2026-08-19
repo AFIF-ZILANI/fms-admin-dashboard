@@ -10,11 +10,12 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus } from "@/components/shared/status-tone";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
-import { RESOURCE_CATEGORIES, type Item, type LowStockItem, type ResourceCategory } from "@/pages/inventory/types";
+import type { Item, LowStockItem } from "@/pages/inventory/types";
+import type { LookupRow } from "@/pages/settings/lookup-types";
 import { ItemFormDialog } from "@/pages/inventory/item-form-dialog";
 
 export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void }) {
-  const [categoryFilter, setCategoryFilter] = useState<ResourceCategory | "ALL">("ALL");
+  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | undefined>(undefined);
@@ -39,6 +40,11 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
     ["items", "low-stock"]
   );
   const lowStockCount = lowStockItems?.length ?? 0;
+
+  const { data: categories } = useGetData<Paginated<LookupRow>>(
+    "/item-categories?active=true&limit=100",
+    ["item-categories", "active"]
+  );
 
   const deactivate = usePostData<Item, string>((id) => `/items/${id}/deactivate`, ["items"]);
   const reactivate = usePostData<Item, string>((id) => `/items/${id}/reactivate`, ["items"]);
@@ -129,19 +135,21 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
             )}
           </div>
 
-          <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as ResourceCategory | "ALL")}>
+          <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v ?? "ALL")}>
             <SelectTrigger className="w-48">
               <SelectValue>
-                {(value: ResourceCategory | "ALL" | "") =>
-                  value && value !== "ALL" ? humanizeEnum(value) : "All categories"
+                {(value: string) =>
+                  value && value !== "ALL"
+                    ? (categories?.results.find((cat) => cat.code === value)?.label ?? humanizeEnum(value))
+                    : "All categories"
                 }
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All categories</SelectItem>
-              {RESOURCE_CATEGORIES.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {humanizeEnum(cat)}
+              {(categories?.results ?? []).map((cat) => (
+                <SelectItem key={cat.code} value={cat.code}>
+                  {cat.label}
                 </SelectItem>
               ))}
             </SelectContent>

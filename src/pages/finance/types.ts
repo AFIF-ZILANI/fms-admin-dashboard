@@ -1,24 +1,10 @@
-export const EXPENSE_CATEGORIES = [
-  "LABOR",
-  "ELECTRICITY",
-  "WATER",
-  "RENT",
-  "TRANSPORT",
-  "FUEL",
-  "MAINTENANCE",
-  "VET_FEE",
-  "INTERNET",
-  "MISC",
-] as const;
-export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
-
 export const COST_TYPES = ["DIRECT", "SHARED_PERIOD", "SHARED_CAPITAL"] as const;
 export type CostType = (typeof COST_TYPES)[number];
 
 export type Expense = {
   id: string;
   batch_id: string | null;
-  category: ExpenseCategory;
+  category: string;
   cost_type: CostType;
   amount: string;
   date: string;

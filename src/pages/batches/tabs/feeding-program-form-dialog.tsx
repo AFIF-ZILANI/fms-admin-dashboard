@@ -52,6 +52,10 @@ export function FeedingProgramFormDialog({ open, onOpenChange, batchId }: Feedin
     if (open) reset({ feed_type: undefined, item_id: "", start_day: undefined, end_day: "" });
   }, [open, reset]);
 
+  // ponytail: "FEED" is a live ItemCategory.code a user can rename via
+  // Settings, which silently breaks this query with no error -- needs a
+  // stable-key mechanism (e.g. an is_system flag) if renaming this
+  // specific category becomes a real risk.
   const { data: feedItems } = useGetData<Paginated<Item>>("/items?category=FEED&limit=100", ["items", "FEED"]);
 
   const createProgram = usePostData<BatchFeedingProgram, FeedingProgramFormValues & { batch_id: string }>(
