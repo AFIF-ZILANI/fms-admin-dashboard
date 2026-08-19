@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus } from "@/components/shared/status-tone";
-import { useGetData, usePostData, usePatchData, type Paginated } from "@/lib/api";
+import { useGetData, usePostData, usePatchData, useDelete, type Paginated } from "@/lib/api";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 
 /** Mirrors server/src/lib/code-gen.ts's generateCode exactly -- cosmetic
@@ -59,6 +59,7 @@ export function LookupManagerCard({ title, singular, endpoint, queryKey, icon: I
   );
   const deactivate = usePostData<LookupRow, string>((id) => `${endpoint}/${id}/deactivate`, [queryKey]);
   const reactivate = usePostData<LookupRow, string>((id) => `${endpoint}/${id}/reactivate`, [queryKey]);
+  const remove = useDelete<null, string>((id) => `${endpoint}/${id}`, [queryKey]);
 
   const openCreate = () => {
     setEditingRow(undefined);
@@ -105,6 +106,14 @@ export function LookupManagerCard({ title, singular, endpoint, queryKey, icon: I
     });
   };
 
+  const onDelete = (row: LookupRow) => {
+    if (!confirm(`Delete "${row.label}"? This can't be undone.`)) return;
+    remove.mutate(row.id, {
+      onSuccess: () => toast.success(`${singular} deleted`),
+      onError: (error) => toast.error(error.message),
+    });
+  };
+
   const columns: Column<LookupRow>[] = [
     { key: "label", header: "Label", render: (r) => <span className="font-medium">{r.label}</span> },
     { key: "code", header: "Code", render: (r) => <span className="text-xs text-muted-foreground">{r.code}</span> },
@@ -134,6 +143,15 @@ export function LookupManagerCard({ title, singular, endpoint, queryKey, icon: I
             }
           >
             {r.is_active ? "Deactivate" : "Reactivate"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete ${r.label}`}
+            onClick={() => onDelete(r)}
+            disabled={remove.isPending && remove.variables === r.id}
+          >
+            <Trash2 />
           </Button>
         </div>
       ),
