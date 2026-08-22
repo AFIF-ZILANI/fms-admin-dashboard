@@ -9,6 +9,8 @@ export type ItemUnit = {
   item_id: string;
   unit: string;
   factor_to_base: string;
+  is_purchasable: boolean;
+  is_usable: boolean;
 };
 
 export type Item = {
@@ -20,6 +22,7 @@ export type Item = {
   reorder_level: string | null;
   preferred_reorder_qty: string | null;
   lead_time_days: number | null;
+  meta_data: Record<string, string> | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
