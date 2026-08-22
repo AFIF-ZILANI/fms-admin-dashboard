@@ -7,6 +7,7 @@ import { SupplierDetailPage } from "@/pages/suppliers/supplier-detail-page";
 import { CustomersListPage } from "@/pages/customers/customers-list-page";
 import { CustomerDetailPage } from "@/pages/customers/customer-detail-page";
 import { InventoryPage } from "@/pages/inventory/inventory-page";
+import { ItemFormPage } from "@/pages/inventory/item-form-page";
 import { AdminsListPage } from "@/pages/admins/admins-list-page";
 import { BatchesListPage } from "@/pages/batches/batches-list-page";
 import { BatchDetailPage } from "@/pages/batches/batch-detail-page";
@@ -36,6 +37,8 @@ function App() {
         <Route path="houses" element={<HousesListPage />} />
         <Route path="houses/:id" element={<HouseDetailPage />} />
         <Route path="inventory" element={<InventoryPage />} />
+        <Route path="inventory/items/new" element={<ItemFormPage />} />
+        <Route path="inventory/items/:id/edit" element={<ItemFormPage />} />
         <Route path="suppliers" element={<SuppliersListPage />} />
         <Route path="suppliers/:id" element={<SupplierDetailPage />} />
         <Route path="customers" element={<CustomersListPage />} />

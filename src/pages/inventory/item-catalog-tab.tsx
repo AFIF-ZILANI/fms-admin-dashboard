@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { AlertTriangle, CheckCircle2, Package, Pencil, Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,13 +13,11 @@ import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Item, LowStockItem } from "@/pages/inventory/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
-import { ItemFormDialog } from "@/pages/inventory/item-form-dialog";
 
 export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void }) {
+  const navigate = useNavigate();
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Item | undefined>(undefined);
 
   const query = new URLSearchParams({ limit: "100" });
   if (categoryFilter !== "ALL") query.set("category", categoryFilter);
@@ -57,14 +56,8 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
     });
   };
 
-  const openCreate = () => {
-    setEditingItem(undefined);
-    setFormOpen(true);
-  };
-  const openEdit = (item: Item) => {
-    setEditingItem(item);
-    setFormOpen(true);
-  };
+  const openCreate = () => navigate("/inventory/items/new");
+  const openEdit = (item: Item) => navigate(`/inventory/items/${item.id}/edit`);
 
   const columns: Column<Item>[] = [
     { key: "name", header: "Name", render: (i) => <span className="font-medium">{i.name}</span> },
@@ -184,8 +177,6 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
               }
         }
       />
-
-      <ItemFormDialog open={formOpen} onOpenChange={setFormOpen} item={editingItem} />
     </div>
   );
 }
