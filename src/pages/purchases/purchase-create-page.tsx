@@ -28,16 +28,21 @@ import type { Item } from "@/pages/inventory/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 import type { Supplier } from "@/pages/suppliers/types";
 import type { PaymentInstrument } from "@/pages/payments/types";
-import type { Purchase } from "@/pages/purchases/types";
+import { DISCOUNT_TYPES, type DiscountType, type Purchase } from "@/pages/purchases/types";
+import { COST_TYPES, type CostType } from "@/pages/finance/types";
 import { BindCodesPrompt } from "@/pages/purchases/bind-codes-prompt";
 
 const CODED_CATEGORIES = ["MEDICINE", "VACCINE", "EQUIPMENT"];
+
+const DISCOUNT_TYPE_LABELS: Record<DiscountType, string> = { FLAT: "Flat amount", PERCENT: "Percent" };
 
 const lineSchema = z.object({
   item_id: z.string().min(1, "Select an item"),
   quantity: z.coerce.number().positive("Must be positive"),
   unit: z.string().min(1, "Select a unit"),
   unit_price: z.coerce.number().positive("Must be positive"),
+  discount_type: z.enum(DISCOUNT_TYPES).optional(),
+  discount_value: z.coerce.number().nonnegative().optional(),
   mfg_date: z.string().optional(),
   expiration_date: z.string().optional(),
 });
@@ -46,21 +51,48 @@ const purchaseSchema = z.object({
   supplier_id: z.string().optional(),
   invoice_no: z.string().trim().optional(),
   purchase_date: z.string().min(1, "Purchase date is required"),
+  discount_type: z.enum(DISCOUNT_TYPES).optional(),
+  discount_value: z.coerce.number().nonnegative().optional(),
   items: z.array(lineSchema).min(1, "Add at least one line item"),
 });
 
 type PurchaseFormInput = z.input<typeof purchaseSchema>;
 type PurchaseFormValues = z.output<typeof purchaseSchema>;
+type LineInput = PurchaseFormInput["items"][number];
 
-function blankLine(): PurchaseFormInput["items"][number] {
+function blankLine(): LineInput {
   return {
     item_id: "",
     quantity: undefined,
-    unit: undefined as unknown as PurchaseFormInput["items"][number]["unit"],
+    unit: undefined as unknown as LineInput["unit"],
     unit_price: undefined,
+    discount_type: undefined,
+    discount_value: undefined,
     mfg_date: "",
     expiration_date: "",
   };
+}
+
+/** Amount a discount removes from `gross` -- FLAT is a currency amount, PERCENT is 0-100 of gross.
+ * Mirrors PurchaseService.computeDiscount so the on-page preview matches what the server will charge. */
+function discountAmount(gross: number, type: DiscountType | undefined, value: number | undefined): number {
+  if (type === undefined || value === undefined || !Number.isFinite(value)) return 0;
+  return type === "PERCENT" ? gross * (value / 100) : value;
+}
+
+function lineGross(line?: { quantity?: unknown; unit_price?: unknown }): number {
+  return (Number(line?.quantity) || 0) * (Number(line?.unit_price) || 0);
+}
+
+function lineNet(line?: {
+  quantity?: unknown;
+  unit_price?: unknown;
+  discount_type?: DiscountType;
+  discount_value?: unknown;
+}): number {
+  const gross = lineGross(line);
+  const value = line?.discount_value === undefined ? undefined : Number(line.discount_value);
+  return Math.max(0, gross - discountAmount(gross, line?.discount_type, value));
 }
 
 type Admin = { id: string; profile: { id: string; name: string } };
@@ -93,12 +125,26 @@ function blankPayment(purchaseDate: string): PendingPayment {
   };
 }
 
+type PendingExpense = {
+  enabled: boolean;
+  category: string;
+  cost_type: CostType | "";
+  amount: string;
+  remarks: string;
+};
+
+function blankExpense(): PendingExpense {
+  return { enabled: false, category: "", cost_type: "", amount: "", remarks: "" };
+}
+
 export function PurchaseCreatePage() {
   usePageTitle("New purchase");
   const navigate = useNavigate();
   const [bindPromptPurchase, setBindPromptPurchase] = useState<Purchase | null>(null);
   const [payment, setPayment] = useState<PendingPayment>(() => blankPayment(new Date().toISOString().slice(0, 10)));
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [expense, setExpense] = useState<PendingExpense>(blankExpense);
+  const [expenseError, setExpenseError] = useState<string | null>(null);
   const [detailsIndex, setDetailsIndex] = useState<number | null>(null);
 
   const {
@@ -113,12 +159,16 @@ export function PurchaseCreatePage() {
       supplier_id: "",
       invoice_no: "",
       purchase_date: new Date().toISOString().slice(0, 10),
+      discount_type: undefined,
+      discount_value: undefined,
       items: [blankLine()],
     },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
   const watchedItems = useWatch({ control, name: "items" });
+  const globalDiscountType = useWatch({ control, name: "discount_type" });
+  const globalDiscountValue = useWatch({ control, name: "discount_value" });
 
   const { data: suppliers } = useGetData<Paginated<Supplier>>("/suppliers?limit=100", ["suppliers"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
@@ -128,12 +178,14 @@ export function PurchaseCreatePage() {
     "/payment-instruments?limit=100&is_active=true",
     ["payment-instruments"]
   );
-
-  const createPurchase = usePostData<Purchase, PurchaseFormValues & { recorded_by_id: string; paid_amount: number }>(
-    "/purchases",
-    ["purchases"]
+  const { data: expenseCategories } = useGetData<Paginated<LookupRow>>(
+    "/expense-categories?active=true&limit=100",
+    ["expense-categories", "active"]
   );
+
+  const createPurchase = usePostData<Purchase, Record<string, unknown>>("/purchases", ["purchases"]);
   const createPayment = usePostData<unknown, Record<string, unknown>>("/payments", ["payments"]);
+  const createExpense = usePostData<unknown, Record<string, unknown>>("/expenses", ["expenses"]);
 
   const itemOptions = items?.results ?? [];
   const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
@@ -147,11 +199,17 @@ export function PurchaseCreatePage() {
     return codes.map((code) => ({ code, label: unitLabel(code) }));
   };
 
-  const totalPreview = (watchedItems ?? []).reduce((sum, line) => {
-    const qty = Number(line?.quantity) || 0;
-    const price = Number(line?.unit_price) || 0;
-    return sum + qty * price;
-  }, 0);
+  // Subtotal = sum of each line's own net total (gross minus that line's discount) -- this is what
+  // the global discount below is then applied against, same order of operations as the backend.
+  const subtotalPreview = (watchedItems ?? []).reduce((sum, line) => sum + lineNet(line), 0);
+  const globalDiscountAmount = discountAmount(
+    subtotalPreview,
+    globalDiscountType,
+    globalDiscountValue === undefined ? undefined : Number(globalDiscountValue)
+  );
+  const netTotalPreview = Math.max(0, subtotalPreview - globalDiscountAmount);
+  const hasAnyDiscount =
+    globalDiscountType !== undefined || (watchedItems ?? []).some((line) => line?.discount_type !== undefined);
 
   const admin = admins?.results ?? [];
   const resolveRecordedBy = (): string | null => {
@@ -163,8 +221,8 @@ export function PurchaseCreatePage() {
   };
 
   /** The amount that will actually be posted as a Payment. "Paid in full" always tracks the live
-   * line-items total rather than a stored number, so it can't go stale if a line changes after picking it. */
-  const paymentAmount = payment.status === "PAID" ? totalPreview : Number(payment.amount);
+   * net total rather than a stored number, so it can't go stale if a line or discount changes after picking it. */
+  const paymentAmount = payment.status === "PAID" ? netTotalPreview : Number(payment.amount);
 
   const onSubmit = (values: PurchaseFormValues) => {
     const recorded_by_id = resolveRecordedBy();
@@ -172,18 +230,47 @@ export function PurchaseCreatePage() {
       toast.error("No admins exist yet — add one before recording a purchase.");
       return;
     }
+
+    for (const [i, line] of values.items.entries()) {
+      if ((line.discount_type !== undefined) !== (line.discount_value !== undefined)) {
+        toast.error(`Line ${i + 1}: pick a discount type and enter a value, or leave both blank.`);
+        return;
+      }
+    }
+    if ((values.discount_type !== undefined) !== (values.discount_value !== undefined)) {
+      toast.error("Enter a discount type and value, or leave both blank.");
+      return;
+    }
+
     setPaymentError(null);
     if (payment.status !== "UNPAID") {
       if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
         setPaymentError("Enter a valid payment amount.");
         return;
       }
-      if (payment.status === "PARTIAL" && paymentAmount >= totalPreview) {
+      if (payment.status === "PARTIAL" && paymentAmount >= netTotalPreview) {
         setPaymentError("A partial payment must be less than the total — pick \"Paid in full\" instead.");
         return;
       }
       if (!payment.from_instrument_id) {
         setPaymentError("Select which instrument this payment is from.");
+        return;
+      }
+    }
+
+    setExpenseError(null);
+    if (expense.enabled) {
+      const amount = Number(expense.amount);
+      if (!expense.category) {
+        setExpenseError("Select an expense category.");
+        return;
+      }
+      if (!expense.cost_type) {
+        setExpenseError("Select a cost type.");
+        return;
+      }
+      if (!Number.isFinite(amount) || amount <= 0) {
+        setExpenseError("Enter a valid expense amount.");
         return;
       }
     }
@@ -204,14 +291,40 @@ export function PurchaseCreatePage() {
     createPurchase.mutate(payload, {
       onSuccess: (purchase) => {
         toast.success("Purchase recorded");
-        const afterPurchase = () => {
+        const afterExpense = () => {
           const hasCodedItems = purchase.items.some((line) => CODED_CATEGORIES.includes(line.item.category));
           if (hasCodedItems) setBindPromptPurchase(purchase);
           else navigate(`/purchases/${purchase.id}`);
         };
+        const withExpense = () => {
+          if (!expense.enabled) {
+            afterExpense();
+            return;
+          }
+          createExpense.mutate(
+            {
+              category: expense.category,
+              cost_type: expense.cost_type,
+              amount: Number(expense.amount),
+              date: values.purchase_date,
+              remarks: expense.remarks || undefined,
+              recorded_by_id,
+            },
+            {
+              onSuccess: () => {
+                toast.success("Expense recorded");
+                afterExpense();
+              },
+              onError: (error) => {
+                toast.warning(`Purchase saved, but the expense failed: ${error.message}`);
+                afterExpense();
+              },
+            }
+          );
+        };
 
         if (payment.status === "UNPAID") {
-          afterPurchase();
+          withExpense();
           return;
         }
 
@@ -230,11 +343,11 @@ export function PurchaseCreatePage() {
           {
             onSuccess: () => {
               toast.success("Payment recorded");
-              afterPurchase();
+              withExpense();
             },
             onError: (error) => {
               toast.warning(`Purchase saved, but the payment failed: ${error.message}`);
-              afterPurchase();
+              withExpense();
             },
           }
         );
@@ -405,10 +518,7 @@ export function PurchaseCreatePage() {
                         />
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatMoney(
-                          (Number(watchedItems?.[index]?.quantity) || 0) *
-                            (Number(watchedItems?.[index]?.unit_price) || 0)
-                        )}
+                        {formatMoney(lineNet(watchedItems?.[index]))}
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
@@ -439,8 +549,50 @@ export function PurchaseCreatePage() {
                 })}
               </TableBody>
             </Table>
-            <div className="mt-3 flex justify-end text-sm font-medium tabular-nums">
-              Total: {formatMoney(totalPreview)}
+
+            <div className="mt-3 flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground">Overall discount (optional)</Label>
+                <Controller
+                  control={control}
+                  name="discount_type"
+                  render={({ field: f }) => (
+                    <Select value={f.value ?? ""} onValueChange={(v) => f.onChange(v || undefined)}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue>
+                          {(v: DiscountType) => (v ? DISCOUNT_TYPE_LABELS[v] : "None")}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DISCOUNT_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {DISCOUNT_TYPE_LABELS[t]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <NumericInput
+                  allowDecimal
+                  decimalPlaces={2}
+                  disabled={globalDiscountType === undefined}
+                  className="w-24"
+                  {...register("discount_value", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })}
+                />
+              </div>
+
+              {hasAnyDiscount ? (
+                <div className="text-sm tabular-nums">
+                  <div className="text-muted-foreground">Subtotal: {formatMoney(subtotalPreview)}</div>
+                  {globalDiscountAmount > 0 && (
+                    <div className="text-muted-foreground">Discount: −{formatMoney(globalDiscountAmount)}</div>
+                  )}
+                  <div className="font-medium">Total: {formatMoney(netTotalPreview)}</div>
+                </div>
+              ) : (
+                <div className="text-sm font-medium tabular-nums">Total: {formatMoney(netTotalPreview)}</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -474,12 +626,12 @@ export function PurchaseCreatePage() {
                   allowDecimal
                   decimalPlaces={2}
                   disabled={payment.status === "PAID"}
-                  value={payment.status === "PAID" ? String(totalPreview) : payment.amount}
+                  value={payment.status === "PAID" ? String(netTotalPreview) : payment.amount}
                   onChange={(e) => setPayment((p) => ({ ...p, amount: e.target.value }))}
                 />
                 {payment.status === "PARTIAL" && (
                   <p className="text-xs text-muted-foreground">
-                    Due after this payment: {formatMoney(Math.max(0, totalPreview - paymentAmount))}
+                    Due after this payment: {formatMoney(Math.max(0, netTotalPreview - paymentAmount))}
                   </p>
                 )}
               </div>
@@ -530,6 +682,83 @@ export function PurchaseCreatePage() {
           )}
         </Card>
 
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Related expense</CardTitle>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={expense.enabled}
+                onChange={(e) => setExpense((p) => ({ ...p, enabled: e.target.checked }))}
+              />
+              e.g. transportation for this delivery
+            </label>
+          </CardHeader>
+          {expense.enabled && (
+            <CardContent className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label>Category</Label>
+                <Select
+                  value={expense.category}
+                  onValueChange={(v) => setExpense((p) => ({ ...p, category: v ?? "" }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      {(v: string) =>
+                        v
+                          ? (expenseCategories?.results.find((c) => c.code === v)?.label ?? humanizeEnum(v))
+                          : "Select category"
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(expenseCategories?.results ?? []).map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Cost type</Label>
+                <Select
+                  value={expense.cost_type}
+                  onValueChange={(v) => setExpense((p) => ({ ...p, cost_type: (v as CostType) ?? "" }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: string) => (v ? humanizeEnum(v) : "Select cost type")}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COST_TYPES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {humanizeEnum(c)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Amount</Label>
+                <NumericInput
+                  allowDecimal
+                  decimalPlaces={2}
+                  value={expense.amount}
+                  onChange={(e) => setExpense((p) => ({ ...p, amount: e.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Remarks (optional)</Label>
+                <Input
+                  value={expense.remarks}
+                  onChange={(e) => setExpense((p) => ({ ...p, remarks: e.target.value }))}
+                />
+              </div>
+              {expenseError && <p className="col-span-2 text-xs text-destructive">{expenseError}</p>}
+            </CardContent>
+          )}
+        </Card>
+
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/purchases")}>
             Cancel
@@ -544,10 +773,42 @@ export function PurchaseCreatePage() {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Line details</DialogTitle>
-            <DialogDescription>Optional — only needed for perishables.</DialogDescription>
+            <DialogDescription>Optional — discount, mfg/expiration for perishables.</DialogDescription>
           </DialogHeader>
           {detailsIndex !== null && (
             <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <Label className="w-20 shrink-0">Discount</Label>
+                <Controller
+                  control={control}
+                  name={`items.${detailsIndex}.discount_type`}
+                  render={({ field: f }) => (
+                    <Select value={f.value ?? ""} onValueChange={(v) => f.onChange(v || undefined)}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue>
+                          {(v: DiscountType) => (v ? DISCOUNT_TYPE_LABELS[v] : "None")}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DISCOUNT_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {DISCOUNT_TYPE_LABELS[t]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <NumericInput
+                  allowDecimal
+                  decimalPlaces={2}
+                  disabled={watchedItems?.[detailsIndex]?.discount_type === undefined}
+                  className="w-24"
+                  {...register(`items.${detailsIndex}.discount_value`, {
+                    setValueAs: (v) => (v === "" ? undefined : Number(v)),
+                  })}
+                />
+              </div>
               <div className="flex flex-col gap-1.5">
                 <Label>Mfg date (optional)</Label>
                 <Input type="date" {...register(`items.${detailsIndex}.mfg_date`)} />

@@ -1,3 +1,6 @@
+export const DISCOUNT_TYPES = ["FLAT", "PERCENT"] as const;
+export type DiscountType = (typeof DISCOUNT_TYPES)[number];
+
 export type PurchaseItemLine = {
   id: string;
   purchase_id: string;
@@ -6,6 +9,8 @@ export type PurchaseItemLine = {
   quantity: string;
   unit: string;
   unit_price: string;
+  discount_type: DiscountType | null;
+  discount_value: string | null;
   total_price: string;
   mfg_date: string | null;
   expiration_date: string | null;
@@ -17,6 +22,8 @@ export type Purchase = {
   supplier_id: string | null;
   invoice_no: string | null;
   purchase_date: string;
+  discount_type: DiscountType | null;
+  discount_value: string | null;
   total_amount: string;
   paid_amount: string;
   due_amount: string;
