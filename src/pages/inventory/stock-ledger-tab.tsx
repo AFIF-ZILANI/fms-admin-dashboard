@@ -59,6 +59,16 @@ export function StockLedgerTab() {
         ),
     },
     { key: "reason", header: "Reason", render: (e) => humanizeEnum(e.reason) },
+    {
+      key: "movement",
+      header: "Movement",
+      render: (e) => (
+        <span className={e.direction === "IN" ? "text-success" : "text-critical"}>
+          {e.direction === "IN" ? "+" : "-"}
+          {e.quantity} {e.item.unit}
+        </span>
+      ),
+    },
     { key: "quantity", header: "Quantity", render: (e) => e.quantity, numeric: true },
     { key: "unit_cost", header: "Unit cost", render: (e) => e.unit_cost ?? "—", numeric: true },
     { key: "ref_type", header: "Ref type", render: (e) => humanizeEnum(e.ref_type) },
