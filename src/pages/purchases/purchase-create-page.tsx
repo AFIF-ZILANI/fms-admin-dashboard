@@ -65,8 +65,16 @@ function blankLine(): PurchaseFormInput["items"][number] {
 
 type Admin = { id: string; profile: { id: string; name: string } };
 
+const PAYMENT_STATUSES = ["UNPAID", "PARTIAL", "PAID"] as const;
+type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  UNPAID: "Unpaid",
+  PARTIAL: "Partially paid",
+  PAID: "Paid in full",
+};
+
 type PendingPayment = {
-  enabled: boolean;
+  status: PaymentStatus;
   amount: string;
   from_instrument_id: string;
   payment_date: string;
@@ -75,7 +83,14 @@ type PendingPayment = {
 };
 
 function blankPayment(purchaseDate: string): PendingPayment {
-  return { enabled: false, amount: "", from_instrument_id: "", payment_date: purchaseDate, transaction_ref: "", note: "" };
+  return {
+    status: "UNPAID",
+    amount: "",
+    from_instrument_id: "",
+    payment_date: purchaseDate,
+    transaction_ref: "",
+    note: "",
+  };
 }
 
 export function PurchaseCreatePage() {
@@ -147,6 +162,10 @@ export function PurchaseCreatePage() {
     return fallback ?? null;
   };
 
+  /** The amount that will actually be posted as a Payment. "Paid in full" always tracks the live
+   * line-items total rather than a stored number, so it can't go stale if a line changes after picking it. */
+  const paymentAmount = payment.status === "PAID" ? totalPreview : Number(payment.amount);
+
   const onSubmit = (values: PurchaseFormValues) => {
     const recorded_by_id = resolveRecordedBy();
     if (!recorded_by_id) {
@@ -154,10 +173,13 @@ export function PurchaseCreatePage() {
       return;
     }
     setPaymentError(null);
-    if (payment.enabled) {
-      const amount = Number(payment.amount);
-      if (!Number.isFinite(amount) || amount <= 0) {
+    if (payment.status !== "UNPAID") {
+      if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
         setPaymentError("Enter a valid payment amount.");
+        return;
+      }
+      if (payment.status === "PARTIAL" && paymentAmount >= totalPreview) {
+        setPaymentError("A partial payment must be less than the total — pick \"Paid in full\" instead.");
         return;
       }
       if (!payment.from_instrument_id) {
@@ -188,7 +210,7 @@ export function PurchaseCreatePage() {
           else navigate(`/purchases/${purchase.id}`);
         };
 
-        if (!payment.enabled) {
+        if (payment.status === "UNPAID") {
           afterPurchase();
           return;
         }
@@ -198,7 +220,7 @@ export function PurchaseCreatePage() {
             ref_type: "PURCHASE",
             ref_id: purchase.id,
             direction: "OUTGOING",
-            amount: Number(payment.amount),
+            amount: paymentAmount,
             payment_date: payment.payment_date,
             from_instrument_id: payment.from_instrument_id,
             transaction_ref: payment.transaction_ref || undefined,
@@ -426,25 +448,40 @@ export function PurchaseCreatePage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Payment</CardTitle>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={payment.enabled}
-                onChange={(e) => setPayment((p) => ({ ...p, enabled: e.target.checked }))}
-              />
-              Record a payment now
-            </label>
+            <Select
+              value={payment.status}
+              onValueChange={(v) =>
+                setPayment((p) => ({ ...p, status: (v as PaymentStatus) ?? "UNPAID" }))
+              }
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue>{(v: PaymentStatus) => PAYMENT_STATUS_LABELS[v]}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {PAYMENT_STATUS_LABELS[s]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </CardHeader>
-          {payment.enabled && (
+          {payment.status !== "UNPAID" && (
             <CardContent className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label>Amount</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={payment.amount}
+                <NumericInput
+                  allowDecimal
+                  decimalPlaces={2}
+                  disabled={payment.status === "PAID"}
+                  value={payment.status === "PAID" ? String(totalPreview) : payment.amount}
                   onChange={(e) => setPayment((p) => ({ ...p, amount: e.target.value }))}
                 />
+                {payment.status === "PARTIAL" && (
+                  <p className="text-xs text-muted-foreground">
+                    Due after this payment: {formatMoney(Math.max(0, totalPreview - paymentAmount))}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label>From instrument</Label>
