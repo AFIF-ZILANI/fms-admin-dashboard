@@ -18,7 +18,6 @@ import { formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Item } from "@/pages/inventory/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 import type { Supplier } from "@/pages/suppliers/types";
-import type { Batch } from "@/pages/batches/types";
 import type { PaymentInstrument } from "@/pages/payments/types";
 import type { Purchase } from "@/pages/purchases/types";
 import { BindCodesPrompt } from "@/pages/purchases/bind-codes-prompt";
@@ -27,7 +26,6 @@ const CODED_CATEGORIES = ["MEDICINE", "VACCINE", "EQUIPMENT"];
 
 const lineSchema = z.object({
   item_id: z.string().min(1, "Select an item"),
-  batch_id: z.string().optional(),
   quantity: z.coerce.number().positive("Must be positive"),
   unit: z.string().min(1, "Select a unit"),
   unit_price: z.coerce.number().positive("Must be positive"),
@@ -48,7 +46,6 @@ type PurchaseFormValues = z.output<typeof purchaseSchema>;
 function blankLine(): PurchaseFormInput["items"][number] {
   return {
     item_id: "",
-    batch_id: "",
     quantity: undefined,
     unit: undefined as unknown as PurchaseFormInput["items"][number]["unit"],
     unit_price: undefined,
@@ -101,7 +98,6 @@ export function PurchaseCreatePage() {
   const { data: suppliers } = useGetData<Paginated<Supplier>>("/suppliers?limit=100", ["suppliers"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
   const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
-  const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
   const { data: admins } = useGetData<Paginated<Admin>>("/admins?limit=100", ["admins"]);
   const { data: instruments } = useGetData<Paginated<PaymentInstrument>>(
     "/payment-instruments?limit=100&is_active=true",
@@ -168,7 +164,6 @@ export function PurchaseCreatePage() {
       paid_amount: 0,
       items: values.items.map((line) => ({
         ...line,
-        batch_id: line.batch_id || undefined,
         mfg_date: line.mfg_date || undefined,
         expiration_date: line.expiration_date || undefined,
       })),
@@ -292,7 +287,6 @@ export function PurchaseCreatePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-40">Item</TableHead>
-                  <TableHead className="min-w-32">Batch</TableHead>
                   <TableHead className="w-24">Quantity</TableHead>
                   <TableHead className="w-28">Unit</TableHead>
                   <TableHead className="w-28">Unit price</TableHead>
@@ -331,28 +325,6 @@ export function PurchaseCreatePage() {
                                 {itemOptions.map((i) => (
                                   <SelectItem key={i.id} value={i.id}>
                                     {i.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Controller
-                          control={control}
-                          name={`items.${index}.batch_id`}
-                          render={({ field: f }) => (
-                            <Select value={f.value ?? ""} onValueChange={f.onChange}>
-                              <SelectTrigger className="w-full">
-                                <SelectValue>
-                                  {(v: string) => batches?.results.find((b) => b.id === v)?.batch_code ?? "None"}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(batches?.results ?? []).map((b) => (
-                                  <SelectItem key={b.id} value={b.id}>
-                                    {b.batch_code}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
