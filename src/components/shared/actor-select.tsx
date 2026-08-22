@@ -13,8 +13,9 @@ type ActorSelectProps = {
 };
 
 // No auth yet (docs/PRD.md §5) — this remembers the last admin picked on this browser
-// as a stand-in for "current user" and pre-selects it next time.
-const LAST_ADMIN_KEY = "fms:last-admin-id";
+// as a stand-in for "current user" and pre-selects it next time. Exported so pages that
+// skip showing this picker entirely (e.g. the purchase form) can still resolve the same value.
+export const LAST_ADMIN_KEY = "fms:last-admin-id";
 
 /**
  * Every write endpoint needs a `recorded_by_id`/`given_by_id` (no auth yet,
