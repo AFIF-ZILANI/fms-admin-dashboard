@@ -4,6 +4,13 @@ import type { PurchaseItemLine } from "@/pages/purchases/types";
 export const ORGANIZATION_ROLES = ["MANUFACTURER", "IMPORTER", "MARKETER", "DISTRIBUTOR"] as const;
 export type OrganizationRole = (typeof ORGANIZATION_ROLES)[number];
 
+export type ItemUnit = {
+  id: string;
+  item_id: string;
+  unit: string;
+  factor_to_base: string;
+};
+
 export type Item = {
   id: string;
   name: string;
@@ -16,6 +23,7 @@ export type Item = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  itemUnits?: ItemUnit[];
 };
 
 export type Warehouse = {

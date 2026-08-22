@@ -1,8 +1,9 @@
-import { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,11 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
+import { useDelete, useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
-import type { Item, Organization } from "@/pages/inventory/types";
+import type { Item, ItemUnit, Organization } from "@/pages/inventory/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
+
+type PendingUnit = { unit: string; factor_to_base: string };
 
 const itemSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -65,8 +68,18 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
     },
   });
 
-  useEffect(() => {
-    if (open) {
+  const [pendingUnits, setPendingUnits] = useState<PendingUnit[]>([]);
+  const [newUnitCode, setNewUnitCode] = useState("");
+  const [newUnitFactor, setNewUnitFactor] = useState("");
+
+  // Resets the form + local unit state whenever the dialog transitions into an open state (for this
+  // item, or fresh for "add"). Adjusted during render rather than in a useEffect, per React's own
+  // "reset state on prop change" pattern — avoids the cascading-render setState-in-effect it'd otherwise be.
+  const resetKey = open ? (item?.id ?? "__new__") : null;
+  const [lastResetKey, setLastResetKey] = useState<string | null>(null);
+  if (resetKey !== lastResetKey) {
+    setLastResetKey(resetKey);
+    if (resetKey !== null) {
       reset(
         item
           ? {
@@ -89,8 +102,11 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
               organization_id: "",
             }
       );
+      setPendingUnits((item?.itemUnits ?? []).map((u) => ({ unit: u.unit, factor_to_base: u.factor_to_base })));
+      setNewUnitCode("");
+      setNewUnitFactor("");
     }
-  }, [open, item, reset]);
+  }
 
   const createItem = usePostData<Item, ItemFormValues>("/items", ["items"]);
   const updateItem = usePatchData<Item, ItemFormValues>(`/items/${item?.id}`, ["items"]);
@@ -108,12 +124,53 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
     "/item-organizations",
     ["organizations"]
   );
+  const createItemUnit = usePostData<ItemUnit, { item_id: string; unit: string; factor_to_base: number }>(
+    "/item-units",
+    ["items"]
+  );
+  const deleteItemUnit = useDelete<null, string>((id) => `/item-units/${id}`, ["items"]);
+
+  const baseUnit = useWatch({ control, name: "unit" });
+  const usedUnitCodes = new Set([baseUnit, ...pendingUnits.map((u) => u.unit)]);
+  const addableUnits = (units?.results ?? []).filter((u) => !usedUnitCodes.has(u.code));
+  const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
+
+  const addPendingUnit = () => {
+    const factor = Number(newUnitFactor);
+    if (!newUnitCode || !Number.isFinite(factor) || factor <= 0) return;
+    setPendingUnits((prev) => [...prev, { unit: newUnitCode, factor_to_base: newUnitFactor }]);
+    setNewUnitCode("");
+    setNewUnitFactor("");
+  };
+
+  /** No PATCH on ItemUnit -- a changed factor is a delete-then-recreate of that unit's row, same as an untouched
+   * removal. Deletes run first so a re-added unit doesn't collide with the row it's replacing (item_id+unit is unique). */
+  async function syncItemUnits(itemId: string) {
+    const original = item?.itemUnits ?? [];
+    const toRemove = original.filter((o) => {
+      const kept = pendingUnits.find((p) => p.unit === o.unit);
+      return !kept || kept.factor_to_base !== o.factor_to_base;
+    });
+    const toAdd = pendingUnits.filter((p) => {
+      const orig = original.find((o) => o.unit === p.unit);
+      return !orig || orig.factor_to_base !== p.factor_to_base;
+    });
+    for (const row of toRemove) {
+      await deleteItemUnit.mutateAsync(row.id);
+    }
+    for (const row of toAdd) {
+      await createItemUnit.mutateAsync({ item_id: itemId, unit: row.unit, factor_to_base: Number(row.factor_to_base) });
+    }
+  }
 
   const onSubmit = (values: ItemFormValues) => {
     const { organization_id, ...payload } = values;
     mutation.mutate(payload, {
       onSuccess: (savedItem) => {
         toast.success(isEdit ? "Item updated" : "Item created");
+        void syncItemUnits(savedItem.id).catch(() => {
+          toast.warning("Item saved, but updating its purchasable units failed. Try again from Edit.");
+        });
         if (!organization_id) {
           onOpenChange(false);
           return;
@@ -225,8 +282,80 @@ export function ItemFormDialog({ open, onOpenChange, item }: ItemFormDialogProps
           </div>
 
           <p className="-mt-2 text-xs text-muted-foreground">
-            Use the unit you dispense in (e.g. G, ML), not the bulk buying unit — no auto-conversion yet.
+            Use the unit you dispense in (e.g. G, ML) as the base unit below.
           </p>
+
+          <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+            <div className="flex flex-col gap-0.5">
+              <Label>Purchasable units</Label>
+              <p className="text-xs text-muted-foreground">
+                Which units this item can be purchased in, and how each converts to the base unit above. Purchases
+                will only offer these units — e.g. Feed: base KG, plus BAG = 50 and MT = 1000.
+              </p>
+            </div>
+
+            {baseUnit && (
+              <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-2.5 py-1.5 text-sm">
+                <span>{unitLabel(baseUnit)}</span>
+                <span className="text-xs text-muted-foreground">base unit · always available</span>
+              </div>
+            )}
+
+            {pendingUnits.map((row, index) => (
+              <div key={row.unit} className="flex items-center gap-2">
+                <span className="flex-1 text-sm">{unitLabel(row.unit)}</span>
+                <span className="text-xs text-muted-foreground">1 {unitLabel(row.unit)} =</span>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  className="w-28"
+                  value={row.factor_to_base}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPendingUnits((prev) => prev.map((p, i) => (i === index ? { ...p, factor_to_base: value } : p)));
+                  }}
+                />
+                <span className="text-xs text-muted-foreground">{baseUnit ? unitLabel(baseUnit) : ""}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Remove ${unitLabel(row.unit)}`}
+                  onClick={() => setPendingUnits((prev) => prev.filter((_, i) => i !== index))}
+                >
+                  <X />
+                </Button>
+              </div>
+            ))}
+
+            <div className="flex items-center gap-2">
+              <Select value={newUnitCode} onValueChange={(v) => setNewUnitCode(v ?? "")}>
+                <SelectTrigger className="w-40">
+                  <SelectValue>{(v: string) => (v ? unitLabel(v) : "Add a unit")}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {addableUnits.map((u) => (
+                    <SelectItem key={u.code} value={u.code}>
+                      {u.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-muted-foreground">factor =</span>
+              <Input
+                type="number"
+                step="0.0001"
+                placeholder="e.g. 50"
+                className="w-28"
+                value={newUnitFactor}
+                onChange={(e) => setNewUnitFactor(e.target.value)}
+              />
+              <Button type="button" variant="outline" size="sm" onClick={addPendingUnit} disabled={!newUnitCode}>
+                <Plus />
+                Add
+              </Button>
+            </div>
+          </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="organization_id">Organization / company (optional)</Label>
