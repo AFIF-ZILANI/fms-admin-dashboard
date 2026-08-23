@@ -55,6 +55,15 @@ export type Warehouse = {
   created_at: string;
 };
 
+/** GET /warehouses/:id/stock and GET /houses/:id/stock response row -- current on-hand
+ * balance for one item at that location. */
+export type LocationStockRow = {
+  item_id: string;
+  item_name: string;
+  unit: string;
+  balance: string;
+};
+
 export type Organization = {
   id: string;
   label_name: string;

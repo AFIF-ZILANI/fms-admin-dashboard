@@ -20,6 +20,7 @@ export type PurchaseItemLine = {
 export type Purchase = {
   id: string;
   supplier_id: string | null;
+  warehouse_id: string | null;
   invoice_no: string | null;
   purchase_date: string;
   discount_type: DiscountType | null;
