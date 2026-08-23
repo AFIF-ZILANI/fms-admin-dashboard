@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,11 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NumericInput } from "@/components/utils/NumaricInput";
 import { ActorSelect, LAST_ADMIN_KEY } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, humanizeEnum } from "@/lib/utils";
 import type { InventoryAdjustment, Item, Warehouse } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
+import type { LookupRow } from "@/pages/settings/lookup-types";
 
 type Admin = { id: string; profile: { id: string; name: string } };
 
@@ -84,6 +87,8 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const { data: admins } = useGetData<Paginated<Admin>>("/admins?limit=100", ["admins"]);
+  const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
+  const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
 
   const queryClient = useQueryClient();
   const createAdjustment = usePostData<InventoryAdjustment, AdjustmentFormValues>("/inventory-adjustments", [
@@ -98,6 +103,17 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
   const before = toNum(watch("quantity_before"));
   const after = toNum(watch("quantity_after"));
   const delta = !Number.isNaN(before) && !Number.isNaN(after) ? after - before : null;
+
+  // Opening balance is entered in whichever purchasable unit the item actually comes in (never
+  // the base unit -- same rule as the purchase form) and converted to base quantity on submit.
+  const [openingUnit, setOpeningUnit] = useState("");
+  const selectedItemId = watch("item_id");
+  const purchasableUnits = (items?.results.find((i) => i.id === selectedItemId)?.itemUnits ?? []).filter(
+    (u) => u.is_purchasable
+  );
+  const openingUnitValue = purchasableUnits.some((u) => u.unit === openingUnit)
+    ? openingUnit
+    : (purchasableUnits[0]?.unit ?? "");
 
   // Opening balance never shows a "who's recording this" picker (there's no auth system yet, so
   // this is the same stand-in used by the purchase form) -- resolved silently from whichever admin
@@ -119,10 +135,21 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
       return;
     }
 
+    let quantity_after = values.quantity_after;
+    if (openingBalance) {
+      const unitRow = purchasableUnits.find((u) => u.unit === openingUnitValue);
+      if (!unitRow) {
+        toast.error("This item has no purchasable units yet — add one from Edit item first.");
+        return;
+      }
+      quantity_after = values.quantity_after * Number(unitRow.factor_to_base);
+    }
+
     const { warehouse_id, house_id, ...rest } = values;
     createAdjustment.mutate(
       {
         ...rest,
+        quantity_after,
         recorded_by_id,
         ...(warehouse_id && { warehouse_id }),
         ...(!openingBalance && house_id && { house_id }),
@@ -246,16 +273,37 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
           {openingBalance ? (
             // Opening balance always starts from zero -- there's nothing to record it "against"
             // yet (that's the whole point), so quantity_before/after collapse into one field.
+            // Entered in whichever purchasable unit the item comes in, converted to base on submit.
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="quantity_after">Quantity</Label>
-              <Input
-                id="quantity_after"
-                type="number"
-                step="0.001"
-                {...register("quantity_after")}
-                aria-invalid={!!errors.quantity_after}
-              />
+              <div className="flex gap-2">
+                <NumericInput
+                  id="quantity_after"
+                  allowDecimal
+                  decimalPlaces={3}
+                  className="flex-1"
+                  {...register("quantity_after")}
+                  aria-invalid={!!errors.quantity_after}
+                />
+                <Select value={openingUnitValue} onValueChange={(v) => setOpeningUnit(v ?? "")}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue>{(v: string) => (v ? unitLabel(v) : "Unit")}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {purchasableUnits.map((u) => (
+                      <SelectItem key={u.unit} value={u.unit}>
+                        {unitLabel(u.unit)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               {errors.quantity_after && <p className="text-xs text-destructive">{errors.quantity_after.message}</p>}
+              {selectedItemId && purchasableUnits.length === 0 && (
+                <p className="text-xs text-destructive">
+                  This item has no purchasable units yet — add one from Edit item first.
+                </p>
+              )}
             </div>
           ) : (
             <>
