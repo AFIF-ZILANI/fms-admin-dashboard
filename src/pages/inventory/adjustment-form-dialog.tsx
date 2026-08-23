@@ -20,7 +20,7 @@ import { NumericInput } from "@/components/utils/NumaricInput";
 import { ActorSelect, LAST_ADMIN_KEY } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { cn, humanizeEnum } from "@/lib/utils";
-import type { InventoryAdjustment, Item, Warehouse } from "@/pages/inventory/types";
+import type { InventoryAdjustment, Item, LocationStockRow, Warehouse } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 
@@ -114,6 +114,26 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
   const openingUnitValue = purchasableUnits.some((u) => u.unit === openingUnit)
     ? openingUnit
     : (purchasableUnits[0]?.unit ?? "");
+
+  // Current on-hand balance at whichever location is selected, so the user can see what's
+  // already there before setting an opening balance or typing quantity_before -- house wins if
+  // both are set, same tie-break the backend uses (inventory-adjustment.service.ts).
+  const selectedWarehouseId = watch("warehouse_id");
+  const selectedHouseId = watch("house_id");
+  const { data: warehouseStock } = useGetData<LocationStockRow[]>(
+    `/warehouses/${selectedWarehouseId}/stock`,
+    ["warehouses", selectedWarehouseId, "stock"],
+    { enabled: !!selectedWarehouseId }
+  );
+  const { data: houseStock } = useGetData<LocationStockRow[]>(
+    `/houses/${selectedHouseId}/stock`,
+    ["houses", selectedHouseId, "stock"],
+    { enabled: !openingBalance && !!selectedHouseId }
+  );
+  const currentBalance =
+    (selectedHouseId && houseStock?.find((s) => s.item_id === selectedItemId)) ||
+    (selectedWarehouseId && warehouseStock?.find((s) => s.item_id === selectedItemId)) ||
+    undefined;
 
   // Opening balance never shows a "who's recording this" picker (there's no auth system yet, so
   // this is the same stand-in used by the purchase form) -- resolved silently from whichever admin
@@ -269,6 +289,11 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
             )}
           </div>
           {errors.warehouse_id && <p className="-mt-2 text-xs text-destructive">{errors.warehouse_id.message}</p>}
+          {currentBalance && (
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Current balance: {currentBalance.balance} {unitLabel(currentBalance.unit)}
+            </p>
+          )}
 
           {openingBalance ? (
             // Opening balance always starts from zero -- there's nothing to record it "against"
