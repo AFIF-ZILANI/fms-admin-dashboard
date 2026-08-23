@@ -390,9 +390,9 @@ export function ItemFormPage() {
               <div key={row.unit} className="flex items-center gap-3">
                 <span className="w-24 text-sm">{unitLabel(row.unit)}</span>
                 <span className="text-xs text-muted-foreground">1 {unitLabel(row.unit)} =</span>
-                <Input
-                  type="number"
-                  step="0.0001"
+                <NumericInput
+                  allowDecimal
+                  decimalPlaces={4}
                   className="w-24"
                   disabled={fixedFactor !== null}
                   value={fixedFactor ?? row.factor_to_base}
@@ -460,9 +460,9 @@ export function ItemFormPage() {
                 </SelectContent>
               </Select>
               <span className="text-xs text-muted-foreground">factor =</span>
-              <Input
-                type="number"
-                step="0.0001"
+              <NumericInput
+                allowDecimal
+                decimalPlaces={4}
                 placeholder="e.g. 50"
                 className="w-24"
                 disabled={unitFixedFactor(newUnitCode) !== null}
