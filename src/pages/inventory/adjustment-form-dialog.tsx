@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NumericInput } from "@/components/utils/NumaricInput";
-import { ActorSelect, LAST_ADMIN_KEY } from "@/components/shared/actor-select";
+import { LAST_ADMIN_KEY } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { cn, humanizeEnum } from "@/lib/utils";
 import type { InventoryAdjustment, Item, LocationStockRow, Warehouse } from "@/pages/inventory/types";
@@ -35,9 +35,6 @@ const adjustmentSchema = z
     quantity_after: z.coerce.number().nonnegative("Must be 0 or more"),
     reason: z.string().trim().min(1, "Reason is required"),
     note: z.string().optional(),
-    // Required only for a manual adjustment (validated on submit there) -- opening balance
-    // resolves this itself from the last-picked admin, with no picker shown for it.
-    recorded_by_id: z.string().optional(),
   })
   .refine((data) => data.warehouse_id || data.house_id, {
     message: "Pick a warehouse or a house",
@@ -79,7 +76,6 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
       quantity_after: undefined,
       reason: openingBalance ? "Opening balance" : "",
       note: "",
-      recorded_by_id: "",
     },
   });
 
@@ -91,7 +87,7 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
   const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
 
   const queryClient = useQueryClient();
-  const createAdjustment = usePostData<InventoryAdjustment, AdjustmentFormValues>("/inventory-adjustments", [
+  const createAdjustment = usePostData<InventoryAdjustment, Record<string, unknown>>("/inventory-adjustments", [
     "inventory-adjustments",
   ]);
 
@@ -135,9 +131,9 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
     (selectedWarehouseId && warehouseStock?.find((s) => s.item_id === selectedItemId)) ||
     undefined;
 
-  // Opening balance never shows a "who's recording this" picker (there's no auth system yet, so
-  // this is the same stand-in used by the purchase form) -- resolved silently from whichever admin
-  // was last picked anywhere in the app.
+  // No "who's recording this" picker (there's no auth system yet, so this is the same stand-in
+  // used by the purchase and transfer forms) -- resolved silently from whichever admin was last
+  // picked anywhere in the app.
   const resolveRecordedBy = (): string | null => {
     const admin = admins?.results ?? [];
     const stored = localStorage.getItem(LAST_ADMIN_KEY);
@@ -148,10 +144,9 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
   };
 
   const onSubmit = (values: AdjustmentFormValues) => {
-    const recorded_by_id = openingBalance ? resolveRecordedBy() : values.recorded_by_id;
+    const recorded_by_id = resolveRecordedBy();
     if (!recorded_by_id) {
-      if (openingBalance) toast.error("No admins exist yet — add one before recording an opening balance.");
-      else setError("recorded_by_id", { message: "Select who's recording this" });
+      toast.error("No admins exist yet — add one before recording this.");
       return;
     }
 
@@ -187,7 +182,7 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
         },
         onError: (error) => {
           let hadFieldError = false;
-          for (const key of ["item_id", "quantity_before", "quantity_after", "reason", "recorded_by_id"] as const) {
+          for (const key of ["item_id", "quantity_before", "quantity_after", "reason"] as const) {
             const message = error.fieldError(key);
             if (message) {
               setError(key, { message });
@@ -385,27 +380,6 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
             <Label htmlFor="note">Note (optional)</Label>
             <Input id="note" {...register("note")} />
           </div>
-
-          {/* Opening balance resolves recorded_by_id itself (see resolveRecordedBy) -- no auth
-              system yet, same stand-in the purchase form uses, no picker needed here either. */}
-          {!openingBalance && (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="recorded_by_id">Recorded by</Label>
-            <Controller
-              control={control}
-              name="recorded_by_id"
-              render={({ field }) => (
-                <ActorSelect
-                  id="recorded_by_id"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  invalid={!!errors.recorded_by_id}
-                />
-              )}
-            />
-            {errors.recorded_by_id && <p className="text-xs text-destructive">{errors.recorded_by_id.message}</p>}
-          </div>
-          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
