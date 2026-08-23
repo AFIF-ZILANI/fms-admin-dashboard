@@ -21,15 +21,15 @@ export function InventoryPage() {
       <div className="overflow-x-auto">
         <TabsList>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="stock-ledger">Stock Ledger</TabsTrigger>
           <TabsTrigger value="items">Item Catalog</TabsTrigger>
           <TabsTrigger value="low-stock">Low-Stock</TabsTrigger>
-          <TabsTrigger value="coded-units">Coded Units</TabsTrigger>
-          <TabsTrigger value="assets">Assets</TabsTrigger>
-          <TabsTrigger value="stock-ledger">Stock Ledger</TabsTrigger>
-          <TabsTrigger value="adjustments">Adjustments</TabsTrigger>
-          <TabsTrigger value="warehouses">Warehouses</TabsTrigger>
-          <TabsTrigger value="organizations">Organizations</TabsTrigger>
           <TabsTrigger value="consumption-log">Consumption Log</TabsTrigger>
+          <TabsTrigger value="assets">Assets</TabsTrigger>
+          <TabsTrigger value="adjustments">Adjustments</TabsTrigger>
+          <TabsTrigger value="organizations">Organizations</TabsTrigger>
+          <TabsTrigger value="coded-units">Coded Units</TabsTrigger>
+          <TabsTrigger value="warehouses">Warehouses</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="analytics">
