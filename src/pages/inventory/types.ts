@@ -55,6 +55,15 @@ export type Warehouse = {
   created_at: string;
 };
 
+/** GET /warehouses/:id/stock and GET /houses/:id/stock response row -- current on-hand
+ * balance for one item at that location. */
+export type LocationStockRow = {
+  item_id: string;
+  item_name: string;
+  unit: string;
+  balance: string;
+};
+
 export type Organization = {
   id: string;
   label_name: string;
@@ -137,7 +146,7 @@ export type StockLedgerEntry = {
   unit_cost: string | null;
   location_type: "WAREHOUSE" | "HOUSE" | "DISPOSAL" | null;
   location_id: string | null;
-  ref_type: "PURCHASE" | "CONSUMPTION" | "ADJUSTMENT";
+  ref_type: "PURCHASE" | "CONSUMPTION" | "ADJUSTMENT" | "TRANSFER";
   ref_id: string;
   occurred_at: string;
   item: Item;

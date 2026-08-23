@@ -24,7 +24,7 @@ import { LAST_ADMIN_KEY } from "@/components/shared/actor-select";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
-import type { Item } from "@/pages/inventory/types";
+import type { Item, Warehouse } from "@/pages/inventory/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 import type { Supplier } from "@/pages/suppliers/types";
 import type { PaymentInstrument } from "@/pages/payments/types";
@@ -49,6 +49,7 @@ const lineSchema = z.object({
 
 const purchaseSchema = z.object({
   supplier_id: z.string().optional(),
+  warehouse_id: z.string().min(1, "Select a warehouse"),
   invoice_no: z.string().trim().optional(),
   purchase_date: z.string().min(1, "Purchase date is required"),
   discount_type: z.enum(DISCOUNT_TYPES).optional(),
@@ -157,6 +158,7 @@ export function PurchaseCreatePage() {
     resolver: zodResolver(purchaseSchema),
     defaultValues: {
       supplier_id: "",
+      warehouse_id: "",
       invoice_no: "",
       purchase_date: new Date().toISOString().slice(0, 10),
       discount_type: undefined,
@@ -171,6 +173,7 @@ export function PurchaseCreatePage() {
   const globalDiscountValue = useWatch({ control, name: "discount_value" });
 
   const { data: suppliers } = useGetData<Paginated<Supplier>>("/suppliers?limit=100", ["suppliers"]);
+  const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
   const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
   const { data: admins } = useGetData<Paginated<Admin>>("/admins?limit=100", ["admins"]);
@@ -378,7 +381,7 @@ export function PurchaseCreatePage() {
           <CardHeader>
             <CardTitle className="text-base">Purchase details</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-3 gap-4">
+          <CardContent className="grid grid-cols-4 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="supplier_id">Supplier (optional)</Label>
               <Controller
@@ -402,6 +405,30 @@ export function PurchaseCreatePage() {
                   </Select>
                 )}
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="warehouse_id">Warehouse</Label>
+              <Controller
+                control={control}
+                name="warehouse_id"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="warehouse_id" className="w-full" aria-invalid={!!errors.warehouse_id}>
+                      <SelectValue>
+                        {(v: string) => warehouses?.results.find((w) => w.id === v)?.name ?? "Select warehouse"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(warehouses?.results ?? []).map((w) => (
+                        <SelectItem key={w.id} value={w.id}>
+                          {w.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.warehouse_id && <p className="text-xs text-destructive">{errors.warehouse_id.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="invoice_no">Invoice number (optional)</Label>
