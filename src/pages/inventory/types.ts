@@ -83,6 +83,19 @@ export type AssetStatus = (typeof ASSET_STATUSES)[number];
 export const STOCK_DIRECTIONS = ["IN", "OUT"] as const;
 export type StockDirection = (typeof STOCK_DIRECTIONS)[number];
 
+/** Free text on the backend (InventoryAdjustment.reason) -- this is the frontend's curated set
+ * of common reasons, offered as a select instead of a raw text input. Not a backend enum. */
+export const ADJUSTMENT_REASONS = [
+  "Stock count correction",
+  "Damaged",
+  "Expired",
+  "Theft or loss",
+  "Wastage",
+  "Data entry correction",
+  "Received without invoice",
+  "Returned to supplier",
+] as const;
+
 export const STOCK_REASONS = [
   "PURCHASE",
   "TRANSFER",

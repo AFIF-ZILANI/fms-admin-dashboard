@@ -20,7 +20,7 @@ import { NumericInput } from "@/components/utils/NumaricInput";
 import { LAST_ADMIN_KEY } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { cn, humanizeEnum } from "@/lib/utils";
-import type { InventoryAdjustment, Item, LocationStockRow, Warehouse } from "@/pages/inventory/types";
+import { ADJUSTMENT_REASONS, type InventoryAdjustment, type Item, type LocationStockRow, type Warehouse } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 
@@ -371,7 +371,24 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
           {!openingBalance && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="reason">Reason</Label>
-              <Input id="reason" {...register("reason")} aria-invalid={!!errors.reason} />
+              <Controller
+                control={control}
+                name="reason"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="reason" className="w-full" aria-invalid={!!errors.reason}>
+                      <SelectValue>{(v: string) => v || "Select reason"}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ADJUSTMENT_REASONS.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {r}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.reason && <p className="text-xs text-destructive">{errors.reason.message}</p>}
             </div>
           )}
