@@ -190,13 +190,15 @@ export function PurchaseCreatePage() {
   const itemOptions = items?.results ?? [];
   const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
 
-  /** A line's allowed units are its item's base unit plus that item's ItemUnit conversions —
-   * never the full global unit list, so a purchase can't be entered in a unit nothing converts from. */
+  /** A line's allowed units are only that item's ItemUnit conversions flagged purchasable — not
+   * the base unit, and not conversions meant only for usage/consumption. An item bought exclusively
+   * in Liter (say) shouldn't offer Ml here just because Ml is its base unit. */
   const allowedUnitsFor = (itemId: string): { code: string; label: string }[] => {
     const item = itemOptions.find((i) => i.id === itemId);
     if (!item) return [];
-    const codes = [item.unit, ...(item.itemUnits ?? []).map((u) => u.unit)];
-    return codes.map((code) => ({ code, label: unitLabel(code) }));
+    return (item.itemUnits ?? [])
+      .filter((u) => u.is_purchasable)
+      .map((u) => ({ code: u.unit, label: unitLabel(u.unit) }));
   };
 
   // Subtotal = sum of each line's own net total (gross minus that line's discount) -- this is what
