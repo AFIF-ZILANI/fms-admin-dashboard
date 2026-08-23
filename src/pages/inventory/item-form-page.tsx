@@ -16,7 +16,7 @@ import { usePageTitle } from "@/components/layout/use-page-title";
 import { useDelete, useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
-import type { Item, ItemUnit, Organization } from "@/pages/inventory/types";
+import { GENERIC_ITEM_UNITS, type Item, type ItemUnit, type Organization, type UnitRow } from "@/pages/inventory/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 
 type PendingUnit = { unit: string; factor_to_base: string; is_purchasable: boolean; is_usable: boolean };
@@ -114,7 +114,7 @@ export function ItemFormPage() {
     "/item-categories?active=true&limit=100",
     ["item-categories", "active"]
   );
-  const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
+  const { data: units } = useGetData<Paginated<UnitRow>>("/units?active=true&limit=100", ["units", "active"]);
 
   const createItem = usePostData<Item, Record<string, unknown>>("/items", ["items"]);
   const updateItem = usePatchData<Item, Record<string, unknown>>(`/items/${id}`, ["items"]);
@@ -131,8 +131,14 @@ export function ItemFormPage() {
 
   const baseUnit = useWatch({ control, name: "unit" });
   const usedUnitCodes = new Set([baseUnit, ...pendingUnits.map((u) => u.unit)]);
-  const addableUnits = (units?.results ?? []).filter((u) => !usedUnitCodes.has(u.code));
+  // A unit belongs to this item's base-unit family if it's tied to that specific base (LITER -> ML)
+  // or generic across every family (Container, null base_unit) -- never one of the 6 bases itself,
+  // and never a unit tied to a different family (LITER can't convert a Gram-based item).
+  const addableUnits = (units?.results ?? []).filter(
+    (u) => !usedUnitCodes.has(u.code) && !u.is_base && (u.base_unit === baseUnit || GENERIC_ITEM_UNITS.has(u.code))
+  );
   const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
+  const unitFixedFactor = (code: string) => units?.results.find((u) => u.code === code)?.fixed_factor ?? null;
 
   const addPendingUnit = () => {
     const factor = Number(newUnitFactor);
@@ -339,11 +345,13 @@ export function ItemFormPage() {
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {(units?.results ?? []).map((unitOption) => (
-                          <SelectItem key={unitOption.code} value={unitOption.code}>
-                            {unitOption.label}
-                          </SelectItem>
-                        ))}
+                        {(units?.results ?? [])
+                          .filter((u) => u.is_base)
+                          .map((unitOption) => (
+                            <SelectItem key={unitOption.code} value={unitOption.code}>
+                              {unitOption.label}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   )}
@@ -352,7 +360,7 @@ export function ItemFormPage() {
                 <p className="text-xs text-muted-foreground">
                   {isEdit
                     ? "Can't be changed after the item is created."
-                    : "The unit you dispense in (e.g. G, ML) — every quantity is stored in this unit."}
+                    : "One of the 6 canonical base units — every purchasable/usable unit below converts to this."}
                 </p>
               </div>
             </div>
@@ -363,9 +371,9 @@ export function ItemFormPage() {
           <CardHeader>
             <CardTitle className="text-base">Unit conversions</CardTitle>
             <p className="text-xs text-muted-foreground">
-              Which units this item can be purchased in, used in, or both — and how each converts to the base
-              unit. Purchases and consumption only offer units flagged for that flow — e.g. Feed: base KG, plus
-              BAG (purchasable) = 50 and MT (purchasable) = 1000.
+              Only units belonging to this item's base-unit family are offered — e.g. a Gram-based item can add
+              Bag or Metric Ton, but not Liter. A unit with a fixed conversion (like Liter or Metric Ton) has its
+              factor locked in automatically; package-size units (Bag, Bottle, Container) stay editable.
             </p>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
@@ -376,7 +384,9 @@ export function ItemFormPage() {
               </div>
             )}
 
-            {pendingUnits.map((row, index) => (
+            {pendingUnits.map((row, index) => {
+              const fixedFactor = unitFixedFactor(row.unit);
+              return (
               <div key={row.unit} className="flex items-center gap-3">
                 <span className="w-24 text-sm">{unitLabel(row.unit)}</span>
                 <span className="text-xs text-muted-foreground">1 {unitLabel(row.unit)} =</span>
@@ -384,7 +394,8 @@ export function ItemFormPage() {
                   type="number"
                   step="0.0001"
                   className="w-24"
-                  value={row.factor_to_base}
+                  disabled={fixedFactor !== null}
+                  value={fixedFactor ?? row.factor_to_base}
                   onChange={(e) => {
                     const value = e.target.value;
                     setPendingUnits((prev) => prev.map((p, i) => (i === index ? { ...p, factor_to_base: value } : p)));
@@ -424,10 +435,19 @@ export function ItemFormPage() {
                   <X />
                 </Button>
               </div>
-            ))}
+              );
+            })}
 
             <div className="flex flex-wrap items-center gap-3">
-              <Select value={newUnitCode} onValueChange={(v) => setNewUnitCode(v ?? "")}>
+              <Select
+                value={newUnitCode}
+                onValueChange={(v) => {
+                  const code = v ?? "";
+                  setNewUnitCode(code);
+                  const fixed = unitFixedFactor(code);
+                  if (fixed !== null) setNewUnitFactor(fixed);
+                }}
+              >
                 <SelectTrigger className="w-40">
                   <SelectValue>{(v: string) => (v ? unitLabel(v) : "Add a unit")}</SelectValue>
                 </SelectTrigger>
@@ -445,6 +465,7 @@ export function ItemFormPage() {
                 step="0.0001"
                 placeholder="e.g. 50"
                 className="w-24"
+                disabled={unitFixedFactor(newUnitCode) !== null}
                 value={newUnitFactor}
                 onChange={(e) => setNewUnitFactor(e.target.value)}
               />

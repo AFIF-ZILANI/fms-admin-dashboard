@@ -4,6 +4,26 @@ import type { PurchaseItemLine } from "@/pages/purchases/types";
 export const ORGANIZATION_ROLES = ["MANUFACTURER", "IMPORTER", "MARKETER", "DISTRIBUTOR"] as const;
 export type OrganizationRole = (typeof ORGANIZATION_ROLES)[number];
 
+export const ITEM_BASE_UNITS = ["ML", "G", "UNIT", "DOSE", "PCS", "METER"] as const;
+
+/** Units valid as an ItemUnit conversion under ANY base-unit family (Container can package a
+ * liquid or a solid). Mirrors the backend allowlist (item.service.ts) -- not every unit with a
+ * null base_unit is generic (e.g. BIRD is a legacy code unrelated to item purchasing). */
+export const GENERIC_ITEM_UNITS = new Set(["CONTAINER"]);
+
+/** GET /units row -- the generic LookupRow shape plus the base-unit hierarchy fields (Unit-only,
+ * not shared with the other lookup tables). base_unit/fixed_factor are null for the 6 base units
+ * themselves and for generic cross-family package units (e.g. Container). */
+export type UnitRow = {
+  id: string;
+  code: string;
+  label: string;
+  is_active: boolean;
+  is_base: boolean;
+  base_unit: string | null;
+  fixed_factor: string | null;
+};
+
 export type ItemUnit = {
   id: string;
   item_id: string;
