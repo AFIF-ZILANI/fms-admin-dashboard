@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookText, PackageMinus, PackagePlus, Plus } from "lucide-react";
+import { ArrowRightLeft, BookText, PackageMinus, PackagePlus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -9,9 +9,11 @@ import { useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { STOCK_DIRECTIONS, STOCK_REASONS, type Item, type StockDirection, type StockLedgerEntry, type StockReason } from "@/pages/inventory/types";
 import { AdjustmentFormDialog } from "@/pages/inventory/adjustment-form-dialog";
+import { TransferFormDialog } from "@/pages/inventory/transfer-form-dialog";
 
 export function StockLedgerTab() {
   const [openingBalanceOpen, setOpeningBalanceOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [itemFilter, setItemFilter] = useState<string>("ALL");
   const [directionFilter, setDirectionFilter] = useState<StockDirection | "ALL">("ALL");
   const [reasonFilter, setReasonFilter] = useState<StockReason | "ALL">("ALL");
@@ -82,7 +84,11 @@ export function StockLedgerTab() {
         <KPICard label="Out movements" value={outCount} icon={PackageMinus} isLoading={allEntriesLoading} />
       </div>
 
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="outline" onClick={() => setTransferOpen(true)}>
+          <ArrowRightLeft />
+          Transfer to house
+        </Button>
         <Button onClick={() => setOpeningBalanceOpen(true)}>
           <Plus />
           Record opening balance
@@ -148,6 +154,7 @@ export function StockLedgerTab() {
         }}
       />
 
+      <TransferFormDialog open={transferOpen} onOpenChange={setTransferOpen} />
       <AdjustmentFormDialog open={openingBalanceOpen} onOpenChange={setOpeningBalanceOpen} openingBalance />
     </div>
   );

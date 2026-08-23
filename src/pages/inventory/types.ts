@@ -146,7 +146,7 @@ export type StockLedgerEntry = {
   unit_cost: string | null;
   location_type: "WAREHOUSE" | "HOUSE" | "DISPOSAL" | null;
   location_id: string | null;
-  ref_type: "PURCHASE" | "CONSUMPTION" | "ADJUSTMENT";
+  ref_type: "PURCHASE" | "CONSUMPTION" | "ADJUSTMENT" | "TRANSFER";
   ref_id: string;
   occurred_at: string;
   item: Item;
