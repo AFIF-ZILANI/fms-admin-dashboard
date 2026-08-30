@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { AlertTriangle, CheckCircle2, Package, Pencil, Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
@@ -11,8 +11,18 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus } from "@/components/shared/status-tone";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
-import type { Item, LowStockItem } from "@/pages/inventory/types";
+import type { Item, ItemStockByLocation, LowStockItem } from "@/pages/inventory/types";
+import { StockBreakdownSheet } from "@/pages/inventory/stock-breakdown-sheet";
 import type { LookupRow } from "@/pages/settings/lookup-types";
+
+/** Sum on-hand balances for display. ponytail: JS floats are fine for a shown stock total at
+ * farm scale; round to 3dp to shed accumulation noise. Individual balances stay exact strings. */
+function sumBalances(rows: ItemStockByLocation[]) {
+  return rows.reduce((total, r) => total + Number(r.balance), 0);
+}
+function formatQty(n: number) {
+  return String(Number(n.toFixed(3)));
+}
 
 export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void }) {
   const navigate = useNavigate();
@@ -48,6 +58,29 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
   const deactivate = usePostData<Item, string>((id) => `/items/${id}/deactivate`, ["items"]);
   const reactivate = usePostData<Item, string>((id) => `/items/${id}/reactivate`, ["items"]);
 
+  // One fetch feeds both stock columns and both breakdown sheets (see GET /items/stock-by-location).
+  const { data: stockRows } = useGetData<ItemStockByLocation[]>(
+    "/items/stock-by-location",
+    ["items", "stock-by-location"]
+  );
+  const stockByItem = useMemo(() => {
+    const map = new Map<string, { WAREHOUSE: ItemStockByLocation[]; HOUSE: ItemStockByLocation[] }>();
+    for (const row of stockRows ?? []) {
+      const entry = map.get(row.item_id) ?? { WAREHOUSE: [], HOUSE: [] };
+      entry[row.location_type].push(row);
+      map.set(row.item_id, entry);
+    }
+    return map;
+  }, [stockRows]);
+
+  const [breakdown, setBreakdown] = useState<{
+    itemId: string;
+    itemName: string;
+    unit: string;
+    kind: "WAREHOUSE" | "HOUSE";
+  } | null>(null);
+  const breakdownRows = breakdown ? (stockByItem.get(breakdown.itemId)?.[breakdown.kind] ?? []) : [];
+
   const toggleActive = (item: Item) => {
     const mutation = item.is_active ? deactivate : reactivate;
     mutation.mutate(item.id, {
@@ -59,10 +92,39 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
   const openCreate = () => navigate("/inventory/items/new");
   const openEdit = (item: Item) => navigate(`/inventory/items/${item.id}/edit`);
 
+  // Clickable total for a stock column: opens the per-location breakdown sheet, or "—" when empty.
+  const stockCell = (item: Item, kind: "WAREHOUSE" | "HOUSE") => {
+    const total = sumBalances(stockByItem.get(item.id)?.[kind] ?? []);
+    if (total <= 0) return <span className="text-muted-foreground">—</span>;
+    return (
+      <button
+        type="button"
+        onClick={() => setBreakdown({ itemId: item.id, itemName: item.name, unit: item.unit, kind })}
+        className="tabular-nums text-primary underline-offset-2 hover:underline"
+      >
+        {formatQty(total)}
+      </button>
+    );
+  };
+
   const columns: Column<Item>[] = [
     { key: "name", header: "Name", render: (i) => <span className="font-medium">{i.name}</span> },
     { key: "category", header: "Category", render: (i) => humanizeEnum(i.category) },
     { key: "unit", header: "Unit", render: (i) => humanizeEnum(i.unit) },
+    {
+      key: "warehouse_stock",
+      header: "Warehouse stock",
+      render: (i) => stockCell(i, "WAREHOUSE"),
+      numeric: true,
+      sortValue: (i) => sumBalances(stockByItem.get(i.id)?.WAREHOUSE ?? []),
+    },
+    {
+      key: "house_stock",
+      header: "Stock in houses",
+      render: (i) => stockCell(i, "HOUSE"),
+      numeric: true,
+      sortValue: (i) => sumBalances(stockByItem.get(i.id)?.HOUSE ?? []),
+    },
     { key: "reorder_level", header: "Reorder level", render: (i) => i.reorder_level ?? "—", numeric: true },
     { key: "lead_time", header: "Lead time", render: (i) => (i.lead_time_days != null ? `${i.lead_time_days}d` : "—"), numeric: true },
     {
@@ -176,6 +238,12 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
                 action: { label: "Add item", onClick: openCreate },
               }
         }
+      />
+
+      <StockBreakdownSheet
+        target={breakdown}
+        rows={breakdownRows}
+        onOpenChange={(open) => !open && setBreakdown(null)}
       />
     </div>
   );

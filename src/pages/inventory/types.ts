@@ -4,7 +4,7 @@ import type { PurchaseItemLine } from "@/pages/purchases/types";
 export const ORGANIZATION_ROLES = ["MANUFACTURER", "IMPORTER", "MARKETER", "DISTRIBUTOR"] as const;
 export type OrganizationRole = (typeof ORGANIZATION_ROLES)[number];
 
-export const ITEM_BASE_UNITS = ["ML", "G", "UNIT", "DOSE", "PCS", "METER"] as const;
+export const ITEM_BASE_UNITS = ["LITER", "KG", "UNIT", "DOSE", "PCS", "METER"] as const;
 
 /** Units valid as an ItemUnit conversion under ANY base-unit family (Container can package a
  * liquid or a solid). Mirrors the backend allowlist (item.service.ts) -- not every unit with a
@@ -61,6 +61,17 @@ export type LocationStockRow = {
   item_id: string;
   item_name: string;
   unit: string;
+  balance: string;
+};
+
+/** GET /items/stock-by-location row -- one item's on-hand balance at one warehouse or house.
+ * The catalog sums these per item for its stock columns and filters them for the breakdown
+ * sheets. DISPOSAL and untagged ledger rows are excluded server-side. */
+export type ItemStockByLocation = {
+  item_id: string;
+  location_type: "WAREHOUSE" | "HOUSE";
+  location_id: string;
+  location_name: string;
   balance: string;
 };
 
