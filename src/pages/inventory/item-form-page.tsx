@@ -230,20 +230,20 @@ export function ItemFormPage() {
           toast.warning("Item saved, but updating its units failed. Try again from Edit.");
         });
         if (!organization_id) {
-          navigate("/inventory");
+          navigate("/inventory?tab=items");
           return;
         }
         linkOrganization.mutate(
           { item_id: savedItem.id, organization_id, role: "MANUFACTURER" },
           {
-            onSuccess: () => navigate("/inventory"),
+            onSuccess: () => navigate("/inventory?tab=items"),
             onError: (error) => {
               toast.warning(
                 error.status === 409
                   ? "Item saved, but it's already linked to that organization."
                   : `Item saved, but linking the organization failed: ${error.message}`
               );
-              navigate("/inventory");
+              navigate("/inventory?tab=items");
             },
           }
         );
@@ -270,7 +270,7 @@ export function ItemFormPage() {
   if (isEdit && !item) {
     return (
       <div className="flex flex-col gap-6">
-        <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate("/inventory")}>
+        <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate("/inventory?tab=items")}>
           <ArrowLeft />
           Back to inventory
         </Button>
@@ -281,7 +281,7 @@ export function ItemFormPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate("/inventory")}>
+      <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate("/inventory?tab=items")}>
         <ArrowLeft />
         Back to inventory
       </Button>
@@ -612,7 +612,7 @@ export function ItemFormPage() {
         </Card>
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate("/inventory")}>
+          <Button type="button" variant="outline" onClick={() => navigate("/inventory?tab=items")}>
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>

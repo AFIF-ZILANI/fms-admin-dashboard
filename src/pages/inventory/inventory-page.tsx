@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { ItemCatalogTab } from "@/pages/inventory/item-catalog-tab";
@@ -14,7 +15,8 @@ import { ConsumptionLogTab } from "@/pages/inventory/consumption-log-tab";
 
 export function InventoryPage() {
   usePageTitle("Inventory");
-  const [tab, setTab] = useState("analytics");
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(searchParams.get("tab") ?? "analytics");
 
   return (
     <Tabs value={tab} onValueChange={(value) => setTab(value ?? "analytics")}>
