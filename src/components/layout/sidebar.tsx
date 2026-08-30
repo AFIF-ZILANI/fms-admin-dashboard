@@ -5,7 +5,7 @@ import {
   SYSTEM_NAV,
   type NavItem,
 } from "@/components/layout/nav-config";
-import { useTheme, type UseThemeProps } from "next-themes";
+import { type UseThemeProps } from "next-themes";
 
 function NavGroup({ items }: { items: NavItem[] }) {
   return (
