@@ -16,20 +16,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
-import { optionalNumber } from "@/lib/zod-helpers";
 import type { Item, PurchaseItemOption, StockUnit } from "@/pages/inventory/types";
 import type { PurchaseItemLine } from "@/pages/purchases/types";
 
 const bindSchema = z.object({
   purchase_item_id: z.string().min(1, "Select a purchase lot"),
-  initial_quantity: optionalNumber(z.coerce.number().positive("Must be positive")),
-  bound_by_id: z.string().optional(),
 });
-type BindFormInput = z.input<typeof bindSchema>;
-type BindFormValues = z.output<typeof bindSchema>;
+type BindFormValues = z.infer<typeof bindSchema>;
 
 type BindCodeDialogProps = {
   open: boolean;
@@ -39,29 +34,35 @@ type BindCodeDialogProps = {
    * the lots are already known (the just-created purchase's own line
    * items) instead of needing a fresh item/purchase-lot search. */
   scopedLots?: PurchaseItemLine[];
+  /** When set, skips the code-lookup step — the unit is already known (the
+   * table's "bind manually" row action). Only unassigned units can bind. */
+  unit?: StockUnit;
 };
 
-export function BindCodeDialog({ open, onOpenChange, scopedLots }: BindCodeDialogProps) {
+export function BindCodeDialog({ open, onOpenChange, scopedLots, unit }: BindCodeDialogProps) {
   const [code, setCode] = useState("");
-  const [lookupCode, setLookupCode] = useState<string | null>(null);
+  const [lookupId, setLookupId] = useState<string | null>(null);
   const [itemFilter, setItemFilter] = useState("");
 
   const {
     control,
-    register,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<BindFormInput, unknown, BindFormValues>({
+  } = useForm<BindFormValues>({
     resolver: zodResolver(bindSchema),
-    defaultValues: { purchase_item_id: "", initial_quantity: "", bound_by_id: "" },
+    defaultValues: { purchase_item_id: "" },
   });
 
+  // id IS the QR payload -- look the unit up by id (getById). Skipped entirely
+  // when a unit is pre-selected via the `unit` prop.
   const { data: foundUnit, isFetching: lookingUp } = useGetData<StockUnit>(
-    `/stock-units/code/${encodeURIComponent(lookupCode ?? "")}`,
-    ["stock-units", "code", lookupCode ?? ""],
-    { enabled: !!lookupCode, retry: false }
+    `/stock-units/${encodeURIComponent(lookupId ?? "")}`,
+    ["stock-units", lookupId ?? ""],
+    { enabled: !unit && !!lookupId, retry: false }
   );
+
+  const effectiveUnit = unit ?? foundUnit;
 
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"], { enabled: !scopedLots });
   const { data: purchaseItems } = useGetData<Paginated<PurchaseItemOption>>(
@@ -70,9 +71,9 @@ export function BindCodeDialog({ open, onOpenChange, scopedLots }: BindCodeDialo
     { enabled: !!itemFilter && !scopedLots }
   );
 
-  const bind = usePostData<StockUnit, BindFormValues>(() => `/stock-units/${foundUnit?.id}/bind`, ["stock-units"]);
+  const bind = usePostData<StockUnit, BindFormValues>(() => `/stock-units/${effectiveUnit?.id}/bind`, ["stock-units"]);
 
-  const canBind = foundUnit?.status === "UNASSIGNED";
+  const canBind = effectiveUnit?.status === "UNASSIGNED";
 
   // In scoped mode the lots are already known (the just-created purchase's
   // own line items) -- no item→lot search needed, just pick from these.
@@ -84,11 +85,8 @@ export function BindCodeDialog({ open, onOpenChange, scopedLots }: BindCodeDialo
       }));
 
   const onSubmit = (values: BindFormValues) => {
-    if (!foundUnit) return;
-    // bound_by_id stays "" when ActorSelect is left unset -- the server's schema is
-    // `.uuid().optional()`, which rejects "" but accepts the key being absent entirely.
-    const payload = { ...values, bound_by_id: values.bound_by_id || undefined };
-    bind.mutate(payload, {
+    if (!effectiveUnit) return;
+    bind.mutate(values, {
       onSuccess: () => {
         toast.success("Code bound");
         handleClose(false);
@@ -100,7 +98,7 @@ export function BindCodeDialog({ open, onOpenChange, scopedLots }: BindCodeDialo
   const handleClose = (nextOpen: boolean) => {
     if (!nextOpen) {
       setCode("");
-      setLookupCode(null);
+      setLookupId(null);
       setItemFilter("");
       reset();
     }
@@ -116,37 +114,39 @@ export function BindCodeDialog({ open, onOpenChange, scopedLots }: BindCodeDialo
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          <div className="flex items-end gap-2">
-            <div className="flex flex-1 flex-col gap-1.5">
-              <Label htmlFor="code">Code</Label>
-              <Input
-                id="code"
-                placeholder="e.g. SU-A1B2C3D4"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-              />
+          {!unit && (
+            <div className="flex items-end gap-2">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label htmlFor="code">Code (scan or paste id)</Label>
+                <Input
+                  id="code"
+                  placeholder="Scan the QR or paste the unit id"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                />
+              </div>
+              <Button type="button" variant="outline" onClick={() => setLookupId(code.trim())} disabled={!code.trim()}>
+                Find
+              </Button>
             </div>
-            <Button type="button" variant="outline" onClick={() => setLookupCode(code.trim())} disabled={!code.trim()}>
-              Find
-            </Button>
-          </div>
+          )}
 
-          {lookupCode && lookingUp && <p className="text-xs text-muted-foreground">Looking up…</p>}
-          {lookupCode && !lookingUp && !foundUnit && (
-            <p className="text-xs text-destructive">No code found matching "{lookupCode}".</p>
+          {!unit && lookupId && lookingUp && <p className="text-xs text-muted-foreground">Looking up…</p>}
+          {!unit && lookupId && !lookingUp && !foundUnit && (
+            <p className="text-xs text-destructive">No code found matching "{lookupId}".</p>
           )}
-          {foundUnit && (
+          {effectiveUnit && (
             <div className="flex items-center gap-2 text-sm">
-              <span className="font-mono text-xs">{foundUnit.code}</span>
+              <span className="font-mono text-xs">{effectiveUnit.id}</span>
               <StatusBadge
-                tone={foundUnit.status === "UNASSIGNED" ? "info" : "warning"}
-                label={humanizeEnum(foundUnit.status)}
+                tone={effectiveUnit.status === "UNASSIGNED" ? "info" : "warning"}
+                label={humanizeEnum(effectiveUnit.status)}
               />
             </div>
           )}
-          {foundUnit && !canBind && (
+          {effectiveUnit && !canBind && (
             <p className="text-xs text-destructive">
-              This code is already {foundUnit.status.toLowerCase()} — only unassigned codes can be bound.
+              This code is already {effectiveUnit.status.toLowerCase()} — only unassigned codes can be bound.
             </p>
           )}
 
@@ -200,23 +200,6 @@ export function BindCodeDialog({ open, onOpenChange, scopedLots }: BindCodeDialo
                 {!scopedLots && itemFilter && lotOptions.length === 0 && (
                   <p className="text-xs text-muted-foreground">No purchase lots for this item yet.</p>
                 )}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="initial_quantity">Initial quantity (optional)</Label>
-                <Input id="initial_quantity" type="number" step="0.001" {...register("initial_quantity")} />
-                <p className="text-xs text-muted-foreground">Leave blank for equipment (non-depleting).</p>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="bound_by_id">Bound by</Label>
-                <Controller
-                  control={control}
-                  name="bound_by_id"
-                  render={({ field }) => (
-                    <ActorSelect id="bound_by_id" value={field.value ?? ""} onChange={field.onChange} />
-                  )}
-                />
               </div>
 
               <DialogFooter>

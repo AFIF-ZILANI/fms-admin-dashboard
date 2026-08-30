@@ -94,7 +94,7 @@ export function ProvisionCodesDialog({ open, onOpenChange }: ProvisionCodesDialo
           <div className="flex flex-col gap-4">
             <div id="printable-codes" className="grid grid-cols-4 gap-4">
               {provisioned.map((unit) => (
-                <QrCode key={unit.id} value={unit.code} size={80} />
+                <QrCode key={unit.id} value={unit.id} size={80} />
               ))}
             </div>
             <DialogFooter className="print:hidden">

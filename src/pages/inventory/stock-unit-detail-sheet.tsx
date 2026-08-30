@@ -83,7 +83,7 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
             <SheetDescription>{unit.purchase_item?.item.name ?? "Unbound"}</SheetDescription>
           </SheetHeader>
 
-          <QrCode value={unit.code} size={140} />
+          <QrCode value={unit.id} size={140} />
 
           <div className="flex items-center justify-center gap-2">
             <StatusBadge tone={STOCK_UNIT_STATUS_TONE[unit.status]} label={humanizeEnum(unit.status)} />
@@ -91,12 +91,12 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-xs text-muted-foreground">House</p>
-              <p>{unit.house?.name ?? "—"}</p>
+              <p className="text-xs text-muted-foreground">Current location</p>
+              <p>{unit.houseAllocations?.[0]?.house.name ?? "—"}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Remaining qty</p>
-              <p>{unit.remaining_quantity ?? "—"}</p>
+              <p className="text-xs text-muted-foreground">Bound at</p>
+              <p>{unit.bound_at ? new Date(unit.bound_at).toLocaleDateString() : "—"}</p>
             </div>
           </div>
 

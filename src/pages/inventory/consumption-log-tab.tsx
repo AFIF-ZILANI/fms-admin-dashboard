@@ -60,7 +60,7 @@ export function ConsumptionLogTab() {
     {
       key: "coded_unit",
       header: "Coded unit",
-      render: (c) => (c.stock_unit ? <span className="font-mono text-xs">{c.stock_unit.code}</span> : "—"),
+      render: (c) => (c.stock_unit ? <span className="font-mono text-xs">{c.stock_unit.id.slice(0, 8)}</span> : "—"),
     },
   ];
 

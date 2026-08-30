@@ -46,7 +46,7 @@ export function AssetDetailSheet({ assetId, onOpenChange }: AssetDetailSheetProp
         <SheetContent>
           <SheetHeader>
             <SheetTitle>{asset.name}</SheetTitle>
-            <SheetDescription>{asset.stock_unit?.code}</SheetDescription>
+            <SheetDescription className="font-mono text-xs">{asset.stock_unit?.id}</SheetDescription>
           </SheetHeader>
 
           <div className="flex items-center gap-2">
@@ -65,10 +65,6 @@ export function AssetDetailSheet({ assetId, onOpenChange }: AssetDetailSheetProp
             <div>
               <p className="text-xs text-muted-foreground">Useful life</p>
               <p>{asset.useful_life_batches} batches</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">House</p>
-              <p>{asset.stock_unit?.house?.name ?? "—"}</p>
             </div>
           </div>
 

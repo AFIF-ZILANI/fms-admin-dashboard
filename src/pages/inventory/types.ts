@@ -145,19 +145,25 @@ export type Asset = {
   depreciations?: AssetDepreciation[];
 };
 
+/** One physical move, logged as an event (WH->House or A->B->C). Latest = current location. */
+export type StockHouseAllocation = {
+  id: string;
+  stock_unit_id: string;
+  house_id: string;
+  occurred_at: string;
+  house: House;
+};
+
+/** The unit's `id` (uuid) IS the QR payload -- no separate human-readable code. Location is
+ * derived from the latest houseAllocations event, not a column. */
 export type StockUnit = {
   id: string;
-  code: string;
   purchase_item_id: string | null;
   status: StockUnitStatus;
-  initial_quantity: string | null;
-  remaining_quantity: string | null;
-  house_id: string | null;
-  bound_by_id: string | null;
   bound_at: string | null;
   created_at: string;
   purchase_item: PurchaseItemLine | null;
-  house: House | null;
+  houseAllocations: StockHouseAllocation[];
   asset: Asset | null;
 };
 
