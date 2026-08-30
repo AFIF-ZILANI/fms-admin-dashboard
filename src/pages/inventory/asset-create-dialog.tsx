@@ -108,14 +108,14 @@ export function AssetCreateDialog({ open, onOpenChange }: AssetCreateDialogProps
                     <SelectValue>
                       {(v: string) => {
                         const unit = units.find((u) => u.id === v);
-                        return unit ? `${unit.code} — ${unit.purchase_item?.item.name ?? ""}` : "Select coded unit";
+                        return unit ? `${unit.id.slice(0, 8)} — ${unit.purchase_item?.item.name ?? ""}` : "Select coded unit";
                       }}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {units.map((unit) => (
                       <SelectItem key={unit.id} value={unit.id}>
-                        {unit.code} — {unit.purchase_item?.item.name ?? "Unknown item"}
+                        {unit.id.slice(0, 8)} — {unit.purchase_item?.item.name ?? "Unknown item"}
                       </SelectItem>
                     ))}
                   </SelectContent>

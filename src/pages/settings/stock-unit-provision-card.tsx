@@ -8,10 +8,9 @@ import { Label } from "@/components/ui/label";
 import { usePostData } from "@/lib/api";
 import type { StockUnit } from "@/pages/settings/types";
 
-// ponytail: no QR image rendering — StockUnit.code is a plain printable
-// string (e.g. "SU-3F9A1B2C"), and generating actual scannable QR images
-// needs a rendering library this app doesn't have yet. Add one when coded
-// units get printed for real, not provisioned only to sit in the list.
+// ponytail: lists the provisioned unit ids as plain text (each id IS the QR
+// payload). Actual scannable QR images are rendered by the Inventory
+// provisioning dialog (provision-codes-dialog.tsx), not here.
 export function StockUnitProvisionCard() {
   const [count, setCount] = useState("50");
   const [lastBatch, setLastBatch] = useState<StockUnit[] | undefined>(undefined);
@@ -69,7 +68,7 @@ export function StockUnitProvisionCard() {
             <Label>Last provisioned batch ({lastBatch.length})</Label>
             <div className="max-h-48 overflow-auto rounded-md border border-border p-2 font-mono text-xs">
               {lastBatch.map((u) => (
-                <div key={u.id}>{u.code}</div>
+                <div key={u.id}>{u.id}</div>
               ))}
             </div>
           </div>
