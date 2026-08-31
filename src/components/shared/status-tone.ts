@@ -1,5 +1,5 @@
 import type { Tone } from "@/components/shared/status-badge";
-import type { AssetStatus, StockUnitStatus } from "@/pages/inventory/types";
+import type { AllocationType, AssetStatus, StockUnitStatus } from "@/pages/inventory/types";
 
 /** `is_active` recurs on Houses/Suppliers/Customers/Employees/Admins/Items — one mapping, reused everywhere. */
 export function activeStatus(isActive: boolean): { tone: Tone; label: string } {
@@ -20,4 +20,11 @@ export const ASSET_STATUS_TONE: Record<AssetStatus, Tone> = {
   ACTIVE: "success",
   RETIRED: "neutral",
   DISPOSED: "neutral",
+};
+
+/** Shared across stock-allocation-tab.tsx and stock-allocation-form-dialog.tsx. */
+export const ALLOCATION_TYPE_TONE: Record<AllocationType, Tone> = {
+  ALLOCATION: "success",
+  REALLOCATION: "info",
+  RETURN: "warning",
 };

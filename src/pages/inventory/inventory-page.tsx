@@ -11,6 +11,7 @@ import { WarehousesTab } from "@/pages/inventory/warehouses-tab";
 import { OrganizationsTab } from "@/pages/inventory/organizations-tab";
 import { AdjustmentsTab } from "@/pages/inventory/adjustments-tab";
 import { StockLedgerTab } from "@/pages/inventory/stock-ledger-tab";
+import { StockAllocationTab } from "@/pages/inventory/stock-allocation-tab";
 import { ConsumptionLogTab } from "@/pages/inventory/consumption-log-tab";
 
 export function InventoryPage() {
@@ -31,6 +32,7 @@ export function InventoryPage() {
           <TabsTrigger value="adjustments">Adjustments</TabsTrigger>
           <TabsTrigger value="organizations">Organizations</TabsTrigger>
           <TabsTrigger value="coded-units">Coded Units</TabsTrigger>
+          <TabsTrigger value="stock-allocation">Stock Allocation</TabsTrigger>
           <TabsTrigger value="warehouses">Warehouses</TabsTrigger>
         </TabsList>
       </div>
@@ -45,6 +47,9 @@ export function InventoryPage() {
       </TabsContent>
       <TabsContent value="coded-units">
         <CodedUnitsTab />
+      </TabsContent>
+      <TabsContent value="stock-allocation">
+        <StockAllocationTab />
       </TabsContent>
       <TabsContent value="assets">
         <AssetsTab />
