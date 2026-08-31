@@ -23,13 +23,14 @@
   }
   #printable-codes {
     /* Uniform grid of fixed 25mm tracks -- packs left-to-right, top-to-bottom with
-       even gaps (flex-wrap gave ragged rows). auto-fill maxes the columns that fit
-       194mm of A4 usable width: 7 cols at 3mm col-gap (7*25 + 6*3 = 193mm). */
+       even 3mm gaps. auto-fill maxes columns that fit A4's 194mm usable width:
+       7 cols (7*25 + 6*3 = 193mm). Square cells (no label) → 10 rows fit the 281mm
+       usable height (10*25 + 9*3 = 277mm), so 70 codes per page. */
     display: grid !important;
     grid-template-columns: repeat(auto-fill, 25mm);
     justify-content: start;
     align-content: start;
-    gap: 4mm 3mm;
+    gap: 3mm;
     width: 100%;
     padding: 0;
     border: 0;
@@ -40,15 +41,11 @@
   .print-cell {
     width: 25mm;
     break-inside: avoid;
-    gap: 0.5mm;
   }
   .print-cell svg {
     display: block;
     width: 25mm !important;
     height: 25mm !important;
-  }
-  .print-cell .code-label {
-    font-size: 6pt;
   }
 }
 
