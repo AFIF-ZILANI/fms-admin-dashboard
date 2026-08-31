@@ -42,11 +42,13 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
   );
   const unitHistory = (history?.results ?? []).filter((c) => c.stock_unit_id === unit?.id);
 
-  const relocate = usePostData<StockUnit, { house_id: string }>(
+  const relocate = usePostData<StockUnit, { house_id: string | null }>(
     () => `/stock-units/${unit?.id}/relocate`,
     ["stock-units"]
   );
   const dispose = usePostData<StockUnit, void>(() => `/stock-units/${unit?.id}/dispose`, ["stock-units"]);
+
+  const currentHouse = unit?.houseAllocations?.[0]?.house ?? null;
 
   const handleRelocate = () => {
     if (!relocateHouseId) return;
@@ -57,6 +59,16 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
           toast.success("Unit relocated");
           setRelocateHouseId("");
         },
+        onError: (error) => toast.error(error.message),
+      }
+    );
+  };
+
+  const handleReturn = () => {
+    relocate.mutate(
+      { house_id: null },
+      {
+        onSuccess: () => toast.success("Unit returned to warehouse"),
         onError: (error) => toast.error(error.message),
       }
     );
@@ -101,7 +113,7 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <p className="text-xs text-muted-foreground">Current location</p>
-              <p>{unit.houseAllocations?.[0]?.house.name ?? "—"}</p>
+              <p>{currentHouse?.name ?? "Warehouse"}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Bound at</p>
@@ -140,6 +152,9 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
                   Relocate
                 </Button>
               </div>
+              <Button variant="outline" onClick={handleReturn} disabled={!currentHouse || relocate.isPending}>
+                Return to warehouse
+              </Button>
               <Button variant="destructive" onClick={handleDispose} disabled={dispose.isPending}>
                 Mark disposed
               </Button>

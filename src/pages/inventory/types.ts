@@ -145,13 +145,25 @@ export type Asset = {
   depreciations?: AssetDepreciation[];
 };
 
-/** One physical move, logged as an event (WH->House or A->B->C). Latest = current location. */
+export const ALLOCATION_TYPES = ["ALLOCATION", "REALLOCATION", "RETURN"] as const;
+export type AllocationType = (typeof ALLOCATION_TYPES)[number];
+
+/** One physical move, logged as an event (WH->House, A->B->C, or House->WH). Latest = current
+ * location; house is null when the event returned the unit to the warehouse. */
 export type StockHouseAllocation = {
   id: string;
   stock_unit_id: string;
-  house_id: string;
+  house_id: string | null;
+  type: AllocationType;
   occurred_at: string;
-  house: House;
+  house: House | null;
+};
+
+/** A StockHouseAllocation row as returned by `GET /api/stock-house-allocations` -- unlike the
+ * nested `houseAllocations[]` on a StockUnit, this carries the unit (and its item) back so an
+ * event can be identified out of context, for the Stock Allocation ledger tab. */
+export type StockHouseAllocationEntry = StockHouseAllocation & {
+  stock_unit: StockUnit;
 };
 
 /** The unit's `id` (uuid) IS the QR payload -- no separate human-readable code. Location is

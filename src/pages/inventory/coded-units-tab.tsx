@@ -298,7 +298,13 @@ export function CodedUnitsTab() {
         onOpenChange={(open) => !open && setBindUnit(null)}
       />
       <ChangeStatusDialog unit={statusUnit} onOpenChange={(open) => !open && setStatusUnit(null)} />
-      <StockUnitDetailSheet unit={selectedUnit} onOpenChange={(open) => !open && setSelectedUnit(null)} />
+      <StockUnitDetailSheet
+        // Prefer the freshly-refetched copy from the current page over the stale snapshot
+        // captured at click time -- a relocate/dispose invalidates ["stock-units"], and without
+        // this the open sheet would keep showing pre-mutation location/status.
+        unit={units.find((u) => u.id === selectedUnit?.id) ?? selectedUnit}
+        onOpenChange={(open) => !open && setSelectedUnit(null)}
+      />
       {confirmDialog}
     </div>
   );
