@@ -18,9 +18,27 @@ type CodePrintSheetProps = {
 };
 
 // Shared QR print sheet -- used both after provisioning and to re-print any selection from the
-// table. Codes print at exactly 2.5cm (index.css @media print) and flex-wrap to fill A4. The QR
-// carries the full id; the label under it is the 8-char prefix (a full uuid won't fit legibly).
+// table. Codes print at exactly 2.5cm (index.css @media print) in a uniform grid that packs A4.
+// The QR carries the full id; the label under it is the 8-char prefix (a full uuid won't fit legibly).
 export function CodePrintSheet({ ids, open, onOpenChange }: CodePrintSheetProps) {
+  // The sheet sits inside base-ui's fixed, screen-centered dialog, which becomes the containing
+  // block for #printable-codes' `position:absolute` -- so it printed from the middle of the page.
+  // Hoist the node to <body> for the duration of printing so it resolves against the page top-left,
+  // then put it back where it was.
+  const handlePrint = () => {
+    const node = document.getElementById("printable-codes");
+    if (!node) return;
+    const parent = node.parentElement!;
+    const anchor = node.nextSibling;
+    document.body.appendChild(node);
+    const restore = () => {
+      parent.insertBefore(node, anchor);
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+    window.print();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
@@ -34,7 +52,7 @@ export function CodePrintSheet({ ids, open, onOpenChange }: CodePrintSheetProps)
 
         <div
           id="printable-codes"
-          className="flex max-h-[60vh] flex-wrap justify-center gap-3 overflow-auto rounded-md border border-border bg-white p-4"
+          className="grid max-h-[60vh] grid-cols-[repeat(auto-fill,94px)] justify-center gap-x-3 gap-y-4 overflow-auto rounded-md border border-border bg-white p-4"
         >
           {ids.map((id) => (
             <div key={id} className="print-cell flex w-[94px] flex-col items-center gap-1">
@@ -48,7 +66,7 @@ export function CodePrintSheet({ ids, open, onOpenChange }: CodePrintSheetProps)
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button type="button" onClick={() => window.print()} disabled={ids.length === 0}>
+          <Button type="button" onClick={handlePrint} disabled={ids.length === 0}>
             <Printer />
             Print
           </Button>

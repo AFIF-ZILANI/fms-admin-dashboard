@@ -3,33 +3,37 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
-/* Print-isolation for the QR code sheet (web/src/pages/inventory/code-print-sheet.tsx) --
-   visibility-based so it survives the dialog's own fixed positioning, unlike display:none toggles.
-   Codes print at a fixed 2.5cm and flex-wrap to pack an A4 page tightly. */
+/* Print layout for the QR code sheet (web/src/pages/inventory/code-print-sheet.tsx).
+   handlePrint() hoists #printable-codes to <body> before printing, so here we just hide
+   its siblings (display:none, not visibility:hidden -- hidden content still occupies pages
+   and emits trailing blanks) and let the grid flow naturally from the page top across pages.
+   Codes print at a fixed 2.5cm in a uniform grid that packs A4. */
 @media print {
   @page {
     size: A4;
     margin: 8mm;
   }
-  body * {
-    visibility: hidden;
+  /* Paper is white regardless of the app's active (dark) theme. */
+  html,
+  body {
+    background: #fff !important;
   }
-  #printable-codes,
-  #printable-codes * {
-    visibility: visible;
+  body > *:not(#printable-codes) {
+    display: none !important;
   }
   #printable-codes {
-    position: absolute;
-    top: 0;
-    left: 0;
+    /* Uniform grid of fixed 25mm tracks -- packs left-to-right, top-to-bottom with
+       even gaps (flex-wrap gave ragged rows). auto-fill maxes the columns that fit
+       194mm of A4 usable width: 7 cols at 3mm col-gap (7*25 + 6*3 = 193mm). */
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, 25mm);
+    justify-content: start;
+    align-content: start;
+    gap: 4mm 3mm;
     width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    align-content: flex-start;
-    gap: 2mm;
     padding: 0;
     border: 0;
-    background: white;
+    background: #fff;
     overflow: visible;
     max-height: none;
   }
@@ -39,6 +43,7 @@
     gap: 0.5mm;
   }
   .print-cell svg {
+    display: block;
     width: 25mm !important;
     height: 25mm !important;
   }
