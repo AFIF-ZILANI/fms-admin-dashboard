@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { CheckCircle2, Clock, Plus, QrCode as QrCodeIcon, Search, X, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Plus, Printer, QrCode as QrCodeIcon, Search, Trash2, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { useGetData, usePatchData, useDelete, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { STOCK_UNIT_STATUSES, type StockUnit, type StockUnitStatus } from "@/pages/inventory/types";
 import { ProvisionCodesDialog } from "@/pages/inventory/provision-codes-dialog";
+import { CodePrintSheet } from "@/pages/inventory/code-print-sheet";
 import { BindCodeDialog } from "@/pages/inventory/bind-code-dialog";
 import { StockUnitDetailSheet } from "@/pages/inventory/stock-unit-detail-sheet";
 
@@ -32,6 +33,8 @@ export function CodedUnitsTab() {
   const [selectedUnit, setSelectedUnit] = useState<StockUnit | null>(null);
   const [bindUnit, setBindUnit] = useState<StockUnit | null>(null);
   const [statusUnit, setStatusUnit] = useState<StockUnit | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [printIds, setPrintIds] = useState<string[] | null>(null);
 
   // Server-side id search (the id IS the QR payload): a scanned full id must be findable even
   // when it's past the first page. ponytail: no debounce -- farm-scale usage; add one if the
@@ -67,6 +70,27 @@ export function CodedUnitsTab() {
       onError: (error) => toast.error(error.message),
     });
   };
+
+  // ponytail: bulk delete fans out to the existing per-id DELETE (no bulk endpoint). allSettled so
+  // one protected unit (consumption/asset) doesn't sink the rest -- we report the split. Fine at
+  // farm scale (page caps at 100); add a real bulk endpoint if selections routinely run large.
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    if (!confirm(`Hard-delete ${ids.length} unit${ids.length === 1 ? "" : "s"}? This can't be undone.`)) return;
+    setBulkDeleting(true);
+    const results = await Promise.allSettled(ids.map((id) => remove.mutateAsync(id)));
+    setBulkDeleting(false);
+    const failed = results.filter((r) => r.status === "rejected").length;
+    const ok = results.length - failed;
+    if (ok) toast.success(`Deleted ${ok} unit${ok === 1 ? "" : "s"}`);
+    if (failed) toast.error(`${failed} could not be deleted (consumption history or linked asset)`);
+    setSelectedIds(new Set());
+  };
+
+  const selectedCount = selectedIds.size;
+  const printSelected = () => setPrintIds([...selectedIds]);
 
   const columns: Column<StockUnit>[] = [
     {
@@ -185,11 +209,32 @@ export function CodedUnitsTab() {
         </div>
       </div>
 
+      {selectedCount > 0 && (
+        <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 px-3 py-2">
+          <span className="text-sm font-medium">{selectedCount} selected</span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={printSelected}>
+              <Printer />
+              Print selected
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDeleting}>
+              <Trash2 />
+              Delete selected
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       <DataTable
         columns={columns}
         rows={units}
         rowKey={(u) => u.id}
         isLoading={isLoading}
+        selectedIds={selectedIds}
+        onSelectedIdsChange={setSelectedIds}
         onRowClick={(u) => setSelectedUnit(u)}
         empty={
           q
@@ -203,7 +248,12 @@ export function CodedUnitsTab() {
         }
       />
 
-      <ProvisionCodesDialog open={provisionOpen} onOpenChange={setProvisionOpen} />
+      <ProvisionCodesDialog
+        open={provisionOpen}
+        onOpenChange={setProvisionOpen}
+        onProvisioned={(newUnits) => setPrintIds(newUnits.map((u) => u.id))}
+      />
+      <CodePrintSheet ids={printIds ?? []} open={!!printIds} onOpenChange={(open) => !open && setPrintIds(null)} />
       <BindCodeDialog open={bindOpen} onOpenChange={setBindOpen} />
       <BindCodeDialog
         open={!!bindUnit}

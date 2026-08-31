@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/shared/empty-state";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,10 @@ type DataTableProps<T> = {
   rowKey: (row: T) => string;
   isLoading?: boolean;
   onRowClick?: (row: T) => void;
+  /** Provide both to render a leading checkbox column. Selection spans the whole set the caller
+   * holds; the header checkbox selects/clears just the rows currently rendered here. */
+  selectedIds?: Set<string>;
+  onSelectedIdsChange?: (ids: Set<string>) => void;
   empty: { icon: LucideIcon; title: string; description?: string; action?: { label: string; onClick: () => void } };
 };
 
@@ -37,8 +42,18 @@ type DataTableProps<T> = {
 // every cell still renders through the column's own `render`, so this stays a
 // thin sorting layer instead of a full column-def rewrite. No pagination UI
 // yet; add when a page's row count outgrows the API's default page size.
-export function DataTable<T>({ columns, rows, rowKey, isLoading, onRowClick, empty }: DataTableProps<T>) {
+export function DataTable<T>({
+  columns,
+  rows,
+  rowKey,
+  isLoading,
+  onRowClick,
+  selectedIds,
+  onSelectedIdsChange,
+  empty,
+}: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const selectable = !!selectedIds && !!onSelectedIdsChange;
 
   const tanstackColumns = useMemo<ColumnDef<T>[]>(
     () =>
@@ -66,11 +81,40 @@ export function DataTable<T>({ columns, rows, rowKey, isLoading, onRowClick, emp
 
   const sortedRows = table.getRowModel().rows.map((r) => r.original);
 
+  const renderedIds = sortedRows.map(rowKey);
+  const allSelected = selectable && renderedIds.length > 0 && renderedIds.every((id) => selectedIds!.has(id));
+  const someSelected = selectable && !allSelected && renderedIds.some((id) => selectedIds!.has(id));
+
+  const toggleOne = (id: string, checked: boolean) => {
+    const next = new Set(selectedIds);
+    if (checked) next.add(id);
+    else next.delete(id);
+    onSelectedIdsChange!(next);
+  };
+  const toggleAll = (checked: boolean) => {
+    const next = new Set(selectedIds);
+    for (const id of renderedIds) {
+      if (checked) next.add(id);
+      else next.delete(id);
+    }
+    onSelectedIdsChange!(next);
+  };
+
   return (
     <div className="rounded-lg border border-border">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
+            {selectable && (
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={allSelected}
+                  indeterminate={someSelected}
+                  onCheckedChange={(checked) => toggleAll(checked)}
+                  aria-label="Select all rows"
+                />
+              </TableHead>
+            )}
             {columns.map((col) => {
               const tanstackCol = table.getColumn(col.key);
               const sortDir = tanstackCol?.getIsSorted();
@@ -110,6 +154,11 @@ export function DataTable<T>({ columns, rows, rowKey, isLoading, onRowClick, emp
           {isLoading
             ? Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
+                  {selectable && (
+                    <TableCell>
+                      <Skeleton className="size-4" />
+                    </TableCell>
+                  )}
                   {columns.map((col) => (
                     <TableCell key={col.key}>
                       <Skeleton className="h-4 w-full max-w-32" />
@@ -123,6 +172,15 @@ export function DataTable<T>({ columns, rows, rowKey, isLoading, onRowClick, emp
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(onRowClick && "cursor-pointer")}
                 >
+                  {selectable && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds!.has(rowKey(row))}
+                        onCheckedChange={(checked) => toggleOne(rowKey(row), checked)}
+                        aria-label="Select row"
+                      />
+                    </TableCell>
+                  )}
                   {columns.map((col) => (
                     <TableCell key={col.key} className={cn(col.numeric && "text-right tabular-nums", col.className)}>
                       {col.render(row)}

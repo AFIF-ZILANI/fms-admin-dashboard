@@ -3,9 +3,14 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
-/* Print-isolation for "Provision blank codes" (web/src/pages/inventory/provision-codes-dialog.tsx) --
-   visibility-based so it survives the dialog's own fixed positioning, unlike display:none toggles. */
+/* Print-isolation for the QR code sheet (web/src/pages/inventory/code-print-sheet.tsx) --
+   visibility-based so it survives the dialog's own fixed positioning, unlike display:none toggles.
+   Codes print at a fixed 2.5cm and flex-wrap to pack an A4 page tightly. */
 @media print {
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
   body * {
     visibility: hidden;
   }
@@ -18,6 +23,27 @@
     top: 0;
     left: 0;
     width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 2mm;
+    padding: 0;
+    border: 0;
+    background: white;
+    overflow: visible;
+    max-height: none;
+  }
+  .print-cell {
+    width: 25mm;
+    break-inside: avoid;
+    gap: 0.5mm;
+  }
+  .print-cell svg {
+    width: 25mm !important;
+    height: 25mm !important;
+  }
+  .print-cell .code-label {
+    font-size: 6pt;
   }
 }
 
