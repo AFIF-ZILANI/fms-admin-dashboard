@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { QrCode } from "@/components/shared/qr-code";
 import { usePostData } from "@/lib/api";
 import type { StockUnit } from "@/pages/inventory/types";
 
@@ -26,11 +24,14 @@ const provisionSchema = z.object({
 type ProvisionFormInput = z.input<typeof provisionSchema>;
 type ProvisionFormValues = z.output<typeof provisionSchema>;
 
-type ProvisionCodesDialogProps = { open: boolean; onOpenChange: (open: boolean) => void };
+type ProvisionCodesDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Fired with the freshly created units so the caller can open the print sheet. */
+  onProvisioned: (units: StockUnit[]) => void;
+};
 
-export function ProvisionCodesDialog({ open, onOpenChange }: ProvisionCodesDialogProps) {
-  const [provisioned, setProvisioned] = useState<StockUnit[]>([]);
-
+export function ProvisionCodesDialog({ open, onOpenChange, onProvisioned }: ProvisionCodesDialogProps) {
   const {
     register,
     handleSubmit,
@@ -48,7 +49,9 @@ export function ProvisionCodesDialog({ open, onOpenChange }: ProvisionCodesDialo
     provision.mutate(values, {
       onSuccess: (units) => {
         toast.success(`${units.length} codes provisioned`);
-        setProvisioned(units);
+        reset();
+        onOpenChange(false);
+        onProvisioned(units);
       },
       onError: (error) => {
         const message = error.fieldError("count");
@@ -59,54 +62,35 @@ export function ProvisionCodesDialog({ open, onOpenChange }: ProvisionCodesDialo
   };
 
   const handleClose = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      setProvisioned([]);
-      reset();
-    }
+    if (!nextOpen) reset();
     onOpenChange(nextOpen);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader className="print:hidden">
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
           <DialogTitle>Provision blank codes</DialogTitle>
-          <DialogDescription>Batch-prints a run of unbound QR codes ahead of need.</DialogDescription>
+          <DialogDescription>
+            Batch-creates a run of unbound QR codes ahead of need. The print sheet opens next.
+          </DialogDescription>
         </DialogHeader>
 
-        {provisioned.length === 0 ? (
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="count">How many codes?</Label>
-              <Input id="count" type="number" step="1" {...register("count")} aria-invalid={!!errors.count} />
-              {errors.count && <p className="text-xs text-destructive">{errors.count.message}</p>}
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => handleClose(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                Provision
-              </Button>
-            </DialogFooter>
-          </form>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <div id="printable-codes" className="grid grid-cols-4 gap-4">
-              {provisioned.map((unit) => (
-                <QrCode key={unit.id} value={unit.id} size={80} />
-              ))}
-            </div>
-            <DialogFooter className="print:hidden">
-              <Button type="button" variant="outline" onClick={() => handleClose(false)}>
-                Done
-              </Button>
-              <Button type="button" onClick={() => window.print()}>
-                Print codes
-              </Button>
-            </DialogFooter>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="count">How many codes?</Label>
+            <Input id="count" type="number" step="1" {...register("count")} aria-invalid={!!errors.count} />
+            {errors.count && <p className="text-xs text-destructive">{errors.count.message}</p>}
           </div>
-        )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleClose(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              Provision
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
