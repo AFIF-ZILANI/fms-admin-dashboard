@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { STOCK_UNIT_STATUS_TONE } from "@/components/shared/status-tone";
 import { useGetData, usePatchData, useDelete, type Paginated } from "@/lib/api";
@@ -35,6 +36,7 @@ export function CodedUnitsTab() {
   const [statusUnit, setStatusUnit] = useState<StockUnit | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [printIds, setPrintIds] = useState<string[] | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
 
   // Server-side id search (the id IS the QR payload): a scanned full id must be findable even
   // when it's past the first page. ponytail: no debounce -- farm-scale usage; add one if the
@@ -65,8 +67,14 @@ export function CodedUnitsTab() {
   const units = data?.results ?? [];
 
   const remove = useDelete<null, string>((id) => `/stock-units/${id}`, ["stock-units"]);
-  const handleDelete = (u: StockUnit) => {
-    if (!confirm(`Hard-delete unit ${u.id.slice(0, 8)}? This can't be undone.`)) return;
+  const handleDelete = async (u: StockUnit) => {
+    const ok = await confirm({
+      title: "Delete unit?",
+      description: `Hard-delete unit ${u.id.slice(0, 8)}? This can't be undone.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     remove.mutate(u.id, {
       onSuccess: () => toast.success("Unit deleted"),
       onError: (error) => toast.error(error.message),
@@ -80,13 +88,19 @@ export function CodedUnitsTab() {
   const handleBulkDelete = async () => {
     const ids = [...selectedIds];
     if (ids.length === 0) return;
-    if (!confirm(`Hard-delete ${ids.length} unit${ids.length === 1 ? "" : "s"}? This can't be undone.`)) return;
+    const ok = await confirm({
+      title: `Delete ${ids.length} unit${ids.length === 1 ? "" : "s"}?`,
+      description: "Hard-delete the selected units? This can't be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setBulkDeleting(true);
     const results = await Promise.allSettled(ids.map((id) => remove.mutateAsync(id)));
     setBulkDeleting(false);
     const failed = results.filter((r) => r.status === "rejected").length;
-    const ok = results.length - failed;
-    if (ok) toast.success(`Deleted ${ok} unit${ok === 1 ? "" : "s"}`);
+    const succeeded = results.length - failed;
+    if (succeeded) toast.success(`Deleted ${succeeded} unit${succeeded === 1 ? "" : "s"}`);
     if (failed) toast.error(`${failed} could not be deleted (consumption history or linked asset)`);
     setSelectedIds(new Set());
   };
@@ -285,6 +299,7 @@ export function CodedUnitsTab() {
       />
       <ChangeStatusDialog unit={statusUnit} onOpenChange={(open) => !open && setStatusUnit(null)} />
       <StockUnitDetailSheet unit={selectedUnit} onOpenChange={(open) => !open && setSelectedUnit(null)} />
+      {confirmDialog}
     </div>
   );
 }
