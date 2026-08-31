@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatusBadge } from "@/components/shared/status-badge";
 import { QrCode } from "@/components/shared/qr-code";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { usePostData, useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Consumption, StockUnit } from "@/pages/inventory/types";
@@ -28,6 +29,7 @@ type StockUnitDetailSheetProps = {
 
 export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailSheetProps) {
   const [relocateHouseId, setRelocateHouseId] = useState("");
+  const { confirm, confirmDialog } = useConfirm();
 
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   // No stock_unit_id filter on GET /consumptions (out of scope for this redesign, see spec) --
@@ -60,8 +62,14 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
     );
   };
 
-  const handleDispose = () => {
-    if (!confirm("Mark this unit as disposed? This can't be undone.")) return;
+  const handleDispose = async () => {
+    const ok = await confirm({
+      title: "Mark unit disposed?",
+      description: "Mark this unit as disposed? This can't be undone.",
+      confirmLabel: "Mark disposed",
+      destructive: true,
+    });
+    if (!ok) return;
     dispose.mutate(undefined, {
       onSuccess: () => toast.success("Unit disposed"),
       onError: (error) => toast.error(error.message),
@@ -75,7 +83,8 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
   ];
 
   return (
-    <Sheet open={!!unit} onOpenChange={onOpenChange}>
+    <>
+      <Sheet open={!!unit} onOpenChange={onOpenChange}>
       {unit && (
         <SheetContent>
           <SheetHeader>
@@ -138,6 +147,8 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
           )}
         </SheetContent>
       )}
-    </Sheet>
+      </Sheet>
+      {confirmDialog}
+    </>
   );
 }

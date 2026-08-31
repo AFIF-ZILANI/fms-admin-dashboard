@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { activeStatus } from "@/components/shared/status-tone";
 import { useGetData, usePostData, usePatchData, useDelete, type Paginated } from "@/lib/api";
 import type { LookupRow } from "@/pages/settings/lookup-types";
@@ -48,6 +49,7 @@ export function LookupManagerCard({ title, singular, endpoint, queryKey, icon: I
   const [formOpen, setFormOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<LookupRow | undefined>(undefined);
   const [label, setLabel] = useState("");
+  const { confirm, confirmDialog } = useConfirm();
 
   const { data, isLoading } = useGetData<Paginated<LookupRow>>(`${endpoint}?limit=100`, [queryKey]);
   const rows = data?.results ?? [];
@@ -106,8 +108,14 @@ export function LookupManagerCard({ title, singular, endpoint, queryKey, icon: I
     });
   };
 
-  const onDelete = (row: LookupRow) => {
-    if (!confirm(`Delete "${row.label}"? This can't be undone.`)) return;
+  const onDelete = async (row: LookupRow) => {
+    const ok = await confirm({
+      title: `Delete ${singular.toLowerCase()}?`,
+      description: `Delete "${row.label}"? This can't be undone.`,
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     remove.mutate(row.id, {
       onSuccess: () => toast.success(`${singular} deleted`),
       onError: (error) => toast.error(error.message),
@@ -208,6 +216,7 @@ export function LookupManagerCard({ title, singular, endpoint, queryKey, icon: I
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </Card>
   );
 }
