@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { CheckCircle2, Clock, Plus, Printer, QrCode as QrCodeIcon, Search, Trash2, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -40,24 +40,26 @@ export function CodedUnitsTab() {
   // when it's past the first page. ponytail: no debounce -- farm-scale usage; add one if the
   // per-keystroke fetch feels chatty.
   const q = search.trim();
-  const query = new URLSearchParams({ limit: "100" });
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
+  // Filter/search narrows the whole set server-side, so a stale page could land out of range.
+  useEffect(() => setPage(1), [statusFilter, q]);
+
+  const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
   if (statusFilter !== "ALL") query.set("status", statusFilter);
   if (q) query.set("q", q);
   const { data, isLoading } = useGetData<Paginated<StockUnit>>(`/stock-units?${query}`, [
     "stock-units",
     statusFilter,
     q,
+    page,
   ]);
 
-  // KPI counts always reflect the unfiltered full set, not the filtered view -- fetched separately at a high limit.
-  const { data: allUnits } = useGetData<Paginated<StockUnit>>("/stock-units?limit=100", [
-    "stock-units",
-    "ALL",
-    "",
-  ]);
-  const counts = (allUnits?.results ?? []).reduce(
-    (acc, u) => ({ ...acc, [u.status]: (acc[u.status] ?? 0) + 1 }),
-    {} as Record<StockUnitStatus, number>
+  // KPI counts always reflect the unfiltered full set -- one server-side aggregate query so they
+  // stay accurate past the list's page cap (a client-side reduce over the page undercounts).
+  const { data: counts } = useGetData<Partial<Record<StockUnitStatus, number>>>(
+    "/stock-units/counts",
+    ["stock-units", "counts"]
   );
 
   const units = data?.results ?? [];
@@ -154,10 +156,10 @@ export function CodedUnitsTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KPICard label="Unassigned" value={counts.UNASSIGNED ?? 0} icon={QrCodeIcon} />
-        <KPICard label="In stock" value={counts.IN_STOCK ?? 0} icon={CheckCircle2} />
-        <KPICard label="In use" value={counts.IN_USE ?? 0} icon={Clock} />
-        <KPICard label="Disposed" value={counts.DISPOSED ?? 0} icon={XCircle} />
+        <KPICard label="Unassigned" value={counts?.UNASSIGNED ?? 0} icon={QrCodeIcon} />
+        <KPICard label="In stock" value={counts?.IN_STOCK ?? 0} icon={CheckCircle2} />
+        <KPICard label="In use" value={counts?.IN_USE ?? 0} icon={Clock} />
+        <KPICard label="Disposed" value={counts?.DISPOSED ?? 0} icon={XCircle} />
       </div>
 
       <div className="flex items-center justify-between gap-3">
@@ -247,6 +249,27 @@ export function CodedUnitsTab() {
               }
         }
       />
+
+      {data && data.totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Page {data.page} of {data.totalPages} · {data.total} total
+          </span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= data.totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       <ProvisionCodesDialog
         open={provisionOpen}
