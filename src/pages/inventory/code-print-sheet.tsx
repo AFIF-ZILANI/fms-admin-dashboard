@@ -18,8 +18,8 @@ type CodePrintSheetProps = {
 };
 
 // Shared QR print sheet -- used both after provisioning and to re-print any selection from the
-// table. Codes print at exactly 2.5cm (index.css @media print) in a uniform grid that packs A4.
-// The QR carries the full id; the label under it is the 8-char prefix (a full uuid won't fit legibly).
+// table. Codes print at a fixed 2.5cm (index.css @media print) in a uniform grid that packs A4.
+// The QR carries the full id; no human-readable label -- the workflow is scan-only.
 export function CodePrintSheet({ ids, open, onOpenChange }: CodePrintSheetProps) {
   // The sheet sits inside base-ui's fixed, screen-centered dialog, which becomes the containing
   // block for #printable-codes' `position:absolute` -- so it printed from the middle of the page.
@@ -52,12 +52,11 @@ export function CodePrintSheet({ ids, open, onOpenChange }: CodePrintSheetProps)
 
         <div
           id="printable-codes"
-          className="grid max-h-[60vh] grid-cols-[repeat(auto-fill,94px)] justify-center gap-x-3 gap-y-4 overflow-auto rounded-md border border-border bg-white p-4"
+          className="grid max-h-[60vh] grid-cols-[repeat(auto-fill,94px)] justify-center gap-3 overflow-auto rounded-md border border-border bg-white p-4"
         >
           {ids.map((id) => (
-            <div key={id} className="print-cell flex w-[94px] flex-col items-center gap-1">
+            <div key={id} className="print-cell w-[94px]">
               <QRCodeSVG value={id} size={94} level="M" />
-              <span className="code-label font-mono text-[9px] leading-none">{id.slice(0, 8)}</span>
             </div>
           ))}
         </div>
