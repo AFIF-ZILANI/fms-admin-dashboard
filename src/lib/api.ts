@@ -68,7 +68,7 @@ function unwrap<T>(raw: Envelope<unknown>): T {
   return data as T;
 }
 
-async function apiFetch<T>(endpoint: string, init?: RequestInit): Promise<T> {
+export async function apiFetch<T>(endpoint: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${BASE_URL}${endpoint}`, {
