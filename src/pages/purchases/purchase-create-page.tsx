@@ -193,15 +193,19 @@ export function PurchaseCreatePage() {
   const itemOptions = items?.results ?? [];
   const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
 
-  /** A line's allowed units are only that item's ItemUnit conversions flagged purchasable — not
-   * the base unit, and not conversions meant only for usage/consumption. An item bought exclusively
-   * in Liter (say) shouldn't offer Ml here just because Ml is its base unit. */
+  /** A line's allowed units are the item's own base unit (always purchasable -- see
+   * item-form-page.tsx, it never gets its own ItemUnit row) plus whichever ItemUnit conversions
+   * are flagged purchasable. Without the base unit, an item with no extra conversions configured
+   * (the common case right after creation) would offer no unit at all. */
   const allowedUnitsFor = (itemId: string): { code: string; label: string }[] => {
     const item = itemOptions.find((i) => i.id === itemId);
     if (!item) return [];
-    return (item.itemUnits ?? [])
-      .filter((u) => u.is_purchasable)
-      .map((u) => ({ code: u.unit, label: unitLabel(u.unit) }));
+    return [
+      { code: item.unit, label: unitLabel(item.unit) },
+      ...(item.itemUnits ?? [])
+        .filter((u) => u.is_purchasable)
+        .map((u) => ({ code: u.unit, label: unitLabel(u.unit) })),
+    ];
   };
 
   // Subtotal = sum of each line's own net total (gross minus that line's discount) -- this is what
