@@ -25,10 +25,19 @@ import type { LookupRow } from "@/pages/settings/lookup-types";
 
 type Admin = { id: string; profile: { id: string; name: string } };
 
+type LocationOption = { value: string; type: "WAREHOUSE" | "HOUSE"; id: string; label: string };
+
+// Combined value is "TYPE:id" -- a single string so it fits shadcn Select's value prop.
+// Ids are UUIDs (no colons), so splitting on the first colon is unambiguous.
+function parseLocation(value: string): { type: "WAREHOUSE" | "HOUSE"; id: string } {
+  const [type, id] = value.split(":");
+  return { type: type as "WAREHOUSE" | "HOUSE", id: id! };
+}
+
 const transferSchema = z.object({
   item_id: z.string().min(1, "Select an item"),
-  from_warehouse_id: z.string().min(1, "Select a warehouse"),
-  to_house_id: z.string().min(1, "Select a house"),
+  from_location: z.string().min(1, "Select a source"),
+  to_location: z.string().min(1, "Select a destination"),
   quantity: z.coerce.number().positive("Quantity must be positive"),
   unit: z.string().min(1, "Select a unit"),
   note: z.string().optional(),
@@ -54,8 +63,8 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
     resolver: zodResolver(transferSchema),
     defaultValues: {
       item_id: "",
-      from_warehouse_id: "",
-      to_house_id: "",
+      from_location: "",
+      to_location: "",
       quantity: undefined,
       unit: "",
       note: "",
@@ -69,8 +78,32 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
   const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
   const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
 
+  const locationOptions: LocationOption[] = [
+    ...(warehouses?.results ?? []).map((w) => ({
+      value: `WAREHOUSE:${w.id}`,
+      type: "WAREHOUSE" as const,
+      id: w.id,
+      label: `Warehouse — ${w.name}`,
+    })),
+    ...(houses?.results ?? []).map((h) => ({
+      value: `HOUSE:${h.id}`,
+      type: "HOUSE" as const,
+      id: h.id,
+      label: `House — ${h.name}`,
+    })),
+  ];
+
   const itemId = useWatch({ control, name: "item_id" });
-  const fromWarehouseId = useWatch({ control, name: "from_warehouse_id" });
+  const fromLocation = useWatch({ control, name: "from_location" });
+  const from = fromLocation ? parseLocation(fromLocation) : null;
+
+  // A destination can't be the same place as the source, and warehouse->warehouse isn't a
+  // supported move (mirrors TransferService's own two rejections server-side).
+  const toOptions = locationOptions.filter((o) => {
+    if (o.value === fromLocation) return false;
+    if (from?.type === "WAREHOUSE" && o.type === "WAREHOUSE") return false;
+    return true;
+  });
 
   const selectedItem = items?.results.find((i) => i.id === itemId);
   const usableUnits = [
@@ -80,12 +113,12 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
       .map((u) => ({ code: u.unit, label: unitLabel(u.unit) })),
   ];
 
-  const { data: warehouseStock } = useGetData<LocationStockRow[]>(
-    `/warehouses/${fromWarehouseId}/stock`,
-    ["warehouses", fromWarehouseId, "stock"],
-    { enabled: !!fromWarehouseId }
+  const { data: sourceStock } = useGetData<LocationStockRow[]>(
+    from ? `/${from.type === "WAREHOUSE" ? "warehouses" : "houses"}/${from.id}/stock` : "",
+    ["stock-at-location", from?.type ?? "", from?.id ?? ""],
+    { enabled: !!from }
   );
-  const availableAtWarehouse = warehouseStock?.find((s) => s.item_id === itemId);
+  const availableAtSource = sourceStock?.find((s) => s.item_id === itemId);
 
   const queryClient = useQueryClient();
   const createTransfer = usePostData<unknown, Record<string, unknown>>("/stock-transfers", ["stock-ledger"]);
@@ -102,15 +135,20 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
   const onSubmit = (values: TransferFormValues) => {
     const recorded_by_id = resolveRecordedBy();
     if (!recorded_by_id) {
-      toast.error("No admins exist yet — add one before recording a transfer.");
+      toast.error("No admins exist yet — add one before recording a move.");
       return;
     }
+
+    const fromParsed = parseLocation(values.from_location);
+    const toParsed = parseLocation(values.to_location);
 
     createTransfer.mutate(
       {
         item_id: values.item_id,
-        from_warehouse_id: values.from_warehouse_id,
-        to_house_id: values.to_house_id,
+        from_location_type: fromParsed.type,
+        from_location_id: fromParsed.id,
+        to_location_type: toParsed.type,
+        to_location_id: toParsed.id,
         quantity: values.quantity,
         unit: values.unit,
         recorded_by_id,
@@ -122,7 +160,8 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
           void queryClient.invalidateQueries({ queryKey: ["items"] });
           void queryClient.invalidateQueries({ queryKey: ["warehouses"] });
           void queryClient.invalidateQueries({ queryKey: ["houses"] });
-          toast.success("Stock transferred");
+          void queryClient.invalidateQueries({ queryKey: ["stock-at-location"] });
+          toast.success("Stock moved");
           reset();
           onOpenChange(false);
         },
@@ -135,8 +174,10 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Transfer to house</DialogTitle>
-          <DialogDescription>Move stock from a warehouse to a house, before it's used.</DialogDescription>
+          <DialogTitle>Move stock</DialogTitle>
+          <DialogDescription>
+            Move stock from a warehouse to a house, between houses, or back to a warehouse.
+          </DialogDescription>
         </DialogHeader>
 
         <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
@@ -207,63 +248,66 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="from_warehouse_id">From warehouse</Label>
+              <Label htmlFor="from_location">From</Label>
               <Controller
                 control={control}
-                name="from_warehouse_id"
+                name="from_location"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger
-                      id="from_warehouse_id"
-                      className="w-full"
-                      aria-invalid={!!errors.from_warehouse_id}
-                    >
+                  <Select
+                    value={field.value}
+                    onValueChange={(v) => {
+                      field.onChange(v);
+                      // A previously chosen destination might no longer be valid for the new source.
+                      setValue("to_location", "");
+                    }}
+                  >
+                    <SelectTrigger id="from_location" className="w-full" aria-invalid={!!errors.from_location}>
                       <SelectValue>
-                        {(v: string) => warehouses?.results.find((w) => w.id === v)?.name ?? "Select warehouse"}
+                        {(v: string) => locationOptions.find((o) => o.value === v)?.label ?? "Select source"}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {(warehouses?.results ?? []).map((w) => (
-                        <SelectItem key={w.id} value={w.id}>
-                          {w.name}
+                      {locationOptions.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {errors.from_warehouse_id && (
-                <p className="text-xs text-destructive">{errors.from_warehouse_id.message}</p>
+              {errors.from_location && (
+                <p className="text-xs text-destructive">{errors.from_location.message}</p>
               )}
-              {availableAtWarehouse && (
+              {availableAtSource && (
                 <p className="text-xs text-muted-foreground">
-                  Available: {availableAtWarehouse.balance} {availableAtWarehouse.unit}
+                  Available: {availableAtSource.balance} {availableAtSource.unit}
                 </p>
               )}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="to_house_id">To house</Label>
+              <Label htmlFor="to_location">To</Label>
               <Controller
                 control={control}
-                name="to_house_id"
+                name="to_location"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="to_house_id" className="w-full" aria-invalid={!!errors.to_house_id}>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={!fromLocation}>
+                    <SelectTrigger id="to_location" className="w-full" aria-invalid={!!errors.to_location}>
                       <SelectValue>
-                        {(v: string) => houses?.results.find((h) => h.id === v)?.name ?? "Select house"}
+                        {(v: string) => locationOptions.find((o) => o.value === v)?.label ?? "Select destination"}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {(houses?.results ?? []).map((h) => (
-                        <SelectItem key={h.id} value={h.id}>
-                          {h.name}
+                      {toOptions.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {errors.to_house_id && <p className="text-xs text-destructive">{errors.to_house_id.message}</p>}
+              {errors.to_location && <p className="text-xs text-destructive">{errors.to_location.message}</p>}
             </div>
           </div>
 
@@ -277,7 +321,7 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              Transfer
+              Move stock
             </Button>
           </DialogFooter>
         </form>

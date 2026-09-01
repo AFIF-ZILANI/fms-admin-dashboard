@@ -87,7 +87,7 @@ export function StockLedgerTab() {
       <div className="flex items-center justify-end gap-2">
         <Button variant="outline" onClick={() => setTransferOpen(true)}>
           <ArrowRightLeft />
-          Transfer to house
+          Move stock
         </Button>
         <Button onClick={() => setOpeningBalanceOpen(true)}>
           <Plus />
