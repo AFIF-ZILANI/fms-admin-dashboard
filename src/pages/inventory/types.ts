@@ -155,6 +155,10 @@ export type StockHouseAllocation = {
   stock_unit_id: string;
   house_id: string | null;
   type: AllocationType;
+  // Links this event to the aggregate StockTransfer (and its 2 StockLedger rows) it was part of,
+  // e.g. several units scanned into one batch move sharing one ledger movement. Null when this
+  // event wasn't linked (the common case today -- linking is opt-in).
+  stock_transfer_id: string | null;
   occurred_at: string;
   house: House | null;
 };

@@ -14,17 +14,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NumericInput } from "@/components/utils/NumaricInput";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { STOCK_UNIT_STATUS_TONE } from "@/components/shared/status-tone";
+import { LAST_ADMIN_KEY } from "@/components/shared/actor-select";
 import { apiFetch, ApiError, useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
-import type { StockUnit } from "@/pages/inventory/types";
+import type { Item, StockUnit, Warehouse } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
+import type { LookupRow } from "@/pages/settings/lookup-types";
 
 type StockAllocationFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
+
+type Admin = { id: string; profile: { id: string; name: string } };
 
 // Finds StockUnits one scan/paste at a time and batches them into a list, then moves the whole
 // batch to one house, between houses, or back to the warehouse in a single submit -- fans out to
@@ -40,8 +45,50 @@ export function StockAllocationFormDialog({ open, onOpenChange }: StockAllocatio
   const [returnToWarehouse, setReturnToWarehouse] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Optional link to the stock ledger -- only offered when every unit in the batch is the same
+  // (bound) item at the same current location, since one aggregate StockTransfer can only
+  // represent one item moving from one place to one place.
+  const [linkQuantity, setLinkQuantity] = useState("");
+  const [linkUnit, setLinkUnit] = useState("");
+  const [linkWarehouseId, setLinkWarehouseId] = useState("");
+
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
+  const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
+  const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
+  const { data: admins } = useGetData<Paginated<Admin>>("/admins?limit=100", ["admins"]);
+  const { data: unitLookup } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
+  const unitLabel = (code: string) => unitLookup?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
   const queryClient = useQueryClient();
+
+  const firstItemId = units[0]?.purchase_item?.item.id;
+  const homogeneousItem =
+    units.length > 0 && units.every((u) => u.purchase_item?.item.id === firstItemId)
+      ? items?.results.find((i) => i.id === firstItemId)
+      : undefined;
+  const firstHouseKey = units[0]?.houseAllocations?.[0]?.house?.id ?? null;
+  const sameLocation = units.every((u) => (u.houseAllocations?.[0]?.house?.id ?? null) === firstHouseKey);
+  // null = every unit is currently at the warehouse; undefined = mixed locations, can't link.
+  const currentHouseId = sameLocation ? firstHouseKey : undefined;
+  const canLinkLedger = !!homogeneousItem && currentHouseId !== undefined;
+  const needsWarehousePick = currentHouseId === null || returnToWarehouse;
+
+  const usableLinkUnits = homogeneousItem
+    ? [
+        { code: homogeneousItem.unit, label: unitLabel(homogeneousItem.unit) },
+        ...(homogeneousItem.itemUnits ?? [])
+          .filter((u) => u.is_usable)
+          .map((u) => ({ code: u.unit, label: unitLabel(u.unit) })),
+      ]
+    : [];
+
+  const resolveRecordedBy = (): string | null => {
+    const admin = admins?.results ?? [];
+    const stored = localStorage.getItem(LAST_ADMIN_KEY);
+    if (stored && admin.some((a) => a.profile.id === stored)) return stored;
+    const fallback = admin[0]?.profile.id;
+    if (fallback) localStorage.setItem(LAST_ADMIN_KEY, fallback);
+    return fallback ?? null;
+  };
 
   const handleAdd = async (e: FormEvent) => {
     e.preventDefault();
@@ -85,17 +132,54 @@ export function StockAllocationFormDialog({ open, onOpenChange }: StockAllocatio
     if (!canSubmit) return;
     setSubmitting(true);
     const house_id = returnToWarehouse ? null : houseId;
+
+    let stock_transfer_id: string | undefined;
+    if (canLinkLedger && linkQuantity && linkUnit) {
+      if (needsWarehousePick && !linkWarehouseId) {
+        toast.error("Select which warehouse this batch is moving from or to.");
+        setSubmitting(false);
+        return;
+      }
+      const recorded_by_id = resolveRecordedBy();
+      if (!recorded_by_id) {
+        toast.error("No admins exist yet — add one before linking to the ledger.");
+        setSubmitting(false);
+        return;
+      }
+      try {
+        const transfer = await apiFetch<{ id: string }>("/stock-transfers", {
+          method: "POST",
+          body: JSON.stringify({
+            item_id: homogeneousItem!.id,
+            from_location_type: currentHouseId === null ? "WAREHOUSE" : "HOUSE",
+            from_location_id: currentHouseId === null ? linkWarehouseId : currentHouseId,
+            to_location_type: returnToWarehouse ? "WAREHOUSE" : "HOUSE",
+            to_location_id: returnToWarehouse ? linkWarehouseId : houseId,
+            quantity: Number(linkQuantity),
+            unit: linkUnit,
+            recorded_by_id,
+          }),
+        });
+        stock_transfer_id = transfer.id;
+      } catch (err) {
+        setSubmitting(false);
+        toast.error(err instanceof ApiError ? err.message : "Could not record the ledger movement.");
+        return;
+      }
+    }
+
     const results = await Promise.allSettled(
       units.map((u) =>
         apiFetch(`/stock-units/${u.id}/relocate`, {
           method: "POST",
-          body: JSON.stringify({ house_id }),
+          body: JSON.stringify({ house_id, ...(stock_transfer_id && { stock_transfer_id }) }),
         })
       )
     );
     setSubmitting(false);
     void queryClient.invalidateQueries({ queryKey: ["stock-units"] });
     void queryClient.invalidateQueries({ queryKey: ["stock-house-allocations"] });
+    if (stock_transfer_id) void queryClient.invalidateQueries({ queryKey: ["stock-ledger"] });
 
     const failed = results.filter((r) => r.status === "rejected").length;
     const succeeded = results.length - failed;
@@ -111,6 +195,9 @@ export function StockAllocationFormDialog({ open, onOpenChange }: StockAllocatio
       setUnits([]);
       setHouseId("");
       setReturnToWarehouse(false);
+      setLinkQuantity("");
+      setLinkUnit("");
+      setLinkWarehouseId("");
     }
     onOpenChange(nextOpen);
   };
@@ -204,6 +291,55 @@ export function StockAllocationFormDialog({ open, onOpenChange }: StockAllocatio
               >
                 Return to warehouse
               </Button>
+            </div>
+          )}
+
+          {canLinkLedger && (
+            <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                Link to stock ledger (optional) — records one aggregate movement of{" "}
+                {homogeneousItem!.name} for this batch.
+              </p>
+              <div className="flex gap-2">
+                <NumericInput
+                  allowDecimal
+                  decimalPlaces={3}
+                  className="flex-1"
+                  placeholder="Total quantity"
+                  value={linkQuantity}
+                  onChange={(e) => setLinkQuantity(e.target.value)}
+                />
+                <Select value={linkUnit} onValueChange={(v) => setLinkUnit(v ?? "")}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue>{(v: string) => (v ? unitLabel(v) : "Unit")}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {usableLinkUnits.map((u) => (
+                      <SelectItem key={u.code} value={u.code}>
+                        {u.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {needsWarehousePick && (
+                <Select value={linkWarehouseId} onValueChange={(v) => setLinkWarehouseId(v ?? "")}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      {(v: string) =>
+                        warehouses?.results.find((w) => w.id === v)?.name ?? "Select warehouse"
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(warehouses?.results ?? []).map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )}
 
