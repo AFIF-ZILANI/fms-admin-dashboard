@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Bird, Package, Pencil, Skull, Thermometer } from "lucide-react";
+import { ArrowLeft, Bird, Package, Pencil, Skull, Thermometer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import type { House } from "@/pages/houses/types";
 import { HouseFormDialog } from "@/pages/houses/house-form-dialog";
 import { HouseStockDialog } from "@/pages/houses/house-stock-dialog";
+import { HouseDeleteDialog } from "@/pages/houses/house-delete-dialog";
 
 type BatchHouseBalance = { batch_id: string; house_id: string; quantity: number; batch?: { batch_code: string } };
 type MortalityLog = { id: string; batch_id: string; count_died: number; cause_note: string | null; date: string };
@@ -31,6 +32,7 @@ export function HouseDetailPage() {
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
   const [stockOpen, setStockOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const { data: house, isLoading } = useGetData<House>(`/houses/${id}`, ["houses", id]);
   usePageTitle(house?.name ?? "House");
@@ -123,12 +125,16 @@ export function HouseDetailPage() {
               Edit
             </Button>
             <Button
-              variant={house.is_active ? "destructive" : "default"}
+              variant={house.is_active ? "outline" : "default"}
               size="sm"
               onClick={toggleActive}
               disabled={deactivate.isPending || reactivate.isPending}
             >
               {house.is_active ? "Deactivate" : "Reactivate"}
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
+              <Trash2 />
+              Delete
             </Button>
           </div>
         </CardHeader>
@@ -188,6 +194,7 @@ export function HouseDetailPage() {
 
       <HouseFormDialog open={editOpen} onOpenChange={setEditOpen} house={house} />
       <HouseStockDialog houseId={house.id} houseName={house.name} open={stockOpen} onOpenChange={setStockOpen} />
+      <HouseDeleteDialog houseId={house.id} houseName={house.name} open={deleteOpen} onOpenChange={setDeleteOpen} />
     </div>
   );
 }
