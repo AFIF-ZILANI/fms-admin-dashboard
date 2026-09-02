@@ -44,6 +44,9 @@ export type Item = {
   lead_time_days: number | null;
   meta_data: Record<string, string> | null;
   is_active: boolean;
+  // true = individually QR-coded (StockUnit) -- medicine, vaccine, equipment. false = aggregate
+  // quantity only (StockLedger) -- feed, husk, etc. Gates which item picker offers this item.
+  is_unit_tracked: boolean;
   created_at: string;
   updated_at: string;
   itemUnits?: ItemUnit[];
