@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import {
@@ -26,12 +26,15 @@ export function HouseDeleteDialog({ houseId, houseName, open, onOpenChange }: Ho
   const [name, setName] = useState("");
   const [phrase, setPhrase] = useState("");
 
-  useEffect(() => {
-    if (open) {
+  // Cleared on the way out rather than on the way in, so reopening never shows
+  // the last attempt's typing -- every close path routes through onOpenChange.
+  const close = (next: boolean) => {
+    if (!next) {
       setName("");
       setPhrase("");
     }
-  }, [open]);
+    onOpenChange(next);
+  };
 
   const remove = useDelete<null, void>(`/houses/${houseId}`, ["houses"]);
   const confirmed = name === houseName && phrase === "delete";
@@ -40,7 +43,7 @@ export function HouseDeleteDialog({ houseId, houseName, open, onOpenChange }: Ho
     remove.mutate(undefined, {
       onSuccess: () => {
         toast.success("House deleted");
-        onOpenChange(false);
+        close(false);
         navigate("/houses");
       },
       onError: (error) => toast.error(error.message),
@@ -48,7 +51,7 @@ export function HouseDeleteDialog({ houseId, houseName, open, onOpenChange }: Ho
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Delete {houseName}?</DialogTitle>
@@ -93,7 +96,7 @@ export function HouseDeleteDialog({ houseId, houseName, open, onOpenChange }: Ho
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => close(false)}>
               Cancel
             </Button>
             <Button type="submit" variant="destructive" disabled={!confirmed || remove.isPending}>
