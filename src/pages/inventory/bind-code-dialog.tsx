@@ -64,7 +64,10 @@ export function BindCodeDialog({ open, onOpenChange, scopedLots, unit }: BindCod
 
   const effectiveUnit = unit ?? foundUnit;
 
-  const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"], { enabled: !scopedLots });
+  const { data: allItems } = useGetData<Paginated<Item>>("/items?limit=100", ["items"], { enabled: !scopedLots });
+  // Bind Code is the QR-tracking mechanism -- an aggregate-only item belongs in Move Stock instead
+  // (see is_unit_tracked on Item).
+  const items = allItems?.results.filter((i) => i.is_unit_tracked);
   const { data: purchaseItems } = useGetData<Paginated<PurchaseItemOption>>(
     itemFilter ? `/purchase-items?item_id=${itemFilter}&limit=50` : "/purchase-items?limit=0",
     ["purchase-items", itemFilter],
@@ -158,11 +161,11 @@ export function BindCodeDialog({ open, onOpenChange, scopedLots, unit }: BindCod
                   <Select value={itemFilter} onValueChange={(v) => setItemFilter(v ?? "")}>
                     <SelectTrigger id="item_filter" className="w-full">
                       <SelectValue>
-                        {(v: string) => items?.results.find((i) => i.id === v)?.name ?? "Select item"}
+                        {(v: string) => items?.find((i) => i.id === v)?.name ?? "Select item"}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {(items?.results ?? []).map((item) => (
+                      {(items ?? []).map((item) => (
                         <SelectItem key={item.id} value={item.id}>
                           {item.name}
                         </SelectItem>

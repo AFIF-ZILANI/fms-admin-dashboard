@@ -71,7 +71,10 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
     },
   });
 
-  const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
+  const { data: allItems } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
+  // Move Stock is the aggregate-quantity mechanism -- an item tracked by QR code belongs in Stock
+  // Allocation instead, so it's excluded here (see is_unit_tracked on Item).
+  const items = allItems?.results.filter((i) => !i.is_unit_tracked);
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const { data: admins } = useGetData<Paginated<Admin>>("/admins?limit=100", ["admins"]);
@@ -105,7 +108,7 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
     return true;
   });
 
-  const selectedItem = items?.results.find((i) => i.id === itemId);
+  const selectedItem = items?.find((i) => i.id === itemId);
   const usableUnits = [
     ...(selectedItem ? [{ code: selectedItem.unit, label: unitLabel(selectedItem.unit) }] : []),
     ...(selectedItem?.itemUnits ?? [])
@@ -196,11 +199,11 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
                 >
                   <SelectTrigger id="item_id" className="w-full" aria-invalid={!!errors.item_id}>
                     <SelectValue>
-                      {(v: string) => items?.results.find((i) => i.id === v)?.name ?? "Select item"}
+                      {(v: string) => items?.find((i) => i.id === v)?.name ?? "Select item"}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {(items?.results ?? []).map((item) => (
+                    {(items ?? []).map((item) => (
                       <SelectItem key={item.id} value={item.id}>
                         {item.name}
                       </SelectItem>

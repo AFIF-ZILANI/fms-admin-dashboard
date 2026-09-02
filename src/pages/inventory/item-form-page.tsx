@@ -28,6 +28,7 @@ const itemSchema = z.object({
   unit: z.string().min(1, "Select a unit"),
   lead_time_days: optionalNumber(z.coerce.number().int().nonnegative("Must be 0 or more")),
   organization_id: z.string().optional(),
+  is_unit_tracked: z.boolean(),
 });
 
 // z.coerce fields make the schema's input type (raw form values) differ from
@@ -58,6 +59,7 @@ export function ItemFormPage() {
       unit: undefined,
       lead_time_days: "",
       organization_id: "",
+      is_unit_tracked: false,
     },
   });
 
@@ -86,6 +88,7 @@ export function ItemFormPage() {
         lead_time_days: item.lead_time_days ?? "",
         // can't prefill — GET /items/:id doesn't return existing organization links (docs/api.md §6.1)
         organization_id: "",
+        is_unit_tracked: item.is_unit_tracked,
       });
       setPendingUnits(
         (item.itemUnits ?? []).map((u) => ({
@@ -99,7 +102,14 @@ export function ItemFormPage() {
       setReorderValue(item.reorder_level ?? "");
       setMetaRows(Object.entries(item.meta_data ?? {}).map(([key, value]) => ({ key, value })));
     } else {
-      reset({ name: "", category: undefined, unit: undefined, lead_time_days: "", organization_id: "" });
+      reset({
+        name: "",
+        category: undefined,
+        unit: undefined,
+        lead_time_days: "",
+        organization_id: "",
+        is_unit_tracked: false,
+      });
       setPendingUnits([]);
       setReorderUnit("");
       setReorderValue("");
@@ -364,6 +374,22 @@ export function ItemFormPage() {
                 </p>
               </div>
             </div>
+
+            <Controller
+              control={control}
+              name="is_unit_tracked"
+              render={({ field }) => (
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={field.value} onCheckedChange={(c) => field.onChange(Boolean(c))} />
+                  Tracked by QR code (medicine, vaccine, equipment)
+                </label>
+              )}
+            />
+            <p className="text-xs text-muted-foreground">
+              Checked: this item is bound to individual QR-coded units (Bind Code, Stock
+              Allocation). Unchecked: tracked only as an aggregate quantity (Move Stock). An item
+              can only use one of the two.
+            </p>
           </CardContent>
         </Card>
 
