@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -89,6 +90,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
   const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
 
+  const queryClient = useQueryClient();
   const createSale = usePostData<Sale, SaleFormValues>("/sales", ["sales"]);
 
   const itemOptions = items?.results ?? [];
@@ -105,6 +107,9 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
     };
     createSale.mutate(payload, {
       onSuccess: (sale) => {
+        // A new sale changes the Overview's charts too -- they're cached under
+        // ["analytics", ...], which usePostData's ["sales"] key never touches.
+        void queryClient.invalidateQueries({ queryKey: ["analytics"] });
         toast.success("Sale recorded");
         onOpenChange(false);
         navigate(`/sales/${sale.id}`);

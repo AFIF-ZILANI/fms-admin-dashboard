@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -103,6 +104,7 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
 
+  const queryClient = useQueryClient();
   const createBirdSale = usePostData<BirdSale, BirdSaleFormValues>("/bird-sales", ["bird-sales"]);
 
   const selectedBatch = batches?.results.find((b) => b.id === batchId);
@@ -112,10 +114,14 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
   const onSubmit = (values: BirdSaleFormValues) => {
     const payload = { ...values, customer_id: values.customer_id || undefined };
     createBirdSale.mutate(payload, {
-      onSuccess: () => {
+      onSuccess: (birdSale) => {
+        // Also ["batches"]: the sale decrements BatchHouseBalance server-side,
+        // so the House dropdown's "(N live)" counts are stale without this.
+        void queryClient.invalidateQueries({ queryKey: ["analytics"] });
+        void queryClient.invalidateQueries({ queryKey: ["batches"] });
         toast.success("Bird sale recorded");
         onOpenChange(false);
-        navigate("/sales");
+        navigate(`/sales/birds/${birdSale.id}`);
       },
       onError: (error) => {
         const message =

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, CreditCard, Receipt } from "lucide-react";
+import { AlertCircle, ArrowLeft, CreditCard, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { EmptyState } from "@/components/shared/empty-state";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
@@ -20,7 +21,7 @@ export function SaleDetailPage() {
   const navigate = useNavigate();
   const [paymentOpen, setPaymentOpen] = useState(false);
 
-  const { data: sale, isLoading } = useGetData<Sale>(`/sales/${id}`, ["sales", id]);
+  const { data: sale, isLoading, isError } = useGetData<Sale>(`/sales/${id}`, ["sales", id]);
   usePageTitle("Sale");
 
   // Sale's own `customer` relation has no name (see types.ts) — look it up separately.
@@ -35,11 +36,29 @@ export function SaleDetailPage() {
     { key: "total", header: "Total", render: (l) => formatMoney(l.total_price), numeric: true },
   ];
 
-  if (isLoading || !sale) {
+  if (isLoading) {
     return (
       <div className="flex flex-col gap-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  // `!sale` without an error is a 404 body -- the same dead end as isError, so
+  // both land here. The old `isLoading || !sale` guard showed a skeleton forever.
+  if (isError || !sale) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate("/sales?tab=regular")}>
+          <ArrowLeft />
+          Back to sales
+        </Button>
+        <EmptyState
+          icon={AlertCircle}
+          title="Couldn't load this sale"
+          description="It may have been removed, or the link is wrong."
+        />
       </div>
     );
   }
@@ -49,7 +68,7 @@ export function SaleDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate("/sales")}>
+      <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate("/sales?tab=regular")}>
         <ArrowLeft />
         Back to sales
       </Button>

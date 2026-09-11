@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Bird, CreditCard } from "lucide-react";
+import { AlertCircle, ArrowLeft, Bird, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
@@ -21,7 +22,11 @@ export function BirdSaleDetailPage() {
   const navigate = useNavigate();
   const [paymentOpen, setPaymentOpen] = useState(false);
 
-  const { data: sale, isLoading } = useGetData<BirdSale>(`/bird-sales/${id}`, ["bird-sales", id]);
+  const {
+    data: sale,
+    isLoading,
+    isError,
+  } = useGetData<BirdSale>(`/bird-sales/${id}`, ["bird-sales", id]);
   usePageTitle("Bird sale");
 
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
@@ -33,11 +38,29 @@ export function BirdSaleDetailPage() {
   const houseName = houses?.results.find((h) => h.id === sale?.house_id)?.name;
   const customerName = customers?.results.find((c) => c.id === sale?.customer_id)?.profile.name;
 
-  if (isLoading || !sale) {
+  if (isLoading) {
     return (
       <div className="flex flex-col gap-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  // `!sale` without an error is a 404 body -- the same dead end as isError, so
+  // both land here. The old `isLoading || !sale` guard showed a skeleton forever.
+  if (isError || !sale) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate("/sales?tab=birds")}>
+          <ArrowLeft />
+          Back to sales
+        </Button>
+        <EmptyState
+          icon={AlertCircle}
+          title="Couldn't load this bird sale"
+          description="It may have been removed, or the link is wrong."
+        />
       </div>
     );
   }
@@ -47,7 +70,7 @@ export function BirdSaleDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate("/sales")}>
+      <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate("/sales?tab=birds")}>
         <ArrowLeft />
         Back to sales
       </Button>
