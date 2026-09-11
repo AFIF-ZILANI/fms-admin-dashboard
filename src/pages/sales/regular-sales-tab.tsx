@@ -9,7 +9,7 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
-import { paymentStatus, type Sale } from "@/pages/sales/types";
+import { paymentStatus, type Sale, type SalesSummary } from "@/pages/sales/types";
 import type { Customer } from "@/pages/customers/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 import { SaleCreateDialog } from "@/pages/sales/sale-create-dialog";
@@ -36,13 +36,15 @@ export function RegularSalesTab() {
   ]);
 
   // KPI counts always reflect the unfiltered full set, not the currently-filtered view --
-  // fetched separately so applying a filter doesn't make the tiles change (same pattern as Stock Ledger).
-  const { data: allSales, isLoading: allSalesLoading } = useGetData<Paginated<Sale>>("/sales?limit=100", [
-    "sales",
-    "ALL",
-    "",
-    "",
-  ]);
+  // fetched separately so applying a filter doesn't make the tiles change (same pattern as
+  // Stock Ledger). Server-side because the list endpoint caps at 100 rows and these must
+  // count every sale -- summing a page of results made the revenue tile disagree with the
+  // count tile beside it.
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+  } = useGetData<SalesSummary>("/sales/summary", ["sales", "summary"]);
 
   // Sale's own `customer` relation has no name (see types.ts) — look it up separately.
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
@@ -51,15 +53,9 @@ export function RegularSalesTab() {
     "item-categories",
     "active",
   ]);
-  const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("SALE");
+  const { trueAmounts } = useOutstanding("SALE");
 
   const sales = data?.results ?? [];
-  const allResults = allSales?.results ?? [];
-  const totalRevenue = allResults.reduce((sum, s) => sum + parseFloat(s.total), 0);
-  const totalDue = allResults.reduce(
-    (sum, s) => sum + parseFloat(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
-    0
-  );
 
   const columns: Column<Sale>[] = [
     { key: "date", header: "Date", render: (s) => new Date(s.sale_date).toLocaleDateString() },
@@ -108,16 +104,24 @@ export function RegularSalesTab() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard
           label="Total sales"
-          value={allSales?.total ?? allResults.length}
+          value={summary?.count ?? 0}
           icon={Receipt}
-          isLoading={allSalesLoading}
+          isLoading={summaryLoading}
+          isError={summaryError}
         />
-        <KPICard label="Total revenue" value={formatMoney(totalRevenue)} icon={Wallet} isLoading={allSalesLoading} />
+        <KPICard
+          label="Total revenue"
+          value={formatMoney(summary?.total_revenue ?? 0)}
+          icon={Wallet}
+          isLoading={summaryLoading}
+          isError={summaryError}
+        />
         <KPICard
           label="Outstanding due"
-          value={formatMoney(totalDue)}
-          icon={Wallet}
-          isLoading={allSalesLoading || outstandingLoading}
+          value={formatMoney(summary?.total_due ?? 0)}
+          icon={Receipt}
+          isLoading={summaryLoading}
+          isError={summaryError}
         />
       </div>
 

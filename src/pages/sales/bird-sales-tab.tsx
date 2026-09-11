@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Bird, CreditCard, Plus, Wallet } from "lucide-react";
+import { Bird, CreditCard, Plus, Receipt, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,7 +13,13 @@ import type { Batch } from "@/pages/batches/types";
 import type { Customer } from "@/pages/customers/types";
 import type { House } from "@/pages/houses/types";
 import { BirdSaleCreateDialog } from "@/pages/sales/bird-sale-create-dialog";
-import { BIRD_GRADES, paymentStatus, type BirdGrade, type BirdSale } from "@/pages/sales/types";
+import {
+  BIRD_GRADES,
+  paymentStatus,
+  type BirdGrade,
+  type BirdSale,
+  type BirdSalesSummary,
+} from "@/pages/sales/types";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
 
@@ -39,29 +45,24 @@ export function BirdSalesTab() {
   ]);
 
   // KPI counts always reflect the unfiltered full set, not the currently-filtered view --
-  // fetched separately so applying a filter doesn't make the tiles change (same pattern as Stock Ledger).
-  const { data: allBirdSales, isLoading: allBirdSalesLoading } = useGetData<Paginated<BirdSale>>(
-    "/bird-sales?limit=100",
-    ["bird-sales", "ALL", "", ""]
-  );
+  // fetched separately so applying a filter doesn't make the tiles change (same pattern as
+  // Stock Ledger). Server-side because the list endpoint caps at 100 rows.
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+  } = useGetData<BirdSalesSummary>("/bird-sales/summary", ["bird-sales", "summary"]);
 
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
-  const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("BIRD_SALE");
+  const { trueAmounts } = useOutstanding("BIRD_SALE");
 
   const batchCode = (id: string) => batches?.results.find((b) => b.id === id)?.batch_code ?? "—";
   const houseName = (id: string) => houses?.results.find((h) => h.id === id)?.name ?? "—";
   const customerName = (id: string | null) => customers?.results.find((c) => c.id === id)?.profile.name ?? "—";
 
   const birdSales = data?.results ?? [];
-  const allResults = allBirdSales?.results ?? [];
-  const totalRevenue = allResults.reduce((sum, s) => sum + parseFloat(s.total_amount), 0);
-  const totalDue = allResults.reduce(
-    (sum, s) => sum + parseFloat(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
-    0
-  );
-  const totalBirds = allResults.reduce((sum, s) => sum + s.birds_count, 0);
 
   const columns: Column<BirdSale>[] = [
     { key: "date", header: "Date", render: (s) => new Date(s.sale_date).toLocaleDateString() },
@@ -112,18 +113,26 @@ export function BirdSalesTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Birds sold" value={totalBirds} icon={Bird} isLoading={allBirdSalesLoading} />
+        <KPICard
+          label="Birds sold"
+          value={summary?.total_birds ?? 0}
+          icon={Bird}
+          isLoading={summaryLoading}
+          isError={summaryError}
+        />
         <KPICard
           label="Total revenue"
-          value={formatMoney(totalRevenue)}
+          value={formatMoney(summary?.total_revenue ?? 0)}
           icon={Wallet}
-          isLoading={allBirdSalesLoading}
+          isLoading={summaryLoading}
+          isError={summaryError}
         />
         <KPICard
           label="Outstanding due"
-          value={formatMoney(totalDue)}
-          icon={Wallet}
-          isLoading={allBirdSalesLoading || outstandingLoading}
+          value={formatMoney(summary?.total_due ?? 0)}
+          icon={Receipt}
+          isLoading={summaryLoading}
+          isError={summaryError}
         />
       </div>
 

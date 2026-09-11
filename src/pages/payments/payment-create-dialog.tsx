@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ActorSelect } from "@/components/shared/actor-select";
+import { useQueryClient } from "@tanstack/react-query";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
@@ -185,6 +186,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
     ["payment-instruments"]
   );
 
+  const queryClient = useQueryClient();
   const createPayment = usePostData<Payment, PaymentFormValues>("/payments", ["payments"]);
 
   const instrumentLabel = (id: string) => {
@@ -202,6 +204,13 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
     };
     createPayment.mutate(payload, {
       onSuccess: () => {
+        // A payment changes what the referenced record still owes, and the
+        // Sales KPI tiles read that from the server summaries -- which the
+        // ["payments"] key above doesn't touch. Without this the row's Due
+        // drops while the tile above it keeps the old figure.
+        void queryClient.invalidateQueries({ queryKey: ["sales"] });
+        void queryClient.invalidateQueries({ queryKey: ["bird-sales"] });
+        void queryClient.invalidateQueries({ queryKey: ["analytics"] });
         toast.success("Payment recorded");
         onOpenChange(false);
       },
