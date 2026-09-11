@@ -36,6 +36,8 @@ type DataTableProps<T> = {
   selectedIds?: Set<string>;
   onSelectedIdsChange?: (ids: Set<string>) => void;
   empty: { icon: LucideIcon; title: string; description?: string; action?: { label: string; onClick: () => void } };
+  /** Rendered under the table, inside the border -- e.g. "Showing 100 of 340". */
+  footer?: ReactNode;
 };
 
 // ponytail: TanStack Table only computes row order here (getSortedRowModel) --
@@ -51,6 +53,7 @@ export function DataTable<T>({
   selectedIds,
   onSelectedIdsChange,
   empty,
+  footer,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const selectable = !!selectedIds && !!onSelectedIdsChange;
@@ -190,6 +193,9 @@ export function DataTable<T>({
               ))}
         </TableBody>
       </Table>
+      {footer && (
+        <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">{footer}</div>
+      )}
     </div>
   );
 }

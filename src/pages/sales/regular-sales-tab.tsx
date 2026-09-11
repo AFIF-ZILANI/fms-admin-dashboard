@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { CreditCard, Plus, Receipt, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { DateRangeFilter } from "@/pages/sales/date-range-filter";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
 import { paymentStatus, type Sale, type SalesSummary } from "@/pages/sales/types";
 import type { Customer } from "@/pages/customers/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
@@ -58,15 +59,38 @@ export function RegularSalesTab() {
   const sales = data?.results ?? [];
 
   const columns: Column<Sale>[] = [
-    { key: "date", header: "Date", render: (s) => new Date(s.sale_date).toLocaleDateString() },
-    { key: "customer", header: "Customer", render: (s) => customerName(s.customer_id) },
-    { key: "items", header: "Lines", render: (s) => s.items.length, numeric: true },
-    { key: "total", header: "Total", render: (s) => formatMoney(s.total), numeric: true },
+    {
+      key: "date",
+      header: "Date",
+      render: (s) => formatDate(s.sale_date),
+      sortValue: (s) => s.sale_date,
+    },
+    {
+      key: "customer",
+      header: "Customer",
+      render: (s) => customerName(s.customer_id),
+      sortValue: (s) => customerName(s.customer_id),
+    },
+    {
+      key: "items",
+      header: "Lines",
+      render: (s) => s.items.length,
+      numeric: true,
+      sortValue: (s) => s.items.length,
+    },
+    {
+      key: "total",
+      header: "Total",
+      render: (s) => formatMoney(s.total),
+      numeric: true,
+      sortValue: (s) => parseFloat(s.total),
+    },
     {
       key: "due",
       header: "Due",
       render: (s) => formatMoney(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
       numeric: true,
+      sortValue: (s) => parseFloat(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
     },
     {
       key: "payment_status",
@@ -125,41 +149,33 @@ export function RegularSalesTab() {
         />
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v ?? "ALL")}>
-            <SelectTrigger className="w-40">
-              <SelectValue>
-                {(v: string) =>
-                  v && v !== "ALL"
-                    ? (categories?.results.find((cat) => cat.code === v)?.label ?? humanizeEnum(v))
-                    : "All categories"
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All categories</SelectItem>
-              {(categories?.results ?? []).map((category) => (
-                <SelectItem key={category.code} value={category.code}>
-                  {category.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            type="date"
-            className="w-40"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            aria-label="From date"
-          />
-          <Input
-            type="date"
-            className="w-40"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            aria-label="To date"
-          />
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="category_filter" className="text-xs text-muted-foreground">
+              Category
+            </Label>
+            <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v ?? "ALL")}>
+              <SelectTrigger id="category_filter" className="w-40">
+                <SelectValue>
+                  {(v: string) =>
+                    v && v !== "ALL"
+                      ? (categories?.results.find((cat) => cat.code === v)?.label ?? humanizeEnum(v))
+                      : "All categories"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All categories</SelectItem>
+                {(categories?.results ?? []).map((category) => (
+                  <SelectItem key={category.code} value={category.code}>
+                    {category.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </div>
         <Button onClick={() => setCreateOpen(true)}>
           <Plus />
@@ -173,6 +189,11 @@ export function RegularSalesTab() {
         rowKey={(s) => s.id}
         isLoading={isLoading}
         onRowClick={(s) => navigate(`/sales/${s.id}`)}
+        footer={
+          data && data.total > sales.length
+            ? `Showing the ${sales.length} most recent of ${data.total} sales. Narrow the date range to see older ones.`
+            : undefined
+        }
         empty={{
           icon: Receipt,
           title: "No sales recorded yet",

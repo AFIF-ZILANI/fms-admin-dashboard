@@ -9,7 +9,7 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Customer } from "@/pages/customers/types";
 import type { House } from "@/pages/houses/types";
@@ -27,7 +27,7 @@ export function BirdSaleDetailPage() {
     isLoading,
     isError,
   } = useGetData<BirdSale>(`/bird-sales/${id}`, ["bird-sales", id]);
-  usePageTitle("Bird sale");
+  usePageTitle(sale ? `Bird sale · ${formatDate(sale.sale_date)}` : "Bird sale");
 
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
@@ -78,7 +78,7 @@ export function BirdSaleDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-xl">Bird sale · {new Date(sale.sale_date).toLocaleDateString()}</CardTitle>
+            <CardTitle className="text-xl">Bird sale · {formatDate(sale.sale_date)}</CardTitle>
             <p className="text-sm text-muted-foreground">
               {batchCode ?? "—"} · {houseName ?? "—"} · {customerName ?? "No customer on file"}
             </p>

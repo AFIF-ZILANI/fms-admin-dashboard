@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ActorSelect } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { cn, formatMoney, humanizeEnum } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
 import type { Batch } from "@/pages/batches/types";
 import type { Customer } from "@/pages/customers/types";
@@ -51,7 +51,15 @@ const birdSaleSchema = z
       data.female_count === undefined ||
       data.male_count + data.female_count === data.birds_count,
     { message: "Male + female count must equal bird count", path: ["female_count"] }
-  );
+  )
+  .refine((data) => data.net_weight <= data.total_weight, {
+    message: "Net weight can't exceed total weight",
+    path: ["net_weight"],
+  })
+  .refine((data) => data.avg_wt_per_katha_kg === undefined || data.total_katha > 0, {
+    message: "Set a katha count before an average per katha",
+    path: ["avg_wt_per_katha_kg"],
+  });
 
 type BirdSaleFormInput = z.input<typeof birdSaleSchema>;
 type BirdSaleFormValues = z.output<typeof birdSaleSchema>;
@@ -87,6 +95,8 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
     register,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<BirdSaleFormInput, unknown, BirdSaleFormValues>({
     resolver: zodResolver(birdSaleSchema),
@@ -98,8 +108,12 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
   }, [open, reset]);
 
   const batchId = useWatch({ control, name: "batch_id" });
+  const houseId = useWatch({ control, name: "house_id" });
   const netWeight = useWatch({ control, name: "net_weight" });
   const pricePerKg = useWatch({ control, name: "price_per_kg" });
+  const birdsCount = useWatch({ control, name: "birds_count" });
+  const totalWeight = useWatch({ control, name: "total_weight" });
+  const totalKatha = useWatch({ control, name: "total_katha" });
 
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
@@ -110,6 +124,29 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
   const selectedBatch = batches?.results.find((b) => b.id === batchId);
   const houseOptions = (selectedBatch?.houseBalances ?? []).filter((hb) => hb.quantity > 0);
   const totalPreview = (Number(netWeight) || 0) * (Number(pricePerKg) || 0);
+
+  // The server rejects an over-count with a 409 only after the whole form is
+  // filled -- surface the ceiling next to the field instead.
+  const liveInHouse = houseOptions.find((hb) => hb.house_id === houseId)?.quantity;
+  const overLiveCount = liveInHouse !== undefined && Number(birdsCount) > liveInHouse;
+
+  // Derived, not authoritative: prefilled so the common case needs no typing,
+  // still editable because the weighing sheet can disagree with the arithmetic.
+  const birdsCountNum = Number(birdsCount) || 0;
+  const netWeightNum = Number(netWeight) || 0;
+  useEffect(() => {
+    if (birdsCountNum > 0 && netWeightNum > 0 && !getValues("avg_weight_g")) {
+      setValue("avg_weight_g", ((netWeightNum * 1000) / birdsCountNum).toFixed(2));
+    }
+  }, [birdsCountNum, netWeightNum, getValues, setValue]);
+
+  useEffect(() => {
+    const kathaNum = Number(totalKatha) || 0;
+    const totalWeightNum = Number(totalWeight) || 0;
+    if (kathaNum > 0 && totalWeightNum > 0 && !getValues("avg_wt_per_katha_kg")) {
+      setValue("avg_wt_per_katha_kg", (totalWeightNum / kathaNum).toFixed(2));
+    }
+  }, [totalKatha, totalWeight, getValues, setValue]);
 
   const onSubmit = (values: BirdSaleFormValues) => {
     const payload = { ...values, customer_id: values.customer_id || undefined };
@@ -143,7 +180,10 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
           </DialogDescription>
         </DialogHeader>
 
-        <form className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1" onSubmit={handleSubmit(onSubmit)}>
+        {/* Only the fields scroll -- the running total and the submit button stay
+            pinned, so a long form can't hide its own actions. */}
+        <form className="flex min-h-0 flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+          <div className="flex max-h-[60vh] min-h-0 flex-col gap-4 overflow-y-auto pr-1">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="batch_id">Batch</Label>
@@ -226,7 +266,13 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="sale_date">Sale date</Label>
-              <Input id="sale_date" type="date" {...register("sale_date")} aria-invalid={!!errors.sale_date} />
+              <Input
+                id="sale_date"
+                type="date"
+                max={new Date().toISOString().slice(0, 10)}
+                {...register("sale_date")}
+                aria-invalid={!!errors.sale_date}
+              />
               {errors.sale_date && <p className="text-xs text-destructive">{errors.sale_date.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
@@ -237,12 +283,12 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
                 render={({ field }) => (
                   <Select value={field.value ?? ""} onValueChange={field.onChange}>
                     <SelectTrigger id="grade" className="w-full" aria-invalid={!!errors.grade}>
-                      <SelectValue>{(v: string) => v || "Select grade"}</SelectValue>
+                      <SelectValue>{(v: string) => (v ? humanizeEnum(v) : "Select grade")}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {BIRD_GRADES.map((g) => (
                         <SelectItem key={g} value={g}>
-                          {g}
+                          {humanizeEnum(g)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -258,6 +304,13 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
               <Label htmlFor="birds_count">Bird count</Label>
               <Input id="birds_count" type="number" {...register("birds_count")} aria-invalid={!!errors.birds_count} />
               {errors.birds_count && <p className="text-xs text-destructive">{errors.birds_count.message}</p>}
+              {liveInHouse !== undefined && !errors.birds_count && (
+                <p className={cn("text-xs", overLiveCount ? "text-destructive" : "text-muted-foreground")}>
+                  {overLiveCount
+                    ? `Only ${liveInHouse} live in this house`
+                    : `${liveInHouse} live in this house`}
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="male_count">Male count (optional)</Label>
@@ -282,8 +335,11 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
               {errors.total_katha && <p className="text-xs text-destructive">{errors.total_katha.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="avg_wt_per_katha_kg">Avg wt/katha (kg, optional)</Label>
+              <Label htmlFor="avg_wt_per_katha_kg">Avg wt/katha (kg, auto)</Label>
               <Input id="avg_wt_per_katha_kg" type="number" step="0.01" {...register("avg_wt_per_katha_kg")} />
+              {errors.avg_wt_per_katha_kg && (
+                <p className="text-xs text-destructive">{errors.avg_wt_per_katha_kg.message}</p>
+              )}
             </div>
           </div>
 
@@ -299,7 +355,7 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
               {errors.net_weight && <p className="text-xs text-destructive">{errors.net_weight.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="avg_weight_g">Avg weight (g, optional)</Label>
+              <Label htmlFor="avg_weight_g">Avg weight (g, auto)</Label>
               <Input id="avg_weight_g" type="number" step="0.01" {...register("avg_weight_g")} />
             </div>
           </div>
@@ -333,6 +389,8 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
             {errors.recorded_by_id && <p className="text-xs text-destructive">{errors.recorded_by_id.message}</p>}
           </div>
 
+          </div>
+
           <div className="flex justify-end text-sm font-medium tabular-nums">
             Total: {formatMoney(totalPreview)}
           </div>
@@ -341,7 +399,7 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || overLiveCount}>
               Record bird sale
             </Button>
           </DialogFooter>

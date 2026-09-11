@@ -105,7 +105,7 @@ export function OverviewTab() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <RevenueByProductLineChart days={days} />
-        <SalesPriceTrendChart />
+        <SalesPriceTrendChart days={days} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

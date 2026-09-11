@@ -10,7 +10,7 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatDate, formatMoney } from "@/lib/utils";
 import { paymentStatus, type Sale, type SaleItemLine } from "@/pages/sales/types";
 import type { Customer } from "@/pages/customers/types";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
@@ -22,7 +22,7 @@ export function SaleDetailPage() {
   const [paymentOpen, setPaymentOpen] = useState(false);
 
   const { data: sale, isLoading, isError } = useGetData<Sale>(`/sales/${id}`, ["sales", id]);
-  usePageTitle("Sale");
+  usePageTitle(sale ? `Sale · ${formatDate(sale.sale_date)}` : "Sale");
 
   // Sale's own `customer` relation has no name (see types.ts) — look it up separately.
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
@@ -76,7 +76,7 @@ export function SaleDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-xl">Sale · {new Date(sale.sale_date).toLocaleDateString()}</CardTitle>
+            <CardTitle className="text-xl">Sale · {formatDate(sale.sale_date)}</CardTitle>
             <p className="text-sm text-muted-foreground">{customerName ?? "No customer on file"}</p>
           </div>
           <div className="flex items-center gap-2">

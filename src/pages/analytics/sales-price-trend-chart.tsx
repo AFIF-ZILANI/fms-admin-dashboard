@@ -13,8 +13,16 @@ import type { SalesTrendPoint } from "@/pages/analytics/types";
 
 const MINI_HEIGHT = CHART_HEIGHT / 2 - 8;
 
-export function SalesPriceTrendChart() {
-  const [days, setDays] = useState(30);
+type SalesPriceTrendChartProps = {
+  /** Pass to let a page-level range control this chart; omit to keep the
+   * chart's own toggle. The Sales Overview showed two competing toggles
+   * because this chart always owned its range. */
+  days?: number;
+};
+
+export function SalesPriceTrendChart({ days: controlledDays }: SalesPriceTrendChartProps = {}) {
+  const [localDays, setLocalDays] = useState(30);
+  const days = controlledDays ?? localDays;
   const { data, isLoading } = useGetData<SalesTrendPoint[]>(`/analytics/trends/sales?days=${days}`, [
     "analytics",
     "trends",
@@ -31,7 +39,9 @@ export function SalesPriceTrendChart() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">Bird sales — revenue &amp; price/kg</CardTitle>
-        <DayRangeToggle value={days} onValueChange={setDays} />
+        {controlledDays === undefined && (
+          <DayRangeToggle value={localDays} onValueChange={setLocalDays} />
+        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {isLoading && <Skeleton style={{ height: CHART_HEIGHT }} className="w-full" />}
