@@ -64,3 +64,10 @@ export function paymentStatus(paid: string, due: string): PaymentStatusInfo {
   if (paidNum > 0) return { tone: "warning", label: "Partial" };
   return { tone: "neutral", label: "Unpaid" };
 }
+
+/** Whole-set totals from GET /sales/summary -- the KPI row can't sum these
+ * client-side, the list endpoint's limit is capped at 100. */
+export type SalesSummary = { count: number; total_revenue: string; total_due: string };
+
+/** GET /bird-sales/summary. total_birds is here for the same reason. */
+export type BirdSalesSummary = SalesSummary & { total_birds: number };
