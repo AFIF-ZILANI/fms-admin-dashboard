@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ActorSelect } from "@/components/shared/actor-select";
 import { useQueryClient } from "@tanstack/react-query";
+import { useOutstanding } from "@/pages/sales/use-outstanding";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
@@ -75,6 +76,12 @@ function blankPayment(defaults?: { ref_type?: PaymentRefType; ref_id?: string })
 type RefOption = { id: string; label: string; due: number };
 
 function useRefOptions(refType: PaymentRefType | undefined, keepRefId?: string): RefOption[] {
+  // The picker used to filter and label by the raw due_amount snapshot while
+  // the sales tables showed payments netted off -- a sale badged "Paid" still
+  // appeared payable here, with its original due. One source of truth now.
+  const { trueAmounts: trueSale } = useOutstanding("SALE");
+  const { trueAmounts: trueBirdSale } = useOutstanding("BIRD_SALE");
+  const { trueAmounts: truePurchase } = useOutstanding("PURCHASE");
   const { data: purchases } = useGetData<Paginated<Purchase>>("/purchases?limit=100", ["purchases"], {
     enabled: refType === "PURCHASE",
   });
@@ -99,29 +106,32 @@ function useRefOptions(refType: PaymentRefType | undefined, keepRefId?: string):
 
   if (refType === "PURCHASE") {
     return (purchases?.results ?? [])
-      .filter((p) => parseFloat(p.due_amount) > 0 || p.id === keepRefId)
-      .map((p) => ({
-        id: p.id,
-        label: `${p.invoice_no ?? "No invoice"} · ${new Date(p.purchase_date).toLocaleDateString()}`,
-        due: parseFloat(p.due_amount),
+      .map((p) => ({ row: p, amounts: truePurchase(p.id, p.paid_amount, p.due_amount) }))
+      .filter(({ row, amounts }) => parseFloat(amounts.due) > 0 || row.id === keepRefId)
+      .map(({ row, amounts }) => ({
+        id: row.id,
+        label: `${row.invoice_no ?? "No invoice"} · ${new Date(row.purchase_date).toLocaleDateString()}`,
+        due: parseFloat(amounts.due),
       }));
   }
   if (refType === "SALE") {
     return (sales?.results ?? [])
-      .filter((s) => parseFloat(s.due_amount) > 0 || s.id === keepRefId)
-      .map((s) => ({
-        id: s.id,
-        label: `Sale · ${new Date(s.sale_date).toLocaleDateString()}`,
-        due: parseFloat(s.due_amount),
+      .map((row) => ({ row, amounts: trueSale(row.id, row.paid_amount, row.due_amount) }))
+      .filter(({ row, amounts }) => parseFloat(amounts.due) > 0 || row.id === keepRefId)
+      .map(({ row, amounts }) => ({
+        id: row.id,
+        label: `Sale · ${new Date(row.sale_date).toLocaleDateString()}`,
+        due: parseFloat(amounts.due),
       }));
   }
   if (refType === "BIRD_SALE") {
     return (birdSales?.results ?? [])
-      .filter((b) => parseFloat(b.due_amount) > 0 || b.id === keepRefId)
-      .map((b) => ({
-        id: b.id,
-        label: `${batches?.results.find((batch) => batch.id === b.batch_id)?.batch_code ?? "Bird sale"} · ${new Date(b.sale_date).toLocaleDateString()}`,
-        due: parseFloat(b.due_amount),
+      .map((row) => ({ row, amounts: trueBirdSale(row.id, row.paid_amount, row.due_amount) }))
+      .filter(({ row, amounts }) => parseFloat(amounts.due) > 0 || row.id === keepRefId)
+      .map(({ row, amounts }) => ({
+        id: row.id,
+        label: `${batches?.results.find((batch) => batch.id === row.batch_id)?.batch_code ?? "Bird sale"} · ${new Date(row.sale_date).toLocaleDateString()}`,
+        due: parseFloat(amounts.due),
       }));
   }
   // Expense/PayrollRecord don't store their own due_amount (append-only,
