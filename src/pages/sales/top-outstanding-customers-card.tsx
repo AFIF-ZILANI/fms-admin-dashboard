@@ -2,54 +2,22 @@ import { AlertCircle, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
-import { useGetData, type Paginated } from "@/lib/api";
+import { useGetData } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
-import type { Customer } from "@/pages/customers/types";
-import type { BirdSale, Sale } from "@/pages/sales/types";
-import { useOutstanding } from "@/pages/sales/use-outstanding";
+
+type TopOutstandingRow = { customer_id: string; customer_name: string; due: string };
 
 const TOP_N = 5;
 
+/** Ranked server-side: summing this client-side meant fetching sales, bird
+ * sales and payments at limit=100 each and joining them here, so any customer
+ * whose unpaid sales fell off those pages silently dropped out of the ranking. */
 export function TopOutstandingCustomersCard() {
-  const { data: sales, isLoading: salesLoading, isError: salesError } = useGetData<Paginated<Sale>>(
-    "/sales?limit=100",
-    ["sales"]
+  const { data, isLoading, isError } = useGetData<TopOutstandingRow[]>(
+    `/analytics/sales/top-outstanding-customers?limit=${TOP_N}`,
+    ["analytics", "sales", "top-outstanding-customers", TOP_N]
   );
-  const {
-    data: birdSales,
-    isLoading: birdSalesLoading,
-    isError: birdSalesError,
-  } = useGetData<Paginated<BirdSale>>("/bird-sales?limit=100", ["bird-sales"]);
-  const { data: customers, isLoading: customersLoading } = useGetData<Paginated<Customer>>("/customers?limit=100", [
-    "customers",
-  ]);
-  const { trueAmounts: trueSaleAmounts, isLoading: saleOutstandingLoading } = useOutstanding("SALE");
-  const { trueAmounts: trueBirdSaleAmounts, isLoading: birdSaleOutstandingLoading } = useOutstanding("BIRD_SALE");
-  const isLoading =
-    salesLoading || birdSalesLoading || customersLoading || saleOutstandingLoading || birdSaleOutstandingLoading;
-  const isError = salesError || birdSalesError;
-
-  const dueByCustomer = new Map<string, number>();
-  for (const s of sales?.results ?? []) {
-    if (!s.customer_id) continue;
-    const due = parseFloat(trueSaleAmounts(s.id, s.paid_amount, s.due_amount).due);
-    dueByCustomer.set(s.customer_id, (dueByCustomer.get(s.customer_id) ?? 0) + due);
-  }
-  for (const s of birdSales?.results ?? []) {
-    if (!s.customer_id) continue;
-    const due = parseFloat(trueBirdSaleAmounts(s.id, s.paid_amount, s.due_amount).due);
-    dueByCustomer.set(s.customer_id, (dueByCustomer.get(s.customer_id) ?? 0) + due);
-  }
-
-  const ranked = Array.from(dueByCustomer.entries())
-    .filter(([, due]) => due > 0)
-    .map(([customerId, due]) => ({
-      customerId,
-      due,
-      name: customers?.results.find((c) => c.id === customerId)?.profile.name ?? "Unknown customer",
-    }))
-    .sort((a, b) => b.due - a.due)
-    .slice(0, TOP_N);
+  const ranked = data ?? [];
 
   return (
     <Card>
@@ -67,8 +35,8 @@ export function TopOutstandingCustomersCard() {
         {!isLoading && !isError && ranked.length > 0 && (
           <ul className="flex flex-col gap-2">
             {ranked.map((r) => (
-              <li key={r.customerId} className="flex items-center justify-between text-sm">
-                <span>{r.name}</span>
+              <li key={r.customer_id} className="flex items-center justify-between text-sm">
+                <span>{r.customer_name}</span>
                 <span className="font-medium tabular-nums">{formatMoney(r.due)}</span>
               </li>
             ))}

@@ -57,6 +57,9 @@ export type GradeDistributionRow = {
   grade: string;
   birds_count: number;
   revenue: string;
+  /** Summed over the same window as `revenue`, so avg price/kg is
+   * revenue/net_weight without a second, differently-windowed fetch. */
+  net_weight: string;
 };
 
 export type PurchasesByCategoryRow = {
