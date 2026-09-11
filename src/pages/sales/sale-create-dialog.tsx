@@ -130,7 +130,10 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
           <DialogDescription>Line totals and the sale total are computed automatically.</DialogDescription>
         </DialogHeader>
 
-        <form className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1" onSubmit={handleSubmit(onSubmit)}>
+        {/* Only the fields scroll -- the running total and the submit button stay
+            pinned, so a long form can't hide its own actions. */}
+        <form className="flex min-h-0 flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+          <div className="flex max-h-[60vh] min-h-0 flex-col gap-4 overflow-y-auto pr-1">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="customer_id">Customer (optional)</Label>
@@ -158,9 +161,13 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="sale_date">Sale date</Label>
+              {/* Capped at today: a future-dated sale shows in the tables but in no
+                  chart (the analytics windows end at now), so it can only look
+                  like missing data. */}
               <Input
                 id="sale_date"
                 type="date"
+                max={new Date().toISOString().slice(0, 10)}
                 {...register("sale_date")}
                 aria-invalid={!!errors.sale_date}
               />
@@ -297,6 +304,8 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
                 )}
               </div>
             ))}
+          </div>
+
           </div>
 
           <div className="flex justify-end text-sm font-medium tabular-nums">

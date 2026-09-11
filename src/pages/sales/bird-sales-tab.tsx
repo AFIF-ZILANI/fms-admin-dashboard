@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Bird, CreditCard, Plus, Receipt, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { DateRangeFilter } from "@/pages/sales/date-range-filter";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Customer } from "@/pages/customers/types";
 import type { House } from "@/pages/houses/types";
@@ -23,7 +24,9 @@ import {
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
 
-const GRADE_TONE = { HIGH: "success", LOW: "warning", CULL: "critical" } as const;
+// A cull sale is normal business, not an error -- "critical" red made every
+// cull row scan as a problem.
+const GRADE_TONE = { HIGH: "success", LOW: "warning", CULL: "neutral" } as const;
 
 export function BirdSalesTab() {
   const navigate = useNavigate();
@@ -65,19 +68,52 @@ export function BirdSalesTab() {
   const birdSales = data?.results ?? [];
 
   const columns: Column<BirdSale>[] = [
-    { key: "date", header: "Date", render: (s) => new Date(s.sale_date).toLocaleDateString() },
-    { key: "batch", header: "Batch", render: (s) => batchCode(s.batch_id) },
-    { key: "house", header: "House", render: (s) => houseName(s.house_id) },
-    { key: "customer", header: "Customer", render: (s) => customerName(s.customer_id) },
-    { key: "grade", header: "Grade", render: (s) => <StatusBadge tone={GRADE_TONE[s.grade]} label={s.grade} /> },
-    { key: "birds", header: "Birds", render: (s) => s.birds_count, numeric: true },
-    { key: "net_weight", header: "Net wt (kg)", render: (s) => s.net_weight, numeric: true },
-    { key: "total", header: "Total", render: (s) => formatMoney(s.total_amount), numeric: true },
+    {
+      key: "date",
+      header: "Date",
+      render: (s) => formatDate(s.sale_date),
+      sortValue: (s) => s.sale_date,
+    },
+    { key: "batch", header: "Batch", render: (s) => batchCode(s.batch_id), sortValue: (s) => batchCode(s.batch_id) },
+    { key: "house", header: "House", render: (s) => houseName(s.house_id), sortValue: (s) => houseName(s.house_id) },
+    {
+      key: "customer",
+      header: "Customer",
+      render: (s) => customerName(s.customer_id),
+      sortValue: (s) => customerName(s.customer_id),
+    },
+    {
+      key: "grade",
+      header: "Grade",
+      render: (s) => <StatusBadge tone={GRADE_TONE[s.grade]} label={humanizeEnum(s.grade)} />,
+    },
+    {
+      key: "birds",
+      header: "Birds",
+      render: (s) => s.birds_count,
+      numeric: true,
+      sortValue: (s) => s.birds_count,
+    },
+    {
+      key: "net_weight",
+      header: "Net wt (kg)",
+      render: (s) => s.net_weight,
+      numeric: true,
+      sortValue: (s) => parseFloat(s.net_weight),
+    },
+    {
+      key: "total",
+      header: "Total",
+      render: (s) => formatMoney(s.total_amount),
+      numeric: true,
+      sortValue: (s) => parseFloat(s.total_amount),
+    },
     {
       key: "due",
       header: "Due",
       render: (s) => formatMoney(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
       numeric: true,
+      sortValue: (s) => parseFloat(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
     },
     {
       key: "payment_status",
@@ -136,35 +172,27 @@ export function BirdSalesTab() {
         />
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={gradeFilter} onValueChange={(v) => setGradeFilter((v ?? "ALL") as BirdGrade | "ALL")}>
-            <SelectTrigger className="w-32">
-              <SelectValue>{(v: string) => (v && v !== "ALL" ? humanizeEnum(v) : "All grades")}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All grades</SelectItem>
-              {BIRD_GRADES.map((grade) => (
-                <SelectItem key={grade} value={grade}>
-                  {humanizeEnum(grade)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            type="date"
-            className="w-40"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            aria-label="From date"
-          />
-          <Input
-            type="date"
-            className="w-40"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            aria-label="To date"
-          />
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="grade_filter" className="text-xs text-muted-foreground">
+              Grade
+            </Label>
+            <Select value={gradeFilter} onValueChange={(v) => setGradeFilter((v ?? "ALL") as BirdGrade | "ALL")}>
+              <SelectTrigger id="grade_filter" className="w-32">
+                <SelectValue>{(v: string) => (v && v !== "ALL" ? humanizeEnum(v) : "All grades")}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All grades</SelectItem>
+                {BIRD_GRADES.map((grade) => (
+                  <SelectItem key={grade} value={grade}>
+                    {humanizeEnum(grade)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </div>
         <Button onClick={() => setCreateOpen(true)}>
           <Plus />
@@ -178,6 +206,11 @@ export function BirdSalesTab() {
         rowKey={(s) => s.id}
         isLoading={isLoading}
         onRowClick={(s) => navigate(`/sales/birds/${s.id}`)}
+        footer={
+          data && data.total > birdSales.length
+            ? `Showing the ${birdSales.length} most recent of ${data.total} bird sales. Narrow the date range to see older ones.`
+            : undefined
+        }
         empty={{
           icon: Bird,
           title: "No bird sales recorded yet",

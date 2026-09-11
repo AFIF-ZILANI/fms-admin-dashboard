@@ -19,7 +19,7 @@ import { ActorSelect } from "@/components/shared/actor-select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Employee, PayrollRecord } from "@/pages/employees/types";
 import type { Expense } from "@/pages/finance/types";
@@ -110,7 +110,7 @@ function useRefOptions(refType: PaymentRefType | undefined, keepRefId?: string):
       .filter(({ row, amounts }) => parseFloat(amounts.due) > 0 || row.id === keepRefId)
       .map(({ row, amounts }) => ({
         id: row.id,
-        label: `${row.invoice_no ?? "No invoice"} · ${new Date(row.purchase_date).toLocaleDateString()}`,
+        label: `${row.invoice_no ?? "No invoice"} · ${formatDate(row.purchase_date)}`,
         due: parseFloat(amounts.due),
       }));
   }
@@ -120,7 +120,7 @@ function useRefOptions(refType: PaymentRefType | undefined, keepRefId?: string):
       .filter(({ row, amounts }) => parseFloat(amounts.due) > 0 || row.id === keepRefId)
       .map(({ row, amounts }) => ({
         id: row.id,
-        label: `Sale · ${new Date(row.sale_date).toLocaleDateString()}`,
+        label: `Sale · ${formatDate(row.sale_date)}`,
         due: parseFloat(amounts.due),
       }));
   }
@@ -130,7 +130,7 @@ function useRefOptions(refType: PaymentRefType | undefined, keepRefId?: string):
       .filter(({ row, amounts }) => parseFloat(amounts.due) > 0 || row.id === keepRefId)
       .map(({ row, amounts }) => ({
         id: row.id,
-        label: `${batches?.results.find((batch) => batch.id === row.batch_id)?.batch_code ?? "Bird sale"} · ${new Date(row.sale_date).toLocaleDateString()}`,
+        label: `${batches?.results.find((batch) => batch.id === row.batch_id)?.batch_code ?? "Bird sale"} · ${formatDate(row.sale_date)}`,
         due: parseFloat(amounts.due),
       }));
   }

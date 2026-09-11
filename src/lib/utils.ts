@@ -23,3 +23,10 @@ export function formatMoney(value: string | number): string {
   const n = typeof value === "string" ? parseFloat(value) : value
   return n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
+
+/** Sale/purchase dates are stored as UTC midnight (a Zod `coerce.date()` of a
+ * "YYYY-MM-DD" input), so rendering them in local time shows the previous day
+ * for any negative UTC offset. Always read these back in UTC. */
+export function formatDate(value: string | Date): string {
+  return new Date(value).toLocaleDateString(undefined, { timeZone: "UTC" })
+}
