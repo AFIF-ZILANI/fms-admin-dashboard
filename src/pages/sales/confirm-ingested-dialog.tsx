@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
@@ -59,7 +58,6 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
   const [discount, setDiscount] = useState(
     String(Math.max(0, row.payload.final_amount - row.payload.received_amount))
   );
-  const [reviewedById, setReviewedById] = useState("");
   const [dismissReason, setDismissReason] = useState("");
 
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches"]);
@@ -91,8 +89,8 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
     STALE_MS;
 
   const handleConfirm = () => {
-    if (!batchId || !houseId || !reviewedById) {
-      toast.error("Batch, house and reviewer are required");
+    if (!batchId || !houseId) {
+      toast.error("Batch and house are required");
       return;
     }
     confirm.mutate(
@@ -108,7 +106,6 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
         price_per_kg: Number(pricePerKg),
         paid_amount: Number(paidAmount),
         discount_amount: Number(discount),
-        reviewed_by_id: reviewedById,
         ...(customerId ? { customer_id: customerId } : {}),
       },
       {
@@ -128,12 +125,12 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
   };
 
   const handleDismiss = () => {
-    if (!dismissReason.trim() || !reviewedById) {
-      toast.error("A reason and a reviewer are required to dismiss");
+    if (!dismissReason.trim()) {
+      toast.error("A reason is required to dismiss");
       return;
     }
     dismiss.mutate(
-      { reason: dismissReason.trim(), reviewed_by_id: reviewedById },
+      { reason: dismissReason.trim() },
       {
         onSuccess: () => {
           toast.success("Sale dismissed");
@@ -379,10 +376,6 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
               <p className="text-xs text-muted-foreground">
                 The shortfall the phone recorded — money knocked off, not owed.
               </p>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="ci_reviewer">Reviewed by</Label>
-              <ActorSelect id="ci_reviewer" value={reviewedById} onChange={setReviewedById} />
             </div>
           </div>
 

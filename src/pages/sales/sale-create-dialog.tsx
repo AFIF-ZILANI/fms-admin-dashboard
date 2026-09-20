@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
@@ -38,7 +37,6 @@ const saleSchema = z.object({
   customer_id: z.string().optional(),
   sale_date: z.string().min(1, "Sale date is required"),
   paid_amount: optionalNumber(z.coerce.number().nonnegative("Must be 0 or more")),
-  recorded_by_id: z.string().min(1, "Select who's recording this"),
   items: z.array(lineSchema).min(1, "Add at least one line item"),
 });
 
@@ -59,7 +57,6 @@ function blankSale(): SaleFormInput {
     customer_id: "",
     sale_date: new Date().toISOString().slice(0, 10),
     paid_amount: "",
-    recorded_by_id: "",
     items: [blankLine()],
   };
 }
@@ -116,7 +113,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
       },
       onError: (error) => {
         const message =
-          error.fieldError("sale_date") ?? error.fieldError("recorded_by_id") ?? error.fieldError("paid_amount");
+          error.fieldError("sale_date") ?? error.fieldError("paid_amount");
         toast.error(message ?? error.message);
       },
     });
@@ -180,22 +177,6 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
               <Label htmlFor="paid_amount">Paid amount (optional, default 0)</Label>
               <Input id="paid_amount" type="number" step="0.01" {...register("paid_amount")} />
               {errors.paid_amount && <p className="text-xs text-destructive">{errors.paid_amount.message}</p>}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="recorded_by_id">Recorded by</Label>
-              <Controller
-                control={control}
-                name="recorded_by_id"
-                render={({ field }) => (
-                  <ActorSelect
-                    id="recorded_by_id"
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                    invalid={!!errors.recorded_by_id}
-                  />
-                )}
-              />
-              {errors.recorded_by_id && <p className="text-xs text-destructive">{errors.recorded_by_id.message}</p>}
             </div>
           </div>
 

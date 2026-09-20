@@ -15,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { DoctorSelect } from "@/components/shared/doctor-select";
 import { usePostData } from "@/lib/api";
 import type { Batch, Medication } from "@/pages/batches/types";
@@ -25,7 +24,6 @@ const medicationSchema = z.object({
   dosage: z.string().min(1, "Dosage is required"),
   cause: z.string().trim().optional(),
   period: z.string().trim().optional(),
-  administered_by_id: z.string().min(1, "Select who administered this"),
   doctor_id: z.string().optional(),
   remarks: z.string().trim().optional(),
   date: z.string().min(1, "Date is required"),
@@ -40,7 +38,6 @@ function blankMedication(): MedicationFormInput {
     dosage: "",
     cause: "",
     period: "",
-    administered_by_id: "",
     doctor_id: "",
     remarks: "",
     date: new Date().toISOString().slice(0, 10),
@@ -89,7 +86,7 @@ export function MedicationFormDialog({ open, onOpenChange, batch }: MedicationFo
       },
       onError: (error) => {
         let hadFieldError = false;
-        for (const key of ["medicine_name", "dosage", "administered_by_id", "date"] as const) {
+        for (const key of ["medicine_name", "dosage", "date"] as const) {
           const message = error.fieldError(key);
           if (message) {
             setError(key, { message });
@@ -138,25 +135,6 @@ export function MedicationFormDialog({ open, onOpenChange, batch }: MedicationFo
               <Label htmlFor="period">Period (optional)</Label>
               <Input id="period" {...register("period")} />
             </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="administered_by_id">Administered by</Label>
-            <Controller
-              control={control}
-              name="administered_by_id"
-              render={({ field }) => (
-                <ActorSelect
-                  id="administered_by_id"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  invalid={!!errors.administered_by_id}
-                />
-              )}
-            />
-            {errors.administered_by_id && (
-              <p className="text-xs text-destructive">{errors.administered_by_id.message}</p>
-            )}
           </div>
 
           <div className="flex flex-col gap-1.5">

@@ -17,14 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NumericInput } from "@/components/utils/NumaricInput";
-import { LAST_ADMIN_KEY } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { cn, humanizeEnum } from "@/lib/utils";
 import { ADJUSTMENT_REASONS, type InventoryAdjustment, type Item, type LocationStockRow, type Warehouse } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
-
-type Admin = { id: string; profile: { id: string; name: string } };
 
 const adjustmentSchema = z
   .object({
@@ -82,7 +79,6 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
-  const { data: admins } = useGetData<Paginated<Admin>>("/admins?limit=100", ["admins"]);
   const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
   const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
 
@@ -131,25 +127,7 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
     (selectedWarehouseId && warehouseStock?.find((s) => s.item_id === selectedItemId)) ||
     undefined;
 
-  // No "who's recording this" picker (there's no auth system yet, so this is the same stand-in
-  // used by the purchase and transfer forms) -- resolved silently from whichever admin was last
-  // picked anywhere in the app.
-  const resolveRecordedBy = (): string | null => {
-    const admin = admins?.results ?? [];
-    const stored = localStorage.getItem(LAST_ADMIN_KEY);
-    if (stored && admin.some((a) => a.profile.id === stored)) return stored;
-    const fallback = admin[0]?.profile.id;
-    if (fallback) localStorage.setItem(LAST_ADMIN_KEY, fallback);
-    return fallback ?? null;
-  };
-
   const onSubmit = (values: AdjustmentFormValues) => {
-    const recorded_by_id = resolveRecordedBy();
-    if (!recorded_by_id) {
-      toast.error("No admins exist yet — add one before recording this.");
-      return;
-    }
-
     let quantity_after = values.quantity_after;
     if (openingBalance) {
       const unitRow = purchasableUnits.find((u) => u.unit === openingUnitValue);
@@ -165,7 +143,6 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
       {
         ...rest,
         quantity_after,
-        recorded_by_id,
         ...(warehouse_id && { warehouse_id }),
         ...(!openingBalance && house_id && { house_id }),
       },

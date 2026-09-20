@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { usePostData } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { CRITERIA, criterionPoints, type PerformanceScoreEntry } from "@/pages/employees/types";
@@ -26,7 +25,6 @@ const scoreEntrySchema = z
     points: z.coerce.number().int().optional(),
     reason: z.string().trim().min(1, "Reason is required"),
     date: z.string().min(1, "Date is required"),
-    given_by_id: z.string().min(1, "Select who's giving this"),
   })
   .refine(
     (data) =>
@@ -44,7 +42,6 @@ function blankScoreEntry(): ScoreEntryFormInput {
     points: undefined,
     reason: "",
     date: new Date().toISOString().slice(0, 10),
-    given_by_id: "",
   };
 }
 
@@ -155,22 +152,6 @@ export function ScoreEntryDialog({ open, onOpenChange, employeeId }: ScoreEntryD
               <Label htmlFor="date">Date</Label>
               <Input id="date" type="date" {...register("date")} aria-invalid={!!errors.date} />
               {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="given_by_id">Given by</Label>
-              <Controller
-                control={control}
-                name="given_by_id"
-                render={({ field }) => (
-                  <ActorSelect
-                    id="given_by_id"
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                    invalid={!!errors.given_by_id}
-                  />
-                )}
-              />
-              {errors.given_by_id && <p className="text-xs text-destructive">{errors.given_by_id.message}</p>}
             </div>
           </div>
 

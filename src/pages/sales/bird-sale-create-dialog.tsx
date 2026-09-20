@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { cn, formatMoney, humanizeEnum } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
@@ -43,7 +42,6 @@ const birdSaleSchema = z
     avg_weight_g: optionalNumber(z.coerce.number().positive()),
     price_per_kg: z.coerce.number().positive("Must be positive"),
     paid_amount: optionalNumber(z.coerce.number().nonnegative()),
-    recorded_by_id: z.string().min(1, "Select who's recording this"),
   })
   .refine(
     (data) =>
@@ -82,7 +80,6 @@ function blankBirdSale(): BirdSaleFormInput {
     avg_weight_g: "",
     price_per_kg: undefined,
     paid_amount: "",
-    recorded_by_id: "",
   };
 }
 
@@ -163,7 +160,6 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
       onError: (error) => {
         const message =
           error.fieldError("sale_date") ??
-          error.fieldError("recorded_by_id") ??
           error.fieldError("birds_count");
         toast.error(message ?? error.message);
       },
@@ -370,23 +366,6 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
               <Label htmlFor="paid_amount">Paid amount (optional, default 0)</Label>
               <Input id="paid_amount" type="number" step="0.01" {...register("paid_amount")} />
             </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="recorded_by_id">Recorded by</Label>
-            <Controller
-              control={control}
-              name="recorded_by_id"
-              render={({ field }) => (
-                <ActorSelect
-                  id="recorded_by_id"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  invalid={!!errors.recorded_by_id}
-                />
-              )}
-            />
-            {errors.recorded_by_id && <p className="text-xs text-destructive">{errors.recorded_by_id.message}</p>}
           </div>
 
           </div>

@@ -17,7 +17,6 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { QrCode } from "@/components/shared/qr-code";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { useConfirm } from "@/components/shared/confirm-dialog";
-import { LAST_ADMIN_KEY } from "@/components/shared/actor-select";
 import { apiFetch, ApiError, usePostData, useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Consumption, Item, StockUnit, Warehouse } from "@/pages/inventory/types";
@@ -30,8 +29,6 @@ type StockUnitDetailSheetProps = {
   unit: StockUnit | null;
   onOpenChange: (open: boolean) => void;
 };
-
-type Admin = { id: string; profile: { id: string; name: string } };
 
 export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailSheetProps) {
   const [relocateHouseId, setRelocateHouseId] = useState("");
@@ -47,7 +44,6 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
-  const { data: admins } = useGetData<Paginated<Admin>>("/admins?limit=100", ["admins"]);
   const { data: unitLookup } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
   const unitLabel = (code: string) => unitLookup?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
   // No stock_unit_id filter on GET /consumptions (out of scope for this redesign, see spec) --
@@ -74,15 +70,6 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
       ]
     : [];
 
-  const resolveRecordedBy = (): string | null => {
-    const admin = admins?.results ?? [];
-    const stored = localStorage.getItem(LAST_ADMIN_KEY);
-    if (stored && admin.some((a) => a.profile.id === stored)) return stored;
-    const fallback = admin[0]?.profile.id;
-    if (fallback) localStorage.setItem(LAST_ADMIN_KEY, fallback);
-    return fallback ?? null;
-  };
-
   const resetLinkFields = () => {
     setLinkQuantity("");
     setLinkUnit("");
@@ -102,12 +89,6 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
         setRelocating(false);
         return;
       }
-      const recorded_by_id = resolveRecordedBy();
-      if (!recorded_by_id) {
-        toast.error("No admins exist yet — add one before linking to the ledger.");
-        setRelocating(false);
-        return;
-      }
       try {
         const transfer = await apiFetch<{ id: string }>("/stock-transfers", {
           method: "POST",
@@ -119,7 +100,6 @@ export function StockUnitDetailSheet({ unit, onOpenChange }: StockUnitDetailShee
             to_location_id: house_id === null ? linkWarehouseId : house_id,
             quantity: Number(linkQuantity),
             unit: linkUnit,
-            recorded_by_id,
           }),
         });
         stock_transfer_id = transfer.id;

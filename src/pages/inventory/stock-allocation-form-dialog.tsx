@@ -17,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { NumericInput } from "@/components/utils/NumaricInput";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { STOCK_UNIT_STATUS_TONE } from "@/components/shared/status-tone";
-import { LAST_ADMIN_KEY } from "@/components/shared/actor-select";
 import { apiFetch, ApiError, useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Item, StockUnit, Warehouse } from "@/pages/inventory/types";
@@ -28,8 +27,6 @@ type StockAllocationFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
-
-type Admin = { id: string; profile: { id: string; name: string } };
 
 // Finds StockUnits one scan/paste at a time and batches them into a list, then moves the whole
 // batch to one house, between houses, or back to the warehouse in a single submit -- fans out to
@@ -55,7 +52,6 @@ export function StockAllocationFormDialog({ open, onOpenChange }: StockAllocatio
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
-  const { data: admins } = useGetData<Paginated<Admin>>("/admins?limit=100", ["admins"]);
   const { data: unitLookup } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
   const unitLabel = (code: string) => unitLookup?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
   const queryClient = useQueryClient();
@@ -80,15 +76,6 @@ export function StockAllocationFormDialog({ open, onOpenChange }: StockAllocatio
           .map((u) => ({ code: u.unit, label: unitLabel(u.unit) })),
       ]
     : [];
-
-  const resolveRecordedBy = (): string | null => {
-    const admin = admins?.results ?? [];
-    const stored = localStorage.getItem(LAST_ADMIN_KEY);
-    if (stored && admin.some((a) => a.profile.id === stored)) return stored;
-    const fallback = admin[0]?.profile.id;
-    if (fallback) localStorage.setItem(LAST_ADMIN_KEY, fallback);
-    return fallback ?? null;
-  };
 
   const handleAdd = async (e: FormEvent) => {
     e.preventDefault();
@@ -140,12 +127,6 @@ export function StockAllocationFormDialog({ open, onOpenChange }: StockAllocatio
         setSubmitting(false);
         return;
       }
-      const recorded_by_id = resolveRecordedBy();
-      if (!recorded_by_id) {
-        toast.error("No admins exist yet — add one before linking to the ledger.");
-        setSubmitting(false);
-        return;
-      }
       try {
         const transfer = await apiFetch<{ id: string }>("/stock-transfers", {
           method: "POST",
@@ -157,7 +138,6 @@ export function StockAllocationFormDialog({ open, onOpenChange }: StockAllocatio
             to_location_id: returnToWarehouse ? linkWarehouseId : houseId,
             quantity: Number(linkQuantity),
             unit: linkUnit,
-            recorded_by_id,
           }),
         });
         stock_transfer_id = transfer.id;

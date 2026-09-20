@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
@@ -29,7 +28,6 @@ const expenseSchema = z.object({
   amount: z.coerce.number().positive("Must be positive"),
   date: z.string().min(1, "Date is required"),
   remarks: z.string().trim().optional(),
-  recorded_by_id: z.string().min(1, "Select who's recording this"),
 });
 
 type ExpenseFormInput = z.input<typeof expenseSchema>;
@@ -43,7 +41,6 @@ function blankExpense(): ExpenseFormInput {
     amount: undefined,
     date: new Date().toISOString().slice(0, 10),
     remarks: "",
-    recorded_by_id: "",
   };
 }
 
@@ -84,7 +81,7 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
         onOpenChange(false);
       },
       onError: (error) => {
-        toast.error(error.fieldError("amount") ?? error.fieldError("recorded_by_id") ?? error.message);
+        toast.error(error.fieldError("amount") ?? error.message);
       },
     });
   };
@@ -192,23 +189,6 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="remarks">Remarks (optional)</Label>
             <Input id="remarks" {...register("remarks")} />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="recorded_by_id">Recorded by</Label>
-            <Controller
-              control={control}
-              name="recorded_by_id"
-              render={({ field }) => (
-                <ActorSelect
-                  id="recorded_by_id"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  invalid={!!errors.recorded_by_id}
-                />
-              )}
-            />
-            {errors.recorded_by_id && <p className="text-xs text-destructive">{errors.recorded_by_id.message}</p>}
           </div>
 
           <DialogFooter>

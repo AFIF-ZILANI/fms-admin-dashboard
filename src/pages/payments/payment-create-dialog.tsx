@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
@@ -42,7 +41,6 @@ const paymentSchema = z.object({
   from_instrument_id: z.string().min(1, "Select the paying instrument"),
   to_instrument_id: z.string().optional(),
   transaction_ref: z.string().trim().optional(),
-  handled_by_id: z.string().optional(),
   note: z.string().trim().optional(),
 });
 
@@ -66,7 +64,6 @@ function blankPayment(defaults?: { ref_type?: PaymentRefType; ref_id?: string })
     from_instrument_id: "",
     to_instrument_id: "",
     transaction_ref: "",
-    handled_by_id: "",
     note: "",
   };
 }
@@ -209,7 +206,6 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
       ...values,
       to_instrument_id: values.to_instrument_id || undefined,
       transaction_ref: values.transaction_ref || undefined,
-      handled_by_id: values.handled_by_id || undefined,
       note: values.note || undefined,
     };
     createPayment.mutate(payload, {
@@ -398,16 +394,6 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="transaction_ref">Transaction ref (optional)</Label>
               <Input id="transaction_ref" {...register("transaction_ref")} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="handled_by_id">Handled by (optional)</Label>
-              <Controller
-                control={control}
-                name="handled_by_id"
-                render={({ field }) => (
-                  <ActorSelect id="handled_by_id" value={field.value ?? ""} onChange={field.onChange} />
-                )}
-              />
             </div>
           </div>
 

@@ -57,6 +57,10 @@ export function BatchesListPage() {
 
   const performanceByBatch = new Map((performances ?? []).map((p) => [p.batch_id, p]));
   const sortedBatches = [...batches].sort((a, b) => {
+    // Running batches always sit on top; closed and sold are history, whatever
+    // the chosen sort is.
+    if ((a.status === "RUNNING") !== (b.status === "RUNNING"))
+      return a.status === "RUNNING" ? -1 : 1;
     if (sortBy === "days_running") return ageInDays(b.starting_date) - ageInDays(a.starting_date);
     if (sortBy === "mortality_rate") {
       const rateA = performanceByBatch.get(a.id)?.cumulative_mortality_rate ?? 0;

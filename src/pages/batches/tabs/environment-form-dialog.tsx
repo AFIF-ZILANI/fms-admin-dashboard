@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { usePostData } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { TIME_PERIODS, type Batch, type EnvironmentRecord } from "@/pages/batches/types";
@@ -28,7 +27,6 @@ const environmentSchema = z.object({
   co2_ppm: z.coerce.number(),
   air_pressure_hpa: z.coerce.number(),
   time_period: z.enum(TIME_PERIODS, "Select a time of day"),
-  recorded_by_id: z.string().min(1, "Select who's recording this"),
 });
 
 type EnvironmentFormInput = z.input<typeof environmentSchema>;
@@ -54,7 +52,6 @@ export function EnvironmentFormDialog({ open, onOpenChange, batch }: Environment
       co2_ppm: undefined,
       air_pressure_hpa: undefined,
       time_period: undefined,
-      recorded_by_id: "",
     },
   });
 
@@ -70,7 +67,6 @@ export function EnvironmentFormDialog({ open, onOpenChange, batch }: Environment
         co2_ppm: undefined,
         air_pressure_hpa: undefined,
         time_period: undefined,
-        recorded_by_id: "",
       });
     }
   }, [open, reset]);
@@ -100,7 +96,6 @@ export function EnvironmentFormDialog({ open, onOpenChange, batch }: Environment
             "co2_ppm",
             "air_pressure_hpa",
             "time_period",
-            "recorded_by_id",
           ] as const) {
             const message = error.fieldError(key);
             if (message) {
@@ -217,23 +212,6 @@ export function EnvironmentFormDialog({ open, onOpenChange, batch }: Environment
                 <p className="text-xs text-destructive">{errors.air_pressure_hpa.message}</p>
               )}
             </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="recorded_by_id">Recorded by</Label>
-            <Controller
-              control={control}
-              name="recorded_by_id"
-              render={({ field }) => (
-                <ActorSelect
-                  id="recorded_by_id"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  invalid={!!errors.recorded_by_id}
-                />
-              )}
-            />
-            {errors.recorded_by_id && <p className="text-xs text-destructive">{errors.recorded_by_id.message}</p>}
           </div>
 
           <DialogFooter>
