@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { usePostData } from "@/lib/api";
 import type { Batch, MortalityLog } from "@/pages/batches/types";
 
@@ -25,7 +24,6 @@ const mortalitySchema = z.object({
   count_died: z.coerce.number().int().positive("Must be a positive number"),
   cause_note: z.string().trim().optional(),
   date: z.string().min(1, "Date is required"),
-  recorded_by_id: z.string().min(1, "Select who's recording this"),
 });
 
 type MortalityFormInput = z.input<typeof mortalitySchema>;
@@ -48,7 +46,6 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
       count_died: undefined,
       cause_note: "",
       date: new Date().toISOString().slice(0, 10),
-      recorded_by_id: "",
     },
   });
 
@@ -61,7 +58,6 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
         count_died: undefined,
         cause_note: "",
         date: new Date().toISOString().slice(0, 10),
-        recorded_by_id: "",
       });
     }
   }, [open, reset]);
@@ -86,7 +82,7 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
       },
       onError: (error) => {
         let hadFieldError = false;
-        for (const key of ["house_id", "count_died", "cause_note", "date", "recorded_by_id"] as const) {
+        for (const key of ["house_id", "count_died", "cause_note", "date"] as const) {
           const message = error.fieldError(key);
           if (message) {
             setError(key, { message });
@@ -148,23 +144,6 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="cause_note">Cause (optional)</Label>
             <Input id="cause_note" {...register("cause_note")} />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="recorded_by_id">Recorded by</Label>
-            <Controller
-              control={control}
-              name="recorded_by_id"
-              render={({ field }) => (
-                <ActorSelect
-                  id="recorded_by_id"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  invalid={!!errors.recorded_by_id}
-                />
-              )}
-            />
-            {errors.recorded_by_id && <p className="text-xs text-destructive">{errors.recorded_by_id.message}</p>}
           </div>
 
           <DialogFooter>

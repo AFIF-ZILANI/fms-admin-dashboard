@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { ALLOCATION_REASONS, type BatchHouseAllocation } from "@/pages/batches/types";
@@ -28,7 +27,6 @@ const allocationSchema = z
     to_house_id: z.string().optional(),
     quantity: z.coerce.number().int().positive("Must be a positive number"),
     reason: z.enum(ALLOCATION_REASONS, "Select a reason"),
-    recorded_by_id: z.string().min(1, "Select who's recording this"),
   })
   .refine((data) => data.from_house_id || data.to_house_id, {
     message: "Pick at least a from-house or a to-house",
@@ -50,14 +48,14 @@ export function AllocationFormDialog({ open, onOpenChange, batchId }: Allocation
     formState: { errors, isSubmitting },
   } = useForm<AllocationFormInput, unknown, AllocationFormValues>({
     resolver: zodResolver(allocationSchema),
-    defaultValues: { from_house_id: "", to_house_id: "", quantity: undefined, reason: undefined, recorded_by_id: "" },
+    defaultValues: { from_house_id: "", to_house_id: "", quantity: undefined, reason: undefined },
   });
 
   // Dialog stays mounted between opens — without this, a second allocation would
   // start from whatever was left in the form after the previous submit.
   useEffect(() => {
     if (open) {
-      reset({ from_house_id: "", to_house_id: "", quantity: undefined, reason: undefined, recorded_by_id: "" });
+      reset({ from_house_id: "", to_house_id: "", quantity: undefined, reason: undefined });
     }
   }, [open, reset]);
 
@@ -85,7 +83,7 @@ export function AllocationFormDialog({ open, onOpenChange, batchId }: Allocation
       },
       onError: (error) => {
         let hadFieldError = false;
-        for (const key of ["from_house_id", "to_house_id", "quantity", "reason", "recorded_by_id"] as const) {
+        for (const key of ["from_house_id", "to_house_id", "quantity", "reason"] as const) {
           const message = error.fieldError(key);
           if (message) {
             setError(key, { message });
@@ -188,23 +186,6 @@ export function AllocationFormDialog({ open, onOpenChange, batchId }: Allocation
               />
               {errors.reason && <p className="text-xs text-destructive">{errors.reason.message}</p>}
             </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="recorded_by_id">Recorded by</Label>
-            <Controller
-              control={control}
-              name="recorded_by_id"
-              render={({ field }) => (
-                <ActorSelect
-                  id="recorded_by_id"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  invalid={!!errors.recorded_by_id}
-                />
-              )}
-            />
-            {errors.recorded_by_id && <p className="text-xs text-destructive">{errors.recorded_by_id.message}</p>}
           </div>
 
           <DialogFooter>

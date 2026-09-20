@@ -20,7 +20,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { NumericInput } from "@/components/utils/NumaricInput";
-import { LAST_ADMIN_KEY } from "@/components/shared/actor-select";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
@@ -221,25 +220,11 @@ export function PurchaseCreatePage() {
     globalDiscountType !== undefined || (watchedItems ?? []).some((line) => line?.discount_type !== undefined);
 
   const admin = admins?.results ?? [];
-  const resolveRecordedBy = (): string | null => {
-    const stored = localStorage.getItem(LAST_ADMIN_KEY);
-    if (stored && admin.some((a) => a.profile.id === stored)) return stored;
-    const fallback = admin[0]?.profile.id;
-    if (fallback) localStorage.setItem(LAST_ADMIN_KEY, fallback);
-    return fallback ?? null;
-  };
-
   /** The amount that will actually be posted as a Payment. "Paid in full" always tracks the live
    * net total rather than a stored number, so it can't go stale if a line or discount changes after picking it. */
   const paymentAmount = payment.status === "PAID" ? netTotalPreview : Number(payment.amount);
 
   const onSubmit = (values: PurchaseFormValues) => {
-    const recorded_by_id = resolveRecordedBy();
-    if (!recorded_by_id) {
-      toast.error("No admins exist yet — add one before recording a purchase.");
-      return;
-    }
-
     for (const [i, line] of values.items.entries()) {
       if ((line.discount_type !== undefined) !== (line.discount_value !== undefined)) {
         toast.error(`Line ${i + 1}: pick a discount type and enter a value, or leave both blank.`);
@@ -288,7 +273,6 @@ export function PurchaseCreatePage() {
       ...values,
       supplier_id: values.supplier_id || undefined,
       invoice_no: values.invoice_no || undefined,
-      recorded_by_id,
       paid_amount: 0,
       items: values.items.map((line) => ({
         ...line,
@@ -317,7 +301,6 @@ export function PurchaseCreatePage() {
               amount: Number(expense.amount),
               date: values.purchase_date,
               remarks: expense.remarks || undefined,
-              recorded_by_id,
             },
             {
               onSuccess: () => {
@@ -346,7 +329,6 @@ export function PurchaseCreatePage() {
             payment_date: payment.payment_date,
             from_instrument_id: payment.from_instrument_id,
             transaction_ref: payment.transaction_ref || undefined,
-            handled_by_id: recorded_by_id,
             note: payment.note || undefined,
           },
           {

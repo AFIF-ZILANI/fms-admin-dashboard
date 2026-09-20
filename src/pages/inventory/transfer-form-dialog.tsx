@@ -16,14 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NumericInput } from "@/components/utils/NumaricInput";
-import { LAST_ADMIN_KEY } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Item, Warehouse, LocationStockRow } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
-
-type Admin = { id: string; profile: { id: string; name: string } };
 
 type LocationOption = { value: string; type: "WAREHOUSE" | "HOUSE"; id: string; label: string };
 
@@ -77,7 +74,6 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
   const items = allItems?.results.filter((i) => !i.is_unit_tracked);
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
-  const { data: admins } = useGetData<Paginated<Admin>>("/admins?limit=100", ["admins"]);
   const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
   const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
 
@@ -126,22 +122,7 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
   const queryClient = useQueryClient();
   const createTransfer = usePostData<unknown, Record<string, unknown>>("/stock-transfers", ["stock-ledger"]);
 
-  const resolveRecordedBy = (): string | null => {
-    const admin = admins?.results ?? [];
-    const stored = localStorage.getItem(LAST_ADMIN_KEY);
-    if (stored && admin.some((a) => a.profile.id === stored)) return stored;
-    const fallback = admin[0]?.profile.id;
-    if (fallback) localStorage.setItem(LAST_ADMIN_KEY, fallback);
-    return fallback ?? null;
-  };
-
   const onSubmit = (values: TransferFormValues) => {
-    const recorded_by_id = resolveRecordedBy();
-    if (!recorded_by_id) {
-      toast.error("No admins exist yet — add one before recording a move.");
-      return;
-    }
-
     const fromParsed = parseLocation(values.from_location);
     const toParsed = parseLocation(values.to_location);
 
@@ -154,7 +135,6 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
         to_location_id: toParsed.id,
         quantity: values.quantity,
         unit: values.unit,
-        recorded_by_id,
         ...(values.note && { note: values.note }),
       },
       {

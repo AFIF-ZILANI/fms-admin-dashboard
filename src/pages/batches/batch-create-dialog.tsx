@@ -22,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { BIRD_BREEDS, type Batch } from "@/pages/batches/types";
@@ -43,7 +42,6 @@ const batchSchema = z.object({
     .positive("Must be a positive number"),
   init_chicks_avg_wt: z.coerce.number().positive("Must be a positive number"),
   house_id: z.string().min(1, "Select the initial house"),
-  recorded_by_id: z.string().min(1, "Select who's recording this"),
 });
 
 // z.coerce fields (initial_chick_count, init_chicks_avg_wt) split input/output types — same pattern as Houses.
@@ -100,7 +98,6 @@ export function BatchCreateDialog({
       initial_chick_count: undefined,
       init_chicks_avg_wt: undefined,
       house_id: "",
-      recorded_by_id: "",
     },
   });
 
@@ -146,7 +143,6 @@ export function BatchCreateDialog({
           "initial_chick_count",
           "init_chicks_avg_wt",
           "house_id",
-          "recorded_by_id",
         ] as const) {
           const message = error.fieldError(key);
           if (message) {
@@ -332,27 +328,6 @@ export function BatchCreateDialog({
             {houses && houses.results.length === 0 && (
               <p className="text-xs text-muted-foreground">
                 No brooder houses available — all are occupied by a running batch.
-              </p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="recorded_by_id">Recorded by</Label>
-            <Controller
-              control={control}
-              name="recorded_by_id"
-              render={({ field }) => (
-                <ActorSelect
-                  id="recorded_by_id"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  invalid={!!errors.recorded_by_id}
-                />
-              )}
-            />
-            {errors.recorded_by_id && (
-              <p className="text-xs text-destructive">
-                {errors.recorded_by_id.message}
               </p>
             )}
           </div>

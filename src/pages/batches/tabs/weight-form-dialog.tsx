@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { usePostData } from "@/lib/api";
 import type { Batch, WeightRecord } from "@/pages/batches/types";
 
@@ -24,7 +23,6 @@ const weightSchema = z.object({
   average_wt_grams: z.coerce.number().positive("Must be a positive number"),
   sample_size: z.coerce.number().int().positive("Must be a positive number"),
   date: z.string().min(1, "Date is required"),
-  measured_by_id: z.string().min(1, "Select who measured this"),
 });
 
 type WeightFormInput = z.input<typeof weightSchema>;
@@ -47,7 +45,6 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
       average_wt_grams: undefined,
       sample_size: undefined,
       date: new Date().toISOString().slice(0, 10),
-      measured_by_id: "",
     },
   });
 
@@ -60,7 +57,6 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
         average_wt_grams: undefined,
         sample_size: undefined,
         date: new Date().toISOString().slice(0, 10),
-        measured_by_id: "",
       });
     }
   }, [open, reset]);
@@ -82,7 +78,7 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
         },
         onError: (error) => {
           let hadFieldError = false;
-          for (const key of ["house_id", "average_wt_grams", "sample_size", "date", "measured_by_id"] as const) {
+          for (const key of ["house_id", "average_wt_grams", "sample_size", "date"] as const) {
             const message = error.fieldError(key);
             if (message) {
               setError(key, { message });
@@ -164,23 +160,6 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
               />
               {errors.sample_size && <p className="text-xs text-destructive">{errors.sample_size.message}</p>}
             </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="measured_by_id">Measured by</Label>
-            <Controller
-              control={control}
-              name="measured_by_id"
-              render={({ field }) => (
-                <ActorSelect
-                  id="measured_by_id"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  invalid={!!errors.measured_by_id}
-                />
-              )}
-            />
-            {errors.measured_by_id && <p className="text-xs text-destructive">{errors.measured_by_id.message}</p>}
           </div>
 
           <DialogFooter>
