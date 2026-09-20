@@ -4,8 +4,9 @@ import { usePageTitle } from "@/components/layout/use-page-title";
 import { OverviewTab } from "@/pages/sales/overview-tab";
 import { RegularSalesTab } from "@/pages/sales/regular-sales-tab";
 import { BirdSalesTab } from "@/pages/sales/bird-sales-tab";
+import { IncomingTab } from "@/pages/sales/incoming-tab";
 
-const TABS = ["overview", "birds", "regular"] as const;
+const TABS = ["overview", "birds", "regular", "incoming"] as const;
 
 export function SalesPage() {
   usePageTitle("Sales");
@@ -24,6 +25,7 @@ export function SalesPage() {
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="birds">Bird Sales</TabsTrigger>
         <TabsTrigger value="regular">Regular Sales</TabsTrigger>
+        <TabsTrigger value="incoming">Incoming</TabsTrigger>
       </TabsList>
       <TabsContent value="overview">
         <OverviewTab />
@@ -33,6 +35,9 @@ export function SalesPage() {
       </TabsContent>
       <TabsContent value="regular">
         <RegularSalesTab />
+      </TabsContent>
+      <TabsContent value="incoming">
+        <IncomingTab />
       </TabsContent>
     </Tabs>
   );
