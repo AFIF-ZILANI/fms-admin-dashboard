@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { AlertTriangle, CheckCircle2, Package, Pencil, Plus, Search, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Package, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,8 @@ import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus } from "@/components/shared/status-tone";
-import { useGetData, usePostData, type Paginated } from "@/lib/api";
+import { useGetData, usePostData, useDelete, type Paginated } from "@/lib/api";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { humanizeEnum } from "@/lib/utils";
 import type { Item, ItemStockByLocation, LowStockItem } from "@/pages/inventory/types";
 import { StockBreakdownSheet } from "@/pages/inventory/stock-breakdown-sheet";
@@ -57,6 +58,10 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
 
   const deactivate = usePostData<Item, string>((id) => `/items/${id}/deactivate`, ["items"]);
   const reactivate = usePostData<Item, string>((id) => `/items/${id}/reactivate`, ["items"]);
+  // Hard delete is only allowed for an item with no history at all -- the server answers 409
+  // otherwise (see ItemService.remove), which surfaces here as the "deactivate instead" toast.
+  const remove = useDelete<null, string>((id) => `/items/${id}`, ["items"]);
+  const { confirm, confirmDialog } = useConfirm();
 
   // One fetch feeds both stock columns and both breakdown sheets (see GET /items/stock-by-location).
   const { data: stockRows } = useGetData<ItemStockByLocation[]>(
@@ -85,6 +90,21 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
     const mutation = item.is_active ? deactivate : reactivate;
     mutation.mutate(item.id, {
       onSuccess: () => toast.success(item.is_active ? "Item deactivated" : "Item reactivated"),
+      onError: (error) => toast.error(error.message),
+    });
+  };
+
+  const deleteItem = async (item: Item) => {
+    const ok = await confirm({
+      title: `Delete ${item.name}?`,
+      description:
+        "This permanently removes the item. It only works if the item was never used -- anything with purchases, stock, consumption or sales must be deactivated instead.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    remove.mutate(item.id, {
+      onSuccess: () => toast.success("Item deleted"),
       onError: (error) => toast.error(error.message),
     });
   };
@@ -150,6 +170,15 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
             disabled={(deactivate.isPending && deactivate.variables === i.id) || (reactivate.isPending && reactivate.variables === i.id)}
           >
             {i.is_active ? "Deactivate" : "Reactivate"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Delete item"
+            onClick={() => void deleteItem(i)}
+            disabled={remove.isPending && remove.variables === i.id}
+          >
+            <Trash2 />
           </Button>
         </div>
       ),
@@ -245,6 +274,8 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
         rows={breakdownRows}
         onOpenChange={(open) => !open && setBreakdown(null)}
       />
+
+      {confirmDialog}
     </div>
   );
 }
