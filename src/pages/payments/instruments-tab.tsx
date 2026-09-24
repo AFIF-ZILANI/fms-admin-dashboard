@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { CreditCard, Pencil, Plus } from "lucide-react";
+import { CreditCard, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus } from "@/components/shared/status-tone";
-import { useGetData, usePostData, type Paginated } from "@/lib/api";
+import { useGetData, usePostData, useDelete, type Paginated } from "@/lib/api";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { humanizeEnum } from "@/lib/utils";
 import { InstrumentBalanceCell } from "@/pages/payments/instrument-balance-cell";
 import { InstrumentFormDialog } from "@/pages/payments/instrument-form-dialog";
@@ -46,6 +47,26 @@ export function InstrumentsTab() {
     setFormOpen(true);
   };
 
+  // Deletable only while no payment has ever named it -- the server answers 409 otherwise,
+  // since a used instrument is part of the money trail and gets deactivated instead.
+  const remove = useDelete<null, string>((id) => `/payment-instruments/${id}`, ["payment-instruments"]);
+  const { confirm, confirmDialog } = useConfirm();
+
+  const deleteInstrument = async (instrument: PaymentInstrument) => {
+    const ok = await confirm({
+      title: `Delete ${instrument.label}?`,
+      description:
+        "This permanently removes the instrument. It only works if no payment has ever used it -- otherwise deactivate it instead.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    remove.mutate(instrument.id, {
+      onSuccess: () => toast.success("Instrument deleted"),
+      onError: (error) => toast.error(error.message),
+    });
+  };
+
   const columns: Column<PaymentInstrument>[] = [
     { key: "label", header: "Label", render: (i) => <span className="font-medium">{i.label}</span> },
     { key: "type", header: "Type", render: (i) => humanizeEnum(i.type) },
@@ -76,6 +97,15 @@ export function InstrumentsTab() {
           >
             {i.is_active ? "Deactivate" : "Reactivate"}
           </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Delete instrument"
+            onClick={() => void deleteInstrument(i)}
+            disabled={remove.isPending && remove.variables === i.id}
+          >
+            <Trash2 />
+          </Button>
         </div>
       ),
       className: "text-right",
@@ -105,6 +135,8 @@ export function InstrumentsTab() {
       />
 
       <InstrumentFormDialog open={formOpen} onOpenChange={setFormOpen} instrument={editing} />
+
+      {confirmDialog}
     </div>
   );
 }

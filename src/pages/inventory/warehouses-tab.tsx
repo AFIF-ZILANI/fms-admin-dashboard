@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Pencil, Plus, Warehouse as WarehouseIcon } from "lucide-react";
+import { Pencil, Plus, Trash2, Warehouse as WarehouseIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
-import { useGetData, type Paginated } from "@/lib/api";
+import { toast } from "sonner";
+import { useGetData, useDelete, type Paginated } from "@/lib/api";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import type { Warehouse } from "@/pages/inventory/types";
 import { WarehouseFormDialog } from "@/pages/inventory/warehouse-form-dialog";
 
@@ -23,6 +25,26 @@ export function WarehousesTab() {
     setFormOpen(true);
   };
 
+  // A warehouse has no is_active, so delete is the only way to clear a typo. The server
+  // refuses (409) the moment any purchase, adjustment or stock movement names it.
+  const remove = useDelete<null, string>((id) => `/warehouses/${id}`, ["warehouses"]);
+  const { confirm, confirmDialog } = useConfirm();
+
+  const deleteWarehouse = async (warehouse: Warehouse) => {
+    const ok = await confirm({
+      title: `Delete ${warehouse.name}?`,
+      description:
+        "This permanently removes the warehouse. It only works if nothing was ever stored, purchased or moved here -- otherwise rename it instead.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    remove.mutate(warehouse.id, {
+      onSuccess: () => toast.success("Warehouse deleted"),
+      onError: (error) => toast.error(error.message),
+    });
+  };
+
   const columns: Column<Warehouse>[] = [
     { key: "name", header: "Name", render: (w) => <span className="font-medium">{w.name}</span> },
     { key: "created", header: "Added", render: (w) => new Date(w.created_at).toLocaleDateString() },
@@ -30,9 +52,18 @@ export function WarehousesTab() {
       key: "actions",
       header: "",
       render: (w) => (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-1">
           <Button variant="ghost" size="icon-sm" aria-label="Rename warehouse" onClick={() => openEdit(w)}>
             <Pencil />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Delete warehouse"
+            onClick={() => void deleteWarehouse(w)}
+            disabled={remove.isPending && remove.variables === w.id}
+          >
+            <Trash2 />
           </Button>
         </div>
       ),
@@ -67,6 +98,8 @@ export function WarehousesTab() {
       />
 
       <WarehouseFormDialog open={formOpen} onOpenChange={setFormOpen} warehouse={editingWarehouse} />
+
+      {confirmDialog}
     </div>
   );
 }
