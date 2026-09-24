@@ -1,4 +1,4 @@
-import { AlertCircle, Users } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -48,12 +48,14 @@ export function TopOutstandingSuppliersCard() {
         <CardTitle className="text-base">Top outstanding suppliers</CardTitle>
       </CardHeader>
       <CardContent>
-        {isLoading && <Skeleton className="h-40 w-full" />}
+        {isLoading && <Skeleton className="h-20 w-full" />}
         {!isLoading && isError && (
           <EmptyState icon={AlertCircle} title="Couldn't load this data" description="Try refreshing the page." />
         )}
+        {/* Paid up is a good outcome, not a call to action, so it reads as one quiet line --
+            EmptyState's py-16 dashed box would punch a hole in the middle of the page. */}
         {!isLoading && !isError && ranked.length === 0 && (
-          <EmptyState icon={Users} title="No outstanding balances" description="Every supplier is paid up." />
+          <p className="text-sm text-muted-foreground">Every supplier is paid up.</p>
         )}
         {!isLoading && !isError && ranked.length > 0 && (
           <ul className="flex flex-col gap-2">

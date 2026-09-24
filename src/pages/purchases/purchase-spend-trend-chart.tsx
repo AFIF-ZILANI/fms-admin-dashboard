@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { AlertCircle, LineChart as LineChartIcon } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TooltipValueType } from "recharts";
@@ -7,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useGetData } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
-import { DayRangeToggle } from "@/pages/analytics/day-range-toggle";
 import {
   CHART_HEIGHT,
   chartAxisProps,
@@ -17,8 +15,11 @@ import {
 } from "@/pages/analytics/chart-theme";
 import type { PurchasesTrendPoint } from "@/pages/analytics/types";
 
-export function PurchaseSpendTrendChart() {
-  const [days, setDays] = useState(30);
+/** Range comes from the Purchases analytics block, which drives every figure in it from
+ * one control -- unlike the Analytics page's charts, which each own their own toggle. */
+type PurchaseSpendTrendChartProps = { days: number };
+
+export function PurchaseSpendTrendChart({ days }: PurchaseSpendTrendChartProps) {
   const { data, isLoading, isError } = useGetData<PurchasesTrendPoint[]>(`/analytics/purchases/trend?days=${days}`, [
     "analytics",
     "purchases",
@@ -31,7 +32,6 @@ export function PurchaseSpendTrendChart() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">Purchase spend trend</CardTitle>
-        <DayRangeToggle value={days} onValueChange={setDays} />
       </CardHeader>
       <CardContent>
         {isLoading && <Skeleton style={{ height: CHART_HEIGHT }} className="w-full" />}
