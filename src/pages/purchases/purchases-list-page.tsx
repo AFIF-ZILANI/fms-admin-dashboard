@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { CreditCard, Plus, Receipt, Wallet } from "lucide-react";
+import { CreditCard, Plus, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
-import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
@@ -41,13 +40,6 @@ export function PurchasesListPage() {
     dateTo,
   ]);
 
-  // KPI counts always reflect the unfiltered full set, not the currently-filtered view --
-  // fetched separately so applying a filter doesn't make the tiles change (same pattern as Regular Sales).
-  const { data: allPurchases, isLoading: allPurchasesLoading } = useGetData<Paginated<Purchase>>(
-    "/purchases?limit=100",
-    ["purchases", "ALL", "ALL", "", ""]
-  );
-
   // Purchase's own `supplier` relation has no name (see types.ts) — look it up separately.
   const { data: suppliers } = useGetData<Paginated<Supplier>>("/suppliers?limit=100", ["suppliers"]);
   const supplierName = (id: string | null) => suppliers?.results.find((s) => s.id === id)?.profile.name ?? "—";
@@ -55,15 +47,9 @@ export function PurchasesListPage() {
     "item-categories",
     "active",
   ]);
-  const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("PURCHASE");
+  const { trueAmounts } = useOutstanding("PURCHASE");
 
   const purchases = data?.results ?? [];
-  const allResults = allPurchases?.results ?? [];
-  const totalSpent = allResults.reduce((sum, p) => sum + parseFloat(p.total_amount), 0);
-  const totalDue = allResults.reduce(
-    (sum, p) => sum + parseFloat(trueAmounts(p.id, p.paid_amount, p.due_amount).due),
-    0
-  );
 
   const columns: Column<Purchase>[] = [
     { key: "date", header: "Date", render: (p) => new Date(p.purchase_date).toLocaleDateString() },
@@ -112,21 +98,7 @@ export function PurchasesListPage() {
     <div className="flex flex-col gap-4">
       <ReorderSuggestionsPanel onRecordPurchase={() => navigate("/purchases/new")} />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard
-          label="Total purchases"
-          value={allPurchases?.total ?? allResults.length}
-          icon={Receipt}
-          isLoading={allPurchasesLoading}
-        />
-        <KPICard label="Total spent" value={formatMoney(totalSpent)} icon={Wallet} isLoading={allPurchasesLoading} />
-        <KPICard
-          label="Outstanding due"
-          value={formatMoney(totalDue)}
-          icon={Wallet}
-          isLoading={allPurchasesLoading || outstandingLoading}
-        />
-      </div>
+      <PurchasesAnalyticsSection />
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -202,8 +174,6 @@ export function PurchasesListPage() {
           action: { label: "Record purchase", onClick: () => navigate("/purchases/new") },
         }}
       />
-
-      <PurchasesAnalyticsSection />
 
       <PaymentCreateDialog
         open={paymentPurchaseId !== null}
