@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ASSET_STATUS_TONE } from "@/components/shared/status-tone";
 import { DataTable, type Column } from "@/components/shared/data-table";
-import { useGetData, usePatchData } from "@/lib/api";
+import { useGetData, usePatchData, useDelete } from "@/lib/api";
+import { useConfirm } from "@/components/shared/confirm-dialog";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Asset, AssetDepreciation, AssetStatus } from "@/pages/inventory/types";
-import { History } from "lucide-react";
+import { History, Trash2 } from "lucide-react";
 
 type AssetDetailSheetProps = {
   assetId: string | null;
@@ -32,6 +33,30 @@ export function AssetDetailSheet({ assetId, onOpenChange }: AssetDetailSheetProp
         onError: (error) => toast.error(error.message),
       }
     );
+  };
+
+  // Only offered while the asset has no depreciation: past that it carries cost history and
+  // the server refuses the delete, so Retire/Dispose is the honest action to show instead.
+  const remove = useDelete<null, void>(`/assets/${assetId}`, ["assets"]);
+  const { confirm, confirmDialog } = useConfirm();
+  const deletable = (asset?.depreciations?.length ?? 0) === 0;
+
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: `Delete ${asset?.name}?`,
+      description:
+        "This permanently removes the asset registration and frees its coded unit to be registered again. The unit itself and its stock history are untouched.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    remove.mutate(undefined, {
+      onSuccess: () => {
+        toast.success("Asset deleted");
+        onOpenChange(false);
+      },
+      onError: (error) => toast.error(error.message),
+    });
   };
 
   const depreciationColumns: Column<AssetDepreciation>[] = [
@@ -78,16 +103,32 @@ export function AssetDetailSheet({ assetId, onOpenChange }: AssetDetailSheetProp
             />
           </div>
 
-          {asset.status === "ACTIVE" && (
+          {(asset.status === "ACTIVE" || deletable) && (
             <SheetFooter>
-              <Button variant="outline" onClick={() => handleStatus("RETIRED")} disabled={setStatus.isPending}>
-                Retire
-              </Button>
-              <Button variant="destructive" onClick={() => handleStatus("DISPOSED")} disabled={setStatus.isPending}>
-                Dispose
-              </Button>
+              {deletable && (
+                <Button
+                  variant="ghost"
+                  className="mr-auto"
+                  onClick={() => void handleDelete()}
+                  disabled={remove.isPending}
+                >
+                  <Trash2 />
+                  Delete
+                </Button>
+              )}
+              {asset.status === "ACTIVE" && (
+                <>
+                  <Button variant="outline" onClick={() => handleStatus("RETIRED")} disabled={setStatus.isPending}>
+                    Retire
+                  </Button>
+                  <Button variant="destructive" onClick={() => handleStatus("DISPOSED")} disabled={setStatus.isPending}>
+                    Dispose
+                  </Button>
+                </>
+              )}
             </SheetFooter>
           )}
+          {confirmDialog}
         </SheetContent>
       )}
     </Sheet>
