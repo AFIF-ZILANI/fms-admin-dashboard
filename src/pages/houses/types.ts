@@ -1,6 +1,10 @@
 export const HOUSE_TYPES = ["BROODER", "GROWER", "LAYER"] as const;
 export type HouseType = (typeof HOUSE_TYPES)[number];
 
+/** Turnaround stage an operator sets on an empty house. Ignored while birds are in it. */
+export const HOUSE_PHASES = ["READY", "CLEANING", "DISINFECTING", "RESTING", "MAINTENANCE"] as const;
+export type HousePhase = (typeof HOUSE_PHASES)[number];
+
 /** One batch currently holding birds in this house (docs/api.md — GET /api/houses). */
 export type HouseOccupant = {
   batch_id: string;
@@ -20,6 +24,7 @@ export type House = {
   type: HouseType;
   number: number;
   capacity: number | null;
+  phase: HousePhase;
   is_active: boolean;
   created_at: string;
   updated_at: string;

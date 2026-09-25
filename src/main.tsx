@@ -6,6 +6,7 @@ import { ThemeProvider } from 'next-themes'
 import './index.css'
 import App from './App.tsx'
 import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 const queryClient = new QueryClient()
 
@@ -13,9 +14,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <TooltipProvider delay={200}>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </TooltipProvider>
         <Toaster />
       </QueryClientProvider>
     </ThemeProvider>

@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
-import { StatusBadge } from "@/components/shared/status-badge";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { HOUSE_TYPES, type HouseListRow, type HouseType } from "@/pages/houses/types";
-import { housePhase } from "@/pages/houses/house-status";
+import { houseStatus } from "@/pages/houses/house-status";
+import { HousePhaseCell } from "@/pages/houses/house-phase-cell";
 import { HouseFormDialog } from "@/pages/houses/house-form-dialog";
 
 const TYPE_LABEL: Record<HouseType, string> = { BROODER: "Brooder", GROWER: "Grower", LAYER: "Layer" };
@@ -62,9 +63,9 @@ export function HousesListPage() {
             <Link
               to={`/batches/${h.occupants[0]!.batch_id}`}
               onClick={(e) => e.stopPropagation()}
-              className="font-medium hover:underline"
+              className="w-fit font-medium hover:underline"
             >
-              {h.occupants[0]!.batch_code}
+              <TruncatedText text={h.occupants[0]!.batch_code} />
             </Link>
             {h.occupants.length > 1 && (
               <span className="text-xs text-muted-foreground">+{h.occupants.length - 1} more in here</span>
@@ -137,16 +138,8 @@ export function HousesListPage() {
     {
       key: "status",
       header: "Status",
-      render: (h) => {
-        const { tone, label, detail } = housePhase(h);
-        return (
-          <div className="flex flex-col items-start gap-1">
-            <StatusBadge tone={tone} label={label} />
-            {detail && <span className="text-xs text-muted-foreground">{detail}</span>}
-          </div>
-        );
-      },
-      sortValue: (h) => housePhase(h).label,
+      render: (h) => <HousePhaseCell house={h} />,
+      sortValue: (h) => houseStatus(h).label,
     },
   ];
 
