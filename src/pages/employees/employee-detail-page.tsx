@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Award, Banknote, CreditCard, Pencil, Plus, Wallet } from "lucide-react";
+import { ArrowLeft, Award, Banknote, CreditCard, Pencil, Plus, UserMinus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,7 +9,9 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus, EMPLOYMENT_STATUS_TONE } from "@/components/shared/status-tone";
 import { usePageTitle } from "@/components/layout/use-page-title";
-import { useGetData, type Paginated } from "@/lib/api";
+import { useConfirm } from "@/components/shared/confirm-dialog";
+import { useGetData, usePostData, type Paginated } from "@/lib/api";
+import { toast } from "sonner";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { EmployeeActivityTimeline } from "@/pages/employees/employee-activity-timeline";
 import { ScoreEntryDialog } from "@/pages/employees/score-entry-dialog";
@@ -44,6 +46,26 @@ export function EmployeeDetailPage() {
     ["payroll-records", id]
   );
   const { trueAmounts } = useOutstanding("PAYROLL");
+  const { confirm, confirmDialog } = useConfirm();
+
+  const terminate = usePostData<Employee, string>((eid) => `/employees/${eid}/terminate`, [
+    "employees",
+  ]);
+
+  const onTerminate = async (name: string) => {
+    const ok = await confirm({
+      title: `Terminate ${name}?`,
+      description:
+        "Their employment ends and the profile goes inactive. Their performance and payroll history stays on record.",
+      confirmLabel: "Terminate",
+      destructive: true,
+    });
+    if (!ok || !id) return;
+    terminate.mutate(id, {
+      onSuccess: () => toast.success(`${name} terminated`),
+      onError: (error) => toast.error(error.message),
+    });
+  };
 
   const entries = scoreEntries?.results ?? [];
   const records = payrollRecords?.results ?? [];
@@ -148,6 +170,17 @@ export function EmployeeDetailPage() {
               <Pencil />
               Edit
             </Button>
+            {employee.employment_status !== "TERMINATED" && (
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={terminate.isPending}
+                onClick={() => void onTerminate(employee.profile.name)}
+              >
+                <UserMinus />
+                Terminate
+              </Button>
+            )}
           </div>
         </CardHeader>
       </Card>
@@ -208,6 +241,8 @@ export function EmployeeDetailPage() {
           scoreEntries={entries}
         />
       )}
+      {confirmDialog}
+
       <PaymentCreateDialog
         open={paymentPayrollId !== null}
         onOpenChange={(open) => !open && setPaymentPayrollId(null)}
