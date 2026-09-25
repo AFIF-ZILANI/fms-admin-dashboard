@@ -12,9 +12,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NumericInput } from "@/components/utils/NumaricInput";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
@@ -149,12 +149,12 @@ export function FeedingProgramFormDialog({ open, onOpenChange, batchId }: Feedin
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="start_day">Start day</Label>
-              <Input id="start_day" type="number" {...register("start_day")} aria-invalid={!!errors.start_day} />
+              <NumericInput id="start_day" allowZero {...register("start_day")} aria-invalid={!!errors.start_day} />
               {errors.start_day && <p className="text-xs text-destructive">{errors.start_day.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="end_day">End day (optional)</Label>
-              <Input id="end_day" type="number" {...register("end_day")} aria-invalid={!!errors.end_day} />
+              <NumericInput id="end_day" allowZero {...register("end_day")} aria-invalid={!!errors.end_day} />
               {errors.end_day && <p className="text-xs text-destructive">{errors.end_day.message}</p>}
             </div>
           </div>

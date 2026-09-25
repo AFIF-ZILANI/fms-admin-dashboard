@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PositiveIntegerInput } from "@/components/utils/NumaricInput";
 import { DoctorSelect } from "@/components/shared/doctor-select";
 import { usePostData } from "@/lib/api";
 import type { Batch, Vaccination } from "@/pages/batches/types";
@@ -115,7 +116,7 @@ export function VaccinationFormDialog({ open, onOpenChange, batch }: Vaccination
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="dosage">Dosage</Label>
-              <Input id="dosage" type="number" {...register("dosage")} aria-invalid={!!errors.dosage} />
+              <PositiveIntegerInput id="dosage" {...register("dosage")} aria-invalid={!!errors.dosage} />
               {errors.dosage && <p className="text-xs text-destructive">{errors.dosage.message}</p>}
             </div>
           </div>

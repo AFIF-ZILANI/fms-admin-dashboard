@@ -13,9 +13,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PositiveIntegerInput } from "@/components/utils/NumaricInput";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { ALLOCATION_REASONS, type BatchHouseAllocation } from "@/pages/batches/types";
@@ -161,7 +161,7 @@ export function AllocationFormDialog({ open, onOpenChange, batchId }: Allocation
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="quantity">Quantity</Label>
-              <Input id="quantity" type="number" {...register("quantity")} aria-invalid={!!errors.quantity} />
+              <PositiveIntegerInput id="quantity" {...register("quantity")} aria-invalid={!!errors.quantity} />
               {errors.quantity && <p className="text-xs text-destructive">{errors.quantity.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">

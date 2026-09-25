@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Plus, Wheat } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { NumericInput } from "@/components/utils/NumaricInput";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -56,7 +56,7 @@ function EndProgramDialog({
         <DialogHeader>
           <DialogTitle>Set end day</DialogTitle>
         </DialogHeader>
-        <Input type="number" value={endDay} onChange={(e) => setEndDay(e.target.value)} autoFocus />
+        <NumericInput allowZero value={endDay} onChange={(e) => setEndDay(e.target.value)} autoFocus />
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
