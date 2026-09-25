@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { SectionHeader } from "@/components/shared/section-header";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, usePatchData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Batch, BatchFeedingProgram, Consumption } from "@/pages/batches/types";
@@ -101,10 +103,20 @@ export function FeedingProgramTab({ batch }: { batch: Batch }) {
   };
 
   const columns: Column<BatchFeedingProgram>[] = [
-    { key: "feed_type", header: "Feed type", render: (p) => humanizeEnum(p.feed_type) },
+    {
+      key: "window",
+      header: "Days",
+      render: (p) => `Day ${p.start_day} — ${p.end_day ?? "ongoing"}`,
+      sortValue: (p) => p.start_day,
+    },
+    { key: "feed_type", header: "Feed type", render: (p) => humanizeEnum(p.feed_type), sortValue: (p) => p.feed_type },
     { key: "item", header: "Item", render: (p) => itemName(p.item_id) },
-    { key: "start", header: "Start day", render: (p) => p.start_day, numeric: true },
-    { key: "end", header: "End day", render: (p) => p.end_day ?? "—", numeric: true },
+    {
+      key: "status",
+      header: "Status",
+      render: (p) =>
+        p.end_day == null ? <StatusBadge tone="success" label="Active" /> : <StatusBadge tone="neutral" label="Ended" />,
+    },
     {
       key: "actual",
       header: "Actual consumed",
@@ -113,6 +125,7 @@ export function FeedingProgramTab({ batch }: { batch: Batch }) {
         return `${actualConsumed(p).toLocaleString()} ${item ? humanizeEnum(item.unit) : ""}`.trim();
       },
       numeric: true,
+      sortValue: (p) => actualConsumed(p),
     },
     {
       key: "actions",
@@ -121,7 +134,7 @@ export function FeedingProgramTab({ batch }: { batch: Batch }) {
         p.end_day == null ? (
           <div className="flex justify-end">
             <Button variant="ghost" size="sm" onClick={() => setEndingRow(p)}>
-              End
+              Set end day
             </Button>
           </div>
         ) : null,
@@ -130,27 +143,33 @@ export function FeedingProgramTab({ batch }: { batch: Batch }) {
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
+    <div className="flex flex-col gap-3">
+      <SectionHeader
+        title="Feeding program"
+        description="Which feed this batch gets, over which days of the cycle, against what was actually consumed."
+      >
         <Button size="sm" onClick={() => setFormOpen(true)}>
           <Plus />
-          Add row
+          Add feed phase
         </Button>
-      </div>
-
-      {consumptions && consumptions.total > consumptions.results.length && (
-        <p className="text-xs text-muted-foreground">
-          Showing the latest {consumptions.results.length} of {consumptions.total} consumption records — "Actual
-          consumed" may undercount early-cycle rows.
-        </p>
-      )}
+      </SectionHeader>
 
       <DataTable
         columns={columns}
-        rows={(data?.results ?? []).sort((a, b) => a.start_day - b.start_day)}
+        rows={(data?.results ?? []).slice().sort((a, b) => a.start_day - b.start_day)}
         rowKey={(p) => p.id}
         isLoading={isLoading}
-        empty={{ icon: Wheat, title: "No feeding program defined for this batch yet" }}
+        empty={{
+          icon: Wheat,
+          title: "No feeding program defined for this batch yet",
+          description: "Add a feed phase to plan what these birds eat and when.",
+          action: { label: "Add feed phase", onClick: () => setFormOpen(true) },
+        }}
+        footer={
+          consumptions && consumptions.total > consumptions.results.length
+            ? `Showing the latest ${consumptions.results.length} of ${consumptions.total} consumption records — "Actual consumed" may undercount early-cycle rows.`
+            : undefined
+        }
       />
 
       <FeedingProgramFormDialog open={formOpen} onOpenChange={setFormOpen} batchId={batch.id} />
