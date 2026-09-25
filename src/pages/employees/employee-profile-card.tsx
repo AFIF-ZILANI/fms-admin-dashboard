@@ -1,6 +1,7 @@
+import { Link } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ageFrom, type Employee } from "@/pages/employees/types";
+import { EDUCATION_LABELS, ageFrom, type EducationLevel, type Employee } from "@/pages/employees/types";
 
 function Detail({ label, value }: { label: string; value: string | null | undefined }) {
   return (
@@ -35,8 +36,24 @@ export function EmployeeProfileCard({ employee }: { employee: Employee }) {
           <Detail label="Marital status" value={title(employee.marital_status)} />
           <Detail label="NID number" value={employee.nid_number} />
           <Detail label="Address" value={employee.profile.address} />
-          <Detail label="Education" value={employee.education} />
-          <Detail label="Experience" value={employee.experience} />
+          <Detail
+            label="Education"
+            value={
+              employee.education
+                ? (EDUCATION_LABELS[employee.education as EducationLevel] ?? employee.education)
+                : null
+            }
+          />
+          <Detail
+            label="Experience"
+            value={
+              employee.experience_years === null
+                ? employee.experience
+                : [`${employee.experience_years} yr`, employee.experience]
+                    .filter(Boolean)
+                    .join(" · ")
+            }
+          />
           <Detail label="Joined" value={new Date(employee.joining_date).toLocaleDateString()} />
           <Detail
             label="Probation ends"
@@ -51,22 +68,47 @@ export function EmployeeProfileCard({ employee }: { employee: Employee }) {
         <Separator />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Detail
-            label="Emergency contact"
-            value={contactLine(
-              employee.emergency_name,
-              employee.emergency_relation,
-              employee.emergency_phone
+          <div className="flex flex-col gap-3">
+            <Detail
+              label="Emergency contact"
+              value={contactLine(
+                employee.emergency_name,
+                employee.emergency_relation,
+                employee.emergency_phone
+              )}
+            />
+            {(employee.emergency_email || employee.emergency_address) && (
+              <p className="text-xs text-muted-foreground">
+                {[employee.emergency_email, employee.emergency_address].filter(Boolean).join(" · ")}
+              </p>
             )}
-          />
-          <Detail
-            label="Reference"
-            value={contactLine(
-              employee.reference_name,
-              employee.reference_relation,
-              employee.reference_phone
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {employee.reference_employee ? (
+              <div className="flex flex-col gap-0.5">
+                <p className="text-xs text-muted-foreground">Reference</p>
+                <Link
+                  to={`/employees/${employee.reference_employee.id}`}
+                  className="text-sm underline-offset-2 hover:underline"
+                >
+                  {employee.reference_employee.profile.name}
+                </Link>
+                <p className="text-xs text-muted-foreground">
+                  Employee · {employee.reference_employee.profile.mobile}
+                </p>
+              </div>
+            ) : (
+              <Detail
+                label="Reference"
+                value={contactLine(
+                  employee.reference_name,
+                  employee.reference_address,
+                  employee.reference_phone
+                )}
+              />
             )}
-          />
+          </div>
         </div>
       </CardContent>
     </Card>

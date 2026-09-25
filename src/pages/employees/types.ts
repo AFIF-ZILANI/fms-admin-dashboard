@@ -9,6 +9,54 @@ export const EMPLOYEE_ROLE_LABELS: Record<EmployeeRole, string> = {
   INTERN: "Intern",
 };
 
+/** Mirrors EDUCATION_LEVELS in server/src/validators/employee.validator.ts. */
+export const EDUCATION_LEVELS = [
+  "NONE",
+  "PRIMARY",
+  "JSC",
+  "SSC",
+  "DAKHIL",
+  "HSC",
+  "ALIM",
+  "DIPLOMA",
+  "BACHELOR",
+  "MASTER",
+] as const;
+export type EducationLevel = (typeof EDUCATION_LEVELS)[number];
+
+export const EDUCATION_LABELS: Record<EducationLevel, string> = {
+  NONE: "No formal education",
+  PRIMARY: "Primary (Class 5)",
+  JSC: "JSC (Class 8)",
+  SSC: "SSC",
+  DAKHIL: "Dakhil",
+  HSC: "HSC",
+  ALIM: "Alim",
+  DIPLOMA: "Diploma",
+  BACHELOR: "Bachelor's",
+  MASTER: "Master's",
+};
+
+/**
+ * Offered in the emergency-contact relationship dropdown. "Other" reveals a
+ * free-text field, so the stored column is a plain string, not an enum.
+ */
+export const RELATIONSHIPS = [
+  "Father",
+  "Mother",
+  "Spouse",
+  "Brother",
+  "Sister",
+  "Son",
+  "Daughter",
+  "Uncle",
+  "Aunt",
+  "Cousin",
+  "Friend",
+  "Neighbour",
+] as const;
+export const RELATIONSHIP_OTHER = "Other";
+
 export const MARITAL_STATUSES = ["SINGLE", "MARRIED", "DIVORCED", "WIDOWED"] as const;
 export type MaritalStatus = (typeof MARITAL_STATUSES)[number];
 
@@ -48,13 +96,18 @@ export type Employee = {
   marital_status: MaritalStatus | null;
   education: string | null;
   experience: string | null;
+  experience_years: number | null;
   nid_number: string | null;
-  reference_name: string | null;
-  reference_relation: string | null;
-  reference_phone: string | null;
   emergency_name: string | null;
   emergency_relation: string | null;
   emergency_phone: string | null;
+  emergency_email: string | null;
+  emergency_address: string | null;
+  reference_employee_id: string | null;
+  reference_employee: { id: string; profile: { name: string; mobile: string } } | null;
+  reference_name: string | null;
+  reference_phone: string | null;
+  reference_address: string | null;
   employment_status: EmploymentStatus;
   probation_end_date: string | null;
 

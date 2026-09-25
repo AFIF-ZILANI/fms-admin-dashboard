@@ -10,16 +10,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { NumericInput } from "@/components/utils/NumaricInput";
 import { ImageUpload, type UploadedImage } from "@/components/shared/image-upload";
+import { PhoneInput } from "@/components/shared/phone-input";
+import { toE164, toLocalDigits } from "@/lib/phone";
 import { usePageTitle } from "@/components/layout/use-page-title";
-import { useGetData, usePatchData, usePostData } from "@/lib/api";
+import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
 import {
+  EDUCATION_LABELS,
+  EDUCATION_LEVELS,
   EMPLOYEE_ROLES,
   EMPLOYEE_ROLE_LABELS,
   EMPLOYMENT_STATUSES,
   EMPLOYMENT_STATUS_LABELS,
   MARITAL_STATUSES,
+  RELATIONSHIPS,
+  RELATIONSHIP_OTHER,
+  type EducationLevel,
   type Employee,
   type EmploymentStatus,
   type MaritalStatus,
@@ -27,32 +34,59 @@ import {
 
 // Mirrors server/src/validators/employee.validator.ts. Everything docs/employee_hire.md
 // marks Mandatory is required; the reference contact is Recommended, so optional.
-const employeeSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
-  mobile: z.string().trim().min(1, "Mobile is required"),
-  email: z.string().trim().optional(),
-  address: z.string().trim().min(1, "Address is required"),
-  date_of_birth: z.string().min(1, "Date of birth is required"),
-  marital_status: z.enum(MARITAL_STATUSES, "Select a marital status"),
-  nid_number: z.string().trim().min(1, "NID number is required"),
+// A phone field holds only the local digits — PhoneInput supplies the +880, and
+// toE164 puts it back at submit time.
+const localPhone = z
+  .string()
+  .min(9, "Enter a 9-10 digit number")
+  .max(10, "Enter a 9-10 digit number");
 
-  role: z.enum(EMPLOYEE_ROLES, "Select a role"),
-  salary: z.coerce.number().positive("Salary must be positive"),
-  joining_date: z.string().min(1, "Joining date is required"),
-  employment_status: z.enum(EMPLOYMENT_STATUSES),
-  probation_end_date: z.string().optional(),
+const employeeSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name is required"),
+    mobile: localPhone,
+    email: z.string().trim().email("Enter a valid email"),
+    address: z.string().trim().min(1, "Address is required"),
+    date_of_birth: z.string().min(1, "Date of birth is required"),
+    marital_status: z.enum(MARITAL_STATUSES, "Select a marital status"),
+    nid_number: z.string().trim().min(1, "NID number is required"),
 
-  education: z.string().trim().min(1, "Educational background is required"),
-  experience: z.string().trim().min(1, "Experience is required"),
+    role: z.enum(EMPLOYEE_ROLES, "Select a role"),
+    salary: z.coerce.number().positive("Salary must be positive"),
+    joining_date: z.string().min(1, "Joining date is required"),
+    employment_status: z.enum(EMPLOYMENT_STATUSES),
+    probation_end_date: z.string().optional(),
 
-  emergency_name: z.string().trim().min(1, "Name is required"),
-  emergency_relation: z.string().trim().min(1, "Relationship is required"),
-  emergency_phone: z.string().trim().min(1, "Phone is required"),
+    education: z.enum(EDUCATION_LEVELS, "Select the highest level completed"),
+    experience_years: z.coerce.number().int().min(0, "Years can't be negative"),
+    experience: z.string().trim().min(1, "Describe the experience"),
 
-  reference_name: z.string().trim().optional(),
-  reference_relation: z.string().trim().optional(),
-  reference_phone: z.string().trim().optional(),
-});
+    emergency_name: z.string().trim().min(1, "Name is required"),
+    emergency_relation: z.string().trim().min(1, "Relationship is required"),
+    emergency_phone: localPhone,
+    emergency_email: z.union([z.string().trim().email("Enter a valid email"), z.literal("")]),
+    emergency_address: z.string().trim().optional(),
+
+    // "employee" vs "outside" is a form-only toggle; the API sees one kind or
+    // the other, with the unused kind sent as null.
+    reference_kind: z.enum(["NONE", "EMPLOYEE", "OUTSIDE"]),
+    reference_employee_id: z.string().optional(),
+    reference_name: z.string().trim().optional(),
+    reference_phone: z.string().trim().optional(),
+    reference_address: z.string().trim().optional(),
+  })
+  .refine((d) => d.reference_kind !== "EMPLOYEE" || !!d.reference_employee_id, {
+    message: "Pick the employee who referred them",
+    path: ["reference_employee_id"],
+  })
+  .refine((d) => d.reference_kind !== "OUTSIDE" || !!d.reference_name?.trim(), {
+    message: "Name is required",
+    path: ["reference_name"],
+  })
+  .refine((d) => d.reference_kind !== "OUTSIDE" || (d.reference_phone ?? "").length >= 9, {
+    message: "Enter a 9-10 digit number",
+    path: ["reference_phone"],
+  });
 
 // z.coerce on salary makes the schema's input type differ from its output type —
 // RHF's 3rd generic carries that through (same pattern as ItemFormPage).
@@ -73,14 +107,19 @@ function blank(): EmployeeFormInput {
     joining_date: new Date().toISOString().slice(0, 10),
     employment_status: "APPOINTED",
     probation_end_date: "",
-    education: "",
+    education: undefined as unknown as EducationLevel,
+    experience_years: undefined,
     experience: "",
     emergency_name: "",
     emergency_relation: "",
     emergency_phone: "",
+    emergency_email: "",
+    emergency_address: "",
+    reference_kind: "NONE",
+    reference_employee_id: "",
     reference_name: "",
-    reference_relation: "",
     reference_phone: "",
+    reference_address: "",
   };
 }
 
@@ -88,7 +127,7 @@ function toFormValues(e: Employee): EmployeeFormInput {
   const date = (d: string | null) => (d ? d.slice(0, 10) : "");
   return {
     name: e.profile.name,
-    mobile: e.profile.mobile,
+    mobile: toLocalDigits(e.profile.mobile),
     email: e.profile.email ?? "",
     address: e.profile.address ?? "",
     date_of_birth: date(e.date_of_birth),
@@ -99,14 +138,19 @@ function toFormValues(e: Employee): EmployeeFormInput {
     joining_date: date(e.joining_date),
     employment_status: e.employment_status,
     probation_end_date: date(e.probation_end_date),
-    education: e.education ?? "",
+    education: (e.education ?? undefined) as EducationLevel,
+    experience_years: e.experience_years ?? undefined,
     experience: e.experience ?? "",
     emergency_name: e.emergency_name ?? "",
     emergency_relation: e.emergency_relation ?? "",
-    emergency_phone: e.emergency_phone ?? "",
+    emergency_phone: toLocalDigits(e.emergency_phone),
+    emergency_email: e.emergency_email ?? "",
+    emergency_address: e.emergency_address ?? "",
+    reference_kind: e.reference_employee_id ? "EMPLOYEE" : e.reference_name ? "OUTSIDE" : "NONE",
+    reference_employee_id: e.reference_employee_id ?? "",
     reference_name: e.reference_name ?? "",
-    reference_relation: e.reference_relation ?? "",
-    reference_phone: e.reference_phone ?? "",
+    reference_phone: toLocalDigits(e.reference_phone),
+    reference_address: e.reference_address ?? "",
   };
 }
 
@@ -181,6 +225,19 @@ export function EmployeeFormPage() {
   }
 
   const employmentStatus = useWatch({ control, name: "employment_status" });
+  const referenceKind = useWatch({ control, name: "reference_kind" });
+  const emergencyRelation = useWatch({ control, name: "emergency_relation" });
+
+  // "Other" isn't stored — it just reveals a free-text box, so the dropdown
+  // shows it selected whenever the saved relationship isn't one of the listed ones.
+  const relationIsOther =
+    !!emergencyRelation && !RELATIONSHIPS.includes(emergencyRelation as (typeof RELATIONSHIPS)[number]);
+
+  // Only active employees can vouch for a new hire, and nobody can refer themselves.
+  const { data: colleagues } = useGetData<Paginated<Employee>>("/employees?limit=100", ["employees"]);
+  const referenceOptions = (colleagues?.results ?? []).filter(
+    (c) => c.profile.is_active && c.id !== id
+  );
 
   const createEmployee = usePostData<Employee, object>("/employees", ["employees"]);
   const updateEmployee = usePatchData<Employee, object>(() => `/employees/${id}`, ["employees"]);
@@ -195,16 +252,43 @@ export function EmployeeFormPage() {
     setPhotoError(null);
 
     const blankToUndefined = (v: string | undefined) => (v && v.trim() ? v : undefined);
+    const { reference_kind, ...rest } = values;
+
+    // The unused reference kind is sent as null, not omitted: on an edit, only an
+    // explicit null clears what was stored before the switch.
+    const reference =
+      reference_kind === "EMPLOYEE"
+        ? {
+            reference_employee_id: values.reference_employee_id,
+            reference_name: null,
+            reference_phone: null,
+            reference_address: null,
+          }
+        : reference_kind === "OUTSIDE"
+          ? {
+              reference_employee_id: null,
+              reference_name: values.reference_name,
+              reference_phone: toE164(values.reference_phone ?? ""),
+              reference_address: blankToUndefined(values.reference_address) ?? null,
+            }
+          : {
+              reference_employee_id: null,
+              reference_name: null,
+              reference_phone: null,
+              reference_address: null,
+            };
+
     const payload = {
-      ...values,
-      email: blankToUndefined(values.email),
+      ...rest,
+      mobile: toE164(values.mobile),
+      emergency_phone: toE164(values.emergency_phone),
+      emergency_email: blankToUndefined(values.emergency_email),
+      emergency_address: blankToUndefined(values.emergency_address),
+      ...reference,
       probation_end_date:
         values.employment_status === "PROBATION"
           ? blankToUndefined(values.probation_end_date)
           : undefined,
-      reference_name: blankToUndefined(values.reference_name),
-      reference_relation: blankToUndefined(values.reference_relation),
-      reference_phone: blankToUndefined(values.reference_phone),
       // Only send the photo when it changed — an unchanged edit shouldn't write a new Avatars row.
       ...(photo.public_id !== employee?.profile.avatar?.public_id ? { avatar: photo } : {}),
       // joining_date isn't accepted on update — the server keeps the original.
@@ -255,7 +339,18 @@ export function EmployeeFormPage() {
                   <Input id="name" {...register("name")} aria-invalid={!!errors.name} />
                 </Field>
                 <Field id="mobile" label="Mobile" error={errors.mobile?.message}>
-                  <Input id="mobile" {...register("mobile")} aria-invalid={!!errors.mobile} />
+                  <Controller
+                    control={control}
+                    name="mobile"
+                    render={({ field }) => (
+                      <PhoneInput
+                        id="mobile"
+                        value={field.value}
+                        onChange={field.onChange}
+                        invalid={!!errors.mobile}
+                      />
+                    )}
+                  />
                 </Field>
                 <Field id="date_of_birth" label="Date of birth" error={errors.date_of_birth?.message}>
                   <Input
@@ -292,8 +387,8 @@ export function EmployeeFormPage() {
                 <Field id="nid_number" label="NID number" error={errors.nid_number?.message}>
                   <Input id="nid_number" {...register("nid_number")} aria-invalid={!!errors.nid_number} />
                 </Field>
-                <Field id="email" label="Email" hint="(optional)">
-                  <Input id="email" type="email" {...register("email")} />
+                <Field id="email" label="Email" error={errors.email?.message}>
+                  <Input id="email" type="email" {...register("email")} aria-invalid={!!errors.email} />
                 </Field>
                 <Field id="address" label="Address" error={errors.address?.message} className="col-span-2">
                   <Input id="address" {...register("address")} aria-invalid={!!errors.address} />
@@ -332,10 +427,11 @@ export function EmployeeFormPage() {
                 />
               </Field>
               <Field id="salary" label="Monthly salary" error={errors.salary?.message}>
-                <Input
+                <NumericInput
                   id="salary"
-                  type="number"
-                  step="0.01"
+                  allowDecimal
+                  decimalPlaces={2}
+                  placeholder="15000"
                   {...register("salary")}
                   aria-invalid={!!errors.salary}
                 />
@@ -391,21 +487,61 @@ export function EmployeeFormPage() {
               <CardTitle className="text-base">Background</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4">
-              <Field
-                id="education"
-                label="Educational background"
-                hint="highest level completed"
-                error={errors.education?.message}
-              >
-                <Input id="education" {...register("education")} aria-invalid={!!errors.education} />
-              </Field>
+              <div className="grid grid-cols-[1fr_7rem] gap-4">
+                <Field
+                  id="education"
+                  label="Education"
+                  hint="highest level completed"
+                  error={errors.education?.message}
+                >
+                  <Controller
+                    control={control}
+                    name="education"
+                    render={({ field }) => (
+                      <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                        <SelectTrigger id="education" className="w-full" aria-invalid={!!errors.education}>
+                          <SelectValue>
+                            {(v: string) => (v ? EDUCATION_LABELS[v as EducationLevel] : "Select level")}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EDUCATION_LEVELS.map((level) => (
+                            <SelectItem key={level} value={level}>
+                              {EDUCATION_LABELS[level]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </Field>
+                <Field
+                  id="experience_years"
+                  label="Experience"
+                  hint="years"
+                  error={errors.experience_years?.message}
+                >
+                  <NumericInput
+                    id="experience_years"
+                    allowZero
+                    placeholder="0"
+                    {...register("experience_years")}
+                    aria-invalid={!!errors.experience_years}
+                  />
+                </Field>
+              </div>
               <Field
                 id="experience"
-                label="Experience"
-                hint="prior relevant work"
+                label="Where and what"
+                hint="employer, role, duties"
                 error={errors.experience?.message}
               >
-                <Input id="experience" {...register("experience")} aria-invalid={!!errors.experience} />
+                <Input
+                  id="experience"
+                  placeholder="Layer farm in Gazipur, feeding and cleaning"
+                  {...register("experience")}
+                  aria-invalid={!!errors.experience}
+                />
               </Field>
             </CardContent>
           </Card>
@@ -414,53 +550,198 @@ export function EmployeeFormPage() {
             <CardHeader>
               <CardTitle className="text-base">Emergency contact</CardTitle>
             </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <Field id="emergency_name" label="Name" error={errors.emergency_name?.message}>
+                <Input
+                  id="emergency_name"
+                  {...register("emergency_name")}
+                  aria-invalid={!!errors.emergency_name}
+                />
+              </Field>
+              <Field id="emergency_phone" label="Phone" error={errors.emergency_phone?.message}>
+                <Controller
+                  control={control}
+                  name="emergency_phone"
+                  render={({ field }) => (
+                    <PhoneInput
+                      id="emergency_phone"
+                      value={field.value}
+                      onChange={field.onChange}
+                      invalid={!!errors.emergency_phone}
+                    />
+                  )}
+                />
+              </Field>
+
+              <Field
+                id="emergency_relation"
+                label="Relationship"
+                error={errors.emergency_relation?.message}
+                className={relationIsOther ? "" : "col-span-2"}
+              >
+                <Controller
+                  control={control}
+                  name="emergency_relation"
+                  render={({ field }) => (
+                    <Select
+                      value={relationIsOther ? RELATIONSHIP_OTHER : (field.value ?? "")}
+                      onValueChange={(v) => field.onChange(v === RELATIONSHIP_OTHER ? " " : v)}
+                    >
+                      <SelectTrigger
+                        id="emergency_relation"
+                        className="w-full"
+                        aria-invalid={!!errors.emergency_relation}
+                      >
+                        <SelectValue>{(v: string) => v.trim() || "Select relationship"}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {RELATIONSHIPS.map((r) => (
+                          <SelectItem key={r} value={r}>
+                            {r}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value={RELATIONSHIP_OTHER}>{RELATIONSHIP_OTHER}…</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+              {relationIsOther && (
+                <Field id="emergency_relation_other" label="Specify">
+                  <Controller
+                    control={control}
+                    name="emergency_relation"
+                    render={({ field }) => (
+                      <Input
+                        id="emergency_relation_other"
+                        autoFocus
+                        placeholder="Employer, in-law…"
+                        value={field.value?.trim() === "" ? "" : field.value}
+                        onChange={(e) => field.onChange(e.target.value || " ")}
+                      />
+                    )}
+                  />
+                </Field>
+              )}
+
+              <Field id="emergency_email" label="Email" hint="(optional)" error={errors.emergency_email?.message}>
+                <Input id="emergency_email" type="email" {...register("emergency_email")} />
+              </Field>
+              <Field id="emergency_address" label="Address" hint="(optional)">
+                <Input id="emergency_address" {...register("emergency_address")} />
+              </Field>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Reference
+                <span className="ml-1.5 text-sm font-normal text-muted-foreground">(optional)</span>
+              </CardTitle>
+            </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <div className="grid grid-cols-3 gap-4">
-                <Field id="emergency_name" label="Name" error={errors.emergency_name?.message}>
-                  <Input
-                    id="emergency_name"
-                    {...register("emergency_name")}
-                    aria-invalid={!!errors.emergency_name}
-                  />
-                </Field>
-                <Field id="emergency_relation" label="Relationship" error={errors.emergency_relation?.message}>
-                  <Input
-                    id="emergency_relation"
-                    placeholder="father, spouse…"
-                    {...register("emergency_relation")}
-                    aria-invalid={!!errors.emergency_relation}
-                  />
-                </Field>
-                <Field id="emergency_phone" label="Phone" error={errors.emergency_phone?.message}>
-                  <Input
-                    id="emergency_phone"
-                    {...register("emergency_phone")}
-                    aria-invalid={!!errors.emergency_phone}
-                  />
-                </Field>
-              </div>
+              {/* A reference is one kind or the other, never both — a segmented
+                  toggle so the invalid combination can't be entered at all. */}
+              <Controller
+                control={control}
+                name="reference_kind"
+                render={({ field }) => (
+                  <div className="flex w-fit gap-1 rounded-md bg-muted p-1">
+                    {(
+                      [
+                        ["NONE", "None"],
+                        ["EMPLOYEE", "An employee"],
+                        ["OUTSIDE", "Someone outside"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => field.onChange(value)}
+                        className={`rounded px-3 py-1 text-sm transition-colors ${
+                          field.value === value
+                            ? "bg-background font-medium shadow-xs"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              />
 
-              <Separator />
+              {referenceKind === "EMPLOYEE" && (
+                <Field
+                  id="reference_employee_id"
+                  label="Referred by"
+                  error={errors.reference_employee_id?.message}
+                >
+                  <Controller
+                    control={control}
+                    name="reference_employee_id"
+                    render={({ field }) => (
+                      <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                        <SelectTrigger
+                          id="reference_employee_id"
+                          className="w-full"
+                          aria-invalid={!!errors.reference_employee_id}
+                        >
+                          <SelectValue>
+                            {(v: string) =>
+                              referenceOptions.find((o) => o.id === v)?.profile.name ??
+                              "Select an employee"
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {referenceOptions.map((o) => (
+                            <SelectItem key={o.id} value={o.id}>
+                              {o.profile.name} · {EMPLOYEE_ROLE_LABELS[o.role]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </Field>
+              )}
 
-              <div>
-                <p className="mb-3 text-sm font-medium">
-                  Reference
-                  <span className="ml-1 font-normal text-muted-foreground">
-                    (recommended — a previous employer or a known local person)
-                  </span>
-                </p>
-                <div className="grid grid-cols-3 gap-4">
-                  <Field id="reference_name" label="Name">
-                    <Input id="reference_name" {...register("reference_name")} />
+              {referenceKind === "OUTSIDE" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <Field id="reference_name" label="Name" error={errors.reference_name?.message}>
+                    <Input
+                      id="reference_name"
+                      {...register("reference_name")}
+                      aria-invalid={!!errors.reference_name}
+                    />
                   </Field>
-                  <Field id="reference_relation" label="Relationship">
-                    <Input id="reference_relation" {...register("reference_relation")} />
+                  <Field id="reference_phone" label="Phone" error={errors.reference_phone?.message}>
+                    <Controller
+                      control={control}
+                      name="reference_phone"
+                      render={({ field }) => (
+                        <PhoneInput
+                          id="reference_phone"
+                          value={field.value}
+                          onChange={field.onChange}
+                          invalid={!!errors.reference_phone}
+                        />
+                      )}
+                    />
                   </Field>
-                  <Field id="reference_phone" label="Phone">
-                    <Input id="reference_phone" {...register("reference_phone")} />
+                  <Field id="reference_address" label="Address" hint="(optional)" className="col-span-2">
+                    <Input id="reference_address" {...register("reference_address")} />
                   </Field>
                 </div>
-              </div>
+              )}
+
+              {referenceKind === "NONE" && (
+                <p className="text-sm text-muted-foreground">
+                  A previous employer or a known local person who can vouch for them.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
