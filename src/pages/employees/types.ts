@@ -1,12 +1,37 @@
 export const EMPLOYEE_ROLES = ["MANAGER", "WORKER", "INTERN"] as const;
 export type EmployeeRole = (typeof EMPLOYEE_ROLES)[number];
 
+// The farm's own words for the three roles (docs/employee_hire.md). The Owner
+// isn't here: they hold the trade licence, which is an Admins profile.
+export const EMPLOYEE_ROLE_LABELS: Record<EmployeeRole, string> = {
+  MANAGER: "General Manager",
+  WORKER: "Shed Worker",
+  INTERN: "Intern",
+};
+
+export const MARITAL_STATUSES = ["SINGLE", "MARRIED", "DIVORCED", "WIDOWED"] as const;
+export type MaritalStatus = (typeof MARITAL_STATUSES)[number];
+
+export const EMPLOYMENT_STATUSES = ["APPOINTED", "PROBATION", "CONFIRMED", "TERMINATED"] as const;
+export type EmploymentStatus = (typeof EMPLOYMENT_STATUSES)[number];
+
+export const EMPLOYMENT_STATUS_LABELS: Record<EmploymentStatus, string> = {
+  APPOINTED: "Appointed",
+  PROBATION: "On probation",
+  CONFIRMED: "Confirmed",
+  TERMINATED: "Terminated",
+};
+
+export type Avatar = { id: string; public_id: string; image_url: string };
+
 export type EmployeeProfile = {
   id: string;
   email: string | null;
   name: string;
   mobile: string;
   address: string | null;
+  avatar_id: string | null;
+  avatar: Avatar | null;
   is_active: boolean;
 };
 
@@ -17,10 +42,40 @@ export type Employee = {
   salary: string;
   joining_date: string;
   rating: number | null;
+
+  // hire profile — null on employees created before the hire-profile migration
+  date_of_birth: string | null;
+  marital_status: MaritalStatus | null;
+  education: string | null;
+  experience: string | null;
+  nid_number: string | null;
+  reference_name: string | null;
+  reference_relation: string | null;
+  reference_phone: string | null;
+  emergency_name: string | null;
+  emergency_relation: string | null;
+  emergency_phone: string | null;
+  employment_status: EmploymentStatus;
+  probation_end_date: string | null;
+
   created_at: string;
   updated_at: string;
   profile: EmployeeProfile;
 };
+
+/**
+ * Whole years elapsed, stepping back a year when this year's birthday hasn't
+ * happened yet — the reason age is derived here and never stored.
+ */
+export function ageFrom(dateOfBirth: string | null): number | null {
+  if (!dateOfBirth) return null;
+  const dob = new Date(dateOfBirth);
+  const now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const monthDelta = now.getMonth() - dob.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < dob.getDate())) age -= 1;
+  return age;
+}
 
 // Fixed point value per criterion (server snapshots this at entry time — see
 // lib/performance-criteria.ts — mirrored here only for display, never sent

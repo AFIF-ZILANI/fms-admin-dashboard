@@ -7,22 +7,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { activeStatus } from "@/components/shared/status-tone";
+import { activeStatus, EMPLOYMENT_STATUS_TONE } from "@/components/shared/status-tone";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { EmployeeActivityTimeline } from "@/pages/employees/employee-activity-timeline";
-import { EmployeeFormDialog } from "@/pages/employees/employee-form-dialog";
 import { ScoreEntryDialog } from "@/pages/employees/score-entry-dialog";
 import { PayrollRunDialog } from "@/pages/employees/payroll-run-dialog";
-import type { Employee, PayrollRecord, PerformanceScoreEntry } from "@/pages/employees/types";
+import { EmployeeProfileCard } from "@/pages/employees/employee-profile-card";
+import {
+  EMPLOYEE_ROLE_LABELS,
+  EMPLOYMENT_STATUS_LABELS,
+  type Employee,
+  type PayrollRecord,
+  type PerformanceScoreEntry,
+} from "@/pages/employees/types";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
 
 export function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [editOpen, setEditOpen] = useState(false);
   const [scoreOpen, setScoreOpen] = useState(false);
   const [payrollOpen, setPayrollOpen] = useState(false);
   const [paymentPayrollId, setPaymentPayrollId] = useState<string | null>(null);
@@ -112,17 +117,34 @@ export function EmployeeDetailPage() {
       </Button>
 
       <Card>
-        <CardHeader className="flex flex-row items-start justify-between">
-          <div>
-            <CardTitle className="text-xl">{employee.profile.name}</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {humanizeEnum(employee.role)} · {employee.profile.mobile}
-              {employee.profile.email ? ` · ${employee.profile.email}` : ""}
-            </p>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            {employee.profile.avatar ? (
+              <img
+                src={employee.profile.avatar.image_url}
+                alt={employee.profile.name}
+                className="size-16 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-muted text-xl font-medium text-muted-foreground">
+                {employee.profile.name.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <div className="min-w-0">
+              <CardTitle className="text-xl">{employee.profile.name}</CardTitle>
+              <p className="truncate text-sm text-muted-foreground">
+                {EMPLOYEE_ROLE_LABELS[employee.role]} · {employee.profile.mobile}
+                {employee.profile.email ? ` · ${employee.profile.email}` : ""}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
+            <StatusBadge
+              tone={EMPLOYMENT_STATUS_TONE[employee.employment_status]}
+              label={EMPLOYMENT_STATUS_LABELS[employee.employment_status]}
+            />
             <StatusBadge tone={tone} label={label} />
-            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/employees/${employee.id}/edit`)}>
               <Pencil />
               Edit
             </Button>
@@ -135,6 +157,8 @@ export function EmployeeDetailPage() {
         <KPICard label="MTD score sum" value={mtdSum > 0 ? `+${mtdSum}` : mtdSum} icon={Award} />
         <KPICard label="Rating" value={employee.rating ? `★ ${employee.rating.toFixed(1)}` : "—"} icon={Award} />
       </div>
+
+      <EmployeeProfileCard employee={employee} />
 
       <EmployeeActivityTimeline scoreEntries={entries} payrollRecords={records} />
 
@@ -174,7 +198,6 @@ export function EmployeeDetailPage() {
         </CardContent>
       </Card>
 
-      <EmployeeFormDialog open={editOpen} onOpenChange={setEditOpen} employee={employee} />
       {id && <ScoreEntryDialog open={scoreOpen} onOpenChange={setScoreOpen} employeeId={id} />}
       {id && (
         <PayrollRunDialog

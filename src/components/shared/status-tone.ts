@@ -1,5 +1,6 @@
 import type { Tone } from "@/components/shared/status-badge";
 import type { AllocationType, AssetStatus, StockUnitStatus } from "@/pages/inventory/types";
+import type { EmploymentStatus } from "@/pages/employees/types";
 
 /** `is_active` recurs on Houses/Suppliers/Customers/Employees/Admins/Items — one mapping, reused everywhere. */
 export function activeStatus(isActive: boolean): { tone: Tone; label: string } {
@@ -27,4 +28,12 @@ export const ALLOCATION_TYPE_TONE: Record<AllocationType, Tone> = {
   ALLOCATION: "success",
   REALLOCATION: "info",
   RETURN: "warning",
+};
+
+/** Shared across the employee roster table and the employee detail header. */
+export const EMPLOYMENT_STATUS_TONE: Record<EmploymentStatus, Tone> = {
+  APPOINTED: "info",
+  PROBATION: "warning",
+  CONFIRMED: "success",
+  TERMINATED: "neutral",
 };
