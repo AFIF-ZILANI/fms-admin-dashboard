@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NumericInput, PositiveIntegerInput } from "@/components/utils/NumaricInput";
 import { usePostData } from "@/lib/api";
 import type { Batch, WeightRecord } from "@/pages/batches/types";
 
@@ -139,10 +140,10 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="average_wt_grams">Average weight (g)</Label>
-              <Input
+              <NumericInput
                 id="average_wt_grams"
-                type="number"
-                step="0.01"
+                allowDecimal
+                decimalPlaces={2}
                 {...register("average_wt_grams")}
                 aria-invalid={!!errors.average_wt_grams}
               />
@@ -152,9 +153,8 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="sample_size">Sample size</Label>
-              <Input
+              <PositiveIntegerInput
                 id="sample_size"
-                type="number"
                 {...register("sample_size")}
                 aria-invalid={!!errors.sample_size}
               />

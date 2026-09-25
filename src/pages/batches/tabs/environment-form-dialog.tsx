@@ -12,9 +12,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NumericInput } from "@/components/utils/NumaricInput";
 import { usePostData } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { TIME_PERIODS, type Batch, type EnvironmentRecord } from "@/pages/batches/types";
@@ -170,15 +170,15 @@ export function EnvironmentFormDialog({ open, onOpenChange, batch }: Environment
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="temperature_c">Temperature (°C)</Label>
-              <Input id="temperature_c" type="number" step="0.1" {...register("temperature_c")} aria-invalid={!!errors.temperature_c} />
+              <NumericInput id="temperature_c" allowDecimal decimalPlaces={1} {...register("temperature_c")} aria-invalid={!!errors.temperature_c} />
               {errors.temperature_c && <p className="text-xs text-destructive">{errors.temperature_c.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="humidity_percent">Humidity (%)</Label>
-              <Input
+              <NumericInput
                 id="humidity_percent"
-                type="number"
-                step="0.1"
+                allowDecimal
+                decimalPlaces={1}
                 {...register("humidity_percent")}
                 aria-invalid={!!errors.humidity_percent}
               />
@@ -191,20 +191,20 @@ export function EnvironmentFormDialog({ open, onOpenChange, batch }: Environment
           <div className="grid grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="ammonia_ppm">Ammonia (ppm)</Label>
-              <Input id="ammonia_ppm" type="number" step="0.1" {...register("ammonia_ppm")} aria-invalid={!!errors.ammonia_ppm} />
+              <NumericInput id="ammonia_ppm" allowDecimal decimalPlaces={1} {...register("ammonia_ppm")} aria-invalid={!!errors.ammonia_ppm} />
               {errors.ammonia_ppm && <p className="text-xs text-destructive">{errors.ammonia_ppm.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="co2_ppm">CO2 (ppm)</Label>
-              <Input id="co2_ppm" type="number" step="0.1" {...register("co2_ppm")} aria-invalid={!!errors.co2_ppm} />
+              <NumericInput id="co2_ppm" allowDecimal decimalPlaces={1} {...register("co2_ppm")} aria-invalid={!!errors.co2_ppm} />
               {errors.co2_ppm && <p className="text-xs text-destructive">{errors.co2_ppm.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="air_pressure_hpa">Pressure (hPa)</Label>
-              <Input
+              <NumericInput
                 id="air_pressure_hpa"
-                type="number"
-                step="0.1"
+                allowDecimal
+                decimalPlaces={1}
                 {...register("air_pressure_hpa")}
                 aria-invalid={!!errors.air_pressure_hpa}
               />

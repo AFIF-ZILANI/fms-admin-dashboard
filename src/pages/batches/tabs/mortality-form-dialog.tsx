@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PositiveIntegerInput } from "@/components/utils/NumaricInput";
 import { usePostData } from "@/lib/api";
 import type { Batch, MortalityLog } from "@/pages/batches/types";
 
@@ -130,7 +131,7 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="count_died">Count died</Label>
-              <Input id="count_died" type="number" {...register("count_died")} aria-invalid={!!errors.count_died} />
+              <PositiveIntegerInput id="count_died" {...register("count_died")} aria-invalid={!!errors.count_died} />
               {errors.count_died && <p className="text-xs text-destructive">{errors.count_died.message}</p>}
             </div>
           </div>
