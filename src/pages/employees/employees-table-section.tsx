@@ -9,13 +9,18 @@ import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus } from "@/components/shared/status-tone";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
-import { EmployeeFormDialog } from "@/pages/employees/employee-form-dialog";
-import { EMPLOYEE_ROLES, type Employee, type EmployeeRole } from "@/pages/employees/types";
+import { formatMoney } from "@/lib/utils";
+import { EMPLOYMENT_STATUS_TONE } from "@/components/shared/status-tone";
+import {
+  EMPLOYEE_ROLES,
+  EMPLOYEE_ROLE_LABELS,
+  EMPLOYMENT_STATUS_LABELS,
+  type Employee,
+  type EmployeeRole,
+} from "@/pages/employees/types";
 
 export function EmployeesTableSection() {
   const navigate = useNavigate();
-  const [formOpen, setFormOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<EmployeeRole | "ALL">("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
@@ -42,16 +47,48 @@ export function EmployeesTableSection() {
   const employees = allEmployees
     .filter((e) => roleFilter === "ALL" || e.role === roleFilter)
     .filter((e) => statusFilter === "ALL" || (statusFilter === "ACTIVE") === e.profile.is_active)
-    .filter((e) => !q || e.profile.name.toLowerCase().includes(q));
+    .filter((e) => !q || e.profile.name.toLowerCase().includes(q) || e.profile.mobile.includes(q));
 
   const isFiltered = !!q || roleFilter !== "ALL" || statusFilter !== "ALL";
 
   const columns: Column<Employee>[] = [
-    { key: "name", header: "Name", render: (e) => <span className="font-medium">{e.profile.name}</span> },
-    { key: "role", header: "Role", render: (e) => humanizeEnum(e.role) },
+    {
+      key: "name",
+      header: "Name",
+      render: (e) => (
+        <div className="flex items-center gap-2.5">
+          {e.profile.avatar ? (
+            <img
+              src={e.profile.avatar.image_url}
+              alt=""
+              className="size-8 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+              {e.profile.name.charAt(0).toUpperCase()}
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="truncate font-medium">{e.profile.name}</p>
+            <p className="truncate text-xs text-muted-foreground">{e.profile.mobile}</p>
+          </div>
+        </div>
+      ),
+    },
+    { key: "role", header: "Role", render: (e) => EMPLOYEE_ROLE_LABELS[e.role] },
     { key: "salary", header: "Salary", render: (e) => formatMoney(e.salary), numeric: true },
     { key: "rating", header: "Rating", render: (e) => (e.rating ? `★ ${e.rating.toFixed(1)}` : "—"), numeric: true },
     { key: "joining_date", header: "Joined", render: (e) => new Date(e.joining_date).toLocaleDateString() },
+    {
+      key: "employment_status",
+      header: "Stage",
+      render: (e) => (
+        <StatusBadge
+          tone={EMPLOYMENT_STATUS_TONE[e.employment_status]}
+          label={EMPLOYMENT_STATUS_LABELS[e.employment_status]}
+        />
+      ),
+    },
     {
       key: "status",
       header: "Status",
@@ -91,7 +128,7 @@ export function EmployeesTableSection() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name…"
+              placeholder="Search name or mobile…"
               className="pl-8"
               aria-label="Search employees"
             />
@@ -110,14 +147,14 @@ export function EmployeesTableSection() {
           <Select value={roleFilter} onValueChange={(v) => setRoleFilter((v ?? "ALL") as EmployeeRole | "ALL")}>
             <SelectTrigger className="w-40">
               <SelectValue>
-                {(v: EmployeeRole | "ALL" | "") => (v && v !== "ALL" ? humanizeEnum(v) : "All roles")}
+                {(v: EmployeeRole | "ALL" | "") => (v && v !== "ALL" ? EMPLOYEE_ROLE_LABELS[v] : "All roles")}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All roles</SelectItem>
               {EMPLOYEE_ROLES.map((role) => (
                 <SelectItem key={role} value={role}>
-                  {humanizeEnum(role)}
+                  {EMPLOYEE_ROLE_LABELS[role]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -137,7 +174,7 @@ export function EmployeesTableSection() {
           </Select>
         </div>
 
-        <Button onClick={() => setFormOpen(true)}>
+        <Button onClick={() => navigate("/employees/new")}>
           <Plus />
           Add employee
         </Button>
@@ -162,12 +199,10 @@ export function EmployeesTableSection() {
                 icon: Users,
                 title: "No employees yet",
                 description: "Add your first employee.",
-                action: { label: "Add employee", onClick: () => setFormOpen(true) },
+                action: { label: "Add employee", onClick: () => navigate("/employees/new") },
               }
         }
       />
-
-      <EmployeeFormDialog open={formOpen} onOpenChange={setFormOpen} />
     </div>
   );
 }
