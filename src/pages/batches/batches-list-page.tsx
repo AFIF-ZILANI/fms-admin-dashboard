@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge, type Tone } from "@/components/shared/status-badge";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
@@ -71,7 +72,12 @@ export function BatchesListPage() {
   });
 
   const columns: Column<Batch>[] = [
-    { key: "code", header: "Batch code", render: (b) => <span className="font-medium">{b.batch_code}</span> },
+    {
+      key: "code",
+      header: "Batch code",
+      render: (b) => <TruncatedText text={b.batch_code} className="font-medium" />,
+      sortValue: (b) => b.batch_code,
+    },
     { key: "breed", header: "Breed", render: (b) => humanizeEnum(b.breed) },
     { key: "phase", header: "Phase", render: (b) => humanizeEnum(b.phase) },
     { key: "days", header: "Days running", render: (b) => ageInDays(b.starting_date), numeric: true },
