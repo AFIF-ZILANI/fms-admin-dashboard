@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Plus, Syringe, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { SectionHeader } from "@/components/shared/section-header";
 import { useGetData, type Paginated } from "@/lib/api";
+import { formatDate } from "@/lib/utils";
 import type { Batch, Medication, Vaccination } from "@/pages/batches/types";
 import { MedicationFormDialog } from "@/pages/batches/tabs/medication-form-dialog";
 import { VaccinationFormDialog } from "@/pages/batches/tabs/vaccination-form-dialog";
@@ -36,7 +37,7 @@ export function TreatmentsTab({ batch }: { batch: Batch }) {
     doctorId ? (doctors?.results.find((d) => d.id === doctorId)?.profile.name ?? "—") : "—";
 
   const medicationColumns: Column<Medication>[] = [
-    { key: "date", header: "Date", render: (m) => new Date(m.date).toLocaleDateString() },
+    { key: "date", header: "Date", render: (m) => formatDate(m.date), sortValue: (m) => m.date },
     { key: "medicine", header: "Medicine", render: (m) => m.medicine_name },
     { key: "dosage", header: "Dosage", render: (m) => m.dosage },
     { key: "cause", header: "Cause", render: (m) => m.cause ?? "—" },
@@ -46,7 +47,7 @@ export function TreatmentsTab({ batch }: { batch: Batch }) {
   ];
 
   const vaccinationColumns: Column<Vaccination>[] = [
-    { key: "date", header: "Date", render: (v) => new Date(v.date).toLocaleDateString() },
+    { key: "date", header: "Date", render: (v) => formatDate(v.date), sortValue: (v) => v.date },
     { key: "vaccine", header: "Vaccine", render: (v) => v.vaccine_name },
     { key: "dosage", header: "Dosage", render: (v) => v.dosage, numeric: true },
     { key: "cause", header: "Cause", render: (v) => v.cause ?? "—" },
@@ -56,44 +57,58 @@ export function TreatmentsTab({ batch }: { batch: Batch }) {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Medications</CardTitle>
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-3">
+        <SectionHeader title="Medications" description="Treatments given to this batch, and who administered them.">
           <Button size="sm" onClick={() => setMedicationOpen(true)}>
             <Plus />
             Log medication
           </Button>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            columns={medicationColumns}
-            rows={medications?.results ?? []}
-            rowKey={(m) => m.id}
-            isLoading={medicationsLoading}
-            empty={{ icon: Pill, title: "No medications logged for this batch" }}
-          />
-        </CardContent>
-      </Card>
+        </SectionHeader>
+        <DataTable
+          columns={medicationColumns}
+          rows={(medications?.results ?? []).slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())}
+          rowKey={(m) => m.id}
+          isLoading={medicationsLoading}
+          empty={{
+            icon: Pill,
+            title: "No medications logged for this batch",
+            description: "Record a treatment to keep the health history complete.",
+            action: { label: "Log medication", onClick: () => setMedicationOpen(true) },
+          }}
+          footer={
+            medications && medications.total > medications.results.length
+              ? `Showing the latest ${medications.results.length} of ${medications.total} medications.`
+              : undefined
+          }
+        />
+      </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Vaccinations</CardTitle>
+      <div className="flex flex-col gap-3">
+        <SectionHeader title="Vaccinations" description="Vaccine schedule as actually delivered in the house.">
           <Button size="sm" onClick={() => setVaccinationOpen(true)}>
             <Plus />
             Log vaccination
           </Button>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            columns={vaccinationColumns}
-            rows={vaccinations?.results ?? []}
-            rowKey={(v) => v.id}
-            isLoading={vaccinationsLoading}
-            empty={{ icon: Syringe, title: "No vaccinations logged for this batch" }}
-          />
-        </CardContent>
-      </Card>
+        </SectionHeader>
+        <DataTable
+          columns={vaccinationColumns}
+          rows={(vaccinations?.results ?? []).slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())}
+          rowKey={(v) => v.id}
+          isLoading={vaccinationsLoading}
+          empty={{
+            icon: Syringe,
+            title: "No vaccinations logged for this batch",
+            description: "Record a dose to keep the vaccination history complete.",
+            action: { label: "Log vaccination", onClick: () => setVaccinationOpen(true) },
+          }}
+          footer={
+            vaccinations && vaccinations.total > vaccinations.results.length
+              ? `Showing the latest ${vaccinations.results.length} of ${vaccinations.total} vaccinations.`
+              : undefined
+          }
+        />
+      </div>
 
       <MedicationFormDialog open={medicationOpen} onOpenChange={setMedicationOpen} batch={batch} />
       <VaccinationFormDialog open={vaccinationOpen} onOpenChange={setVaccinationOpen} batch={batch} />
