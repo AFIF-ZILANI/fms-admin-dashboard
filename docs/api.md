@@ -412,10 +412,10 @@ on create.
 
 | Method | Path | Status | Body / Query |
 |---|---|---|---|
-| GET | `/api/houses` | 200 | query: `type?`, `is_active?`, `is_available?`; each row carries `occupants[] { batch_id, batch_code, batch_status, alive, placed, since, expected_selling_date }` and `last_vacated_at` |
+| GET | `/api/houses` | 200 | query: `type?`, `is_active?`, `is_available?`, `phase?`; each row carries `occupants[] { batch_id, batch_code, batch_status, alive, placed, since, expected_selling_date }` and `last_vacated_at` |
 | GET | `/api/houses/:id` | 200 | — |
 | POST | `/api/houses` | 201 | `{ name, type, number, capacity? }` |
-| PATCH | `/api/houses/:id` | 200 | any subset of create fields |
+| PATCH | `/api/houses/:id` | 200 | any subset of create fields, plus `phase` (`READY`/`CLEANING`/`DISINFECTING`/`RESTING`/`MAINTENANCE`) |
 | POST | `/api/houses/:id/deactivate` | 200 | — |
 | POST | `/api/houses/:id/reactivate` | 200 | — |
 
