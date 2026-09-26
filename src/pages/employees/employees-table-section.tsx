@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Search, Users, X } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { activeStatus } from "@/components/shared/status-tone";
-import { useGetData, usePostData, type Paginated } from "@/lib/api";
+import { activeStatus, EMPLOYMENT_STATUS_TONE } from "@/components/shared/status-tone";
+import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
-import { EMPLOYMENT_STATUS_TONE } from "@/components/shared/status-tone";
 import {
   EMPLOYEE_ROLES,
   EMPLOYEE_ROLE_LABELS,
@@ -26,18 +24,6 @@ export function EmployeesTableSection() {
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
 
   const { data, isLoading } = useGetData<Paginated<Employee>>("/employees?limit=100", ["employees"]);
-
-  const deactivate = usePostData<Employee, string>((id) => `/employees/${id}/deactivate`, ["employees"]);
-  const reactivate = usePostData<Employee, string>((id) => `/employees/${id}/reactivate`, ["employees"]);
-
-  const toggleActive = (employee: Employee, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const mutation = employee.profile.is_active ? deactivate : reactivate;
-    mutation.mutate(employee.id, {
-      onSuccess: () => toast.success(employee.profile.is_active ? "Employee deactivated" : "Employee reactivated"),
-      onError: (error) => toast.error(error.message),
-    });
-  };
 
   const allEmployees = data?.results ?? [];
 
@@ -96,26 +82,6 @@ export function EmployeesTableSection() {
         const { tone, label } = activeStatus(e.profile.is_active);
         return <StatusBadge tone={tone} label={label} />;
       },
-    },
-    {
-      key: "actions",
-      header: "",
-      render: (e) => (
-        <div className="flex justify-end gap-1">
-          <Button
-            variant={e.profile.is_active ? "destructive" : "outline"}
-            size="sm"
-            onClick={(ev) => toggleActive(e, ev)}
-            disabled={
-              (deactivate.isPending && deactivate.variables === e.id) ||
-              (reactivate.isPending && reactivate.variables === e.id)
-            }
-          >
-            {e.profile.is_active ? "Deactivate" : "Reactivate"}
-          </Button>
-        </div>
-      ),
-      className: "text-right",
     },
   ];
 
