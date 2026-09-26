@@ -285,10 +285,13 @@ export function EmployeeFormPage() {
       emergency_email: blankToUndefined(values.emergency_email),
       emergency_address: blankToUndefined(values.emergency_address),
       ...reference,
+      // Explicit null, never an omitted key: on a PATCH an omitted key means
+      // "leave unchanged", which is how a confirmed employee kept showing the
+      // deadline from their probation. The service enforces this too.
       probation_end_date:
         values.employment_status === "PROBATION"
-          ? blankToUndefined(values.probation_end_date)
-          : undefined,
+          ? (blankToUndefined(values.probation_end_date) ?? null)
+          : null,
       // Only send the photo when it changed — an unchanged edit shouldn't write a new Avatars row.
       ...(photo.public_id !== employee?.profile.avatar?.public_id ? { avatar: photo } : {}),
       // joining_date isn't accepted on update — the server keeps the original.
