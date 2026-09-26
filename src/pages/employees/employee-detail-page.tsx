@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Award, Banknote, CreditCard, Pencil, Plus, UserMinus, Wallet } from "lucide-react";
+import { ArrowLeft, Award, Banknote, CreditCard, Pencil, Plus, UserMinus, UserPlus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,6 +52,10 @@ export function EmployeeDetailPage() {
     "employees",
   ]);
 
+  const reinstate = usePostData<Employee, string>((eid) => `/employees/${eid}/reinstate`, [
+    "employees",
+  ]);
+
   const onTerminate = async (name: string) => {
     const ok = await confirm({
       title: `Terminate ${name}?`,
@@ -63,6 +67,20 @@ export function EmployeeDetailPage() {
     if (!ok || !id) return;
     terminate.mutate(id, {
       onSuccess: () => toast.success(`${name} terminated`),
+      onError: (error) => toast.error(error.message),
+    });
+  };
+
+  const onReinstate = async (name: string) => {
+    const ok = await confirm({
+      title: `Reinstate ${name}?`,
+      description:
+        "They come back as active staff at the Appointed stage, so the appointment and probation paperwork starts over.",
+      confirmLabel: "Reinstate",
+    });
+    if (!ok || !id) return;
+    reinstate.mutate(id, {
+      onSuccess: () => toast.success(`${name} reinstated`),
       onError: (error) => toast.error(error.message),
     });
   };
@@ -170,7 +188,17 @@ export function EmployeeDetailPage() {
               <Pencil />
               Edit
             </Button>
-            {employee.employment_status !== "TERMINATED" && (
+            {employee.employment_status === "TERMINATED" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={reinstate.isPending}
+                onClick={() => void onReinstate(employee.profile.name)}
+              >
+                <UserPlus />
+                Reinstate
+              </Button>
+            ) : (
               <Button
                 variant="destructive"
                 size="sm"
