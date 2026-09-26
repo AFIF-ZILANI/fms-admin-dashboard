@@ -189,8 +189,10 @@ export function EmployeeDetailPage() {
               Edit
             </Button>
             {employee.employment_status === "TERMINATED" ? (
+              // Primary, not outline: on a terminated employee's page this is the
+              // one thing you'd come here to do, and an outline button sits at the
+              // same weight as Edit -- which is how it got missed.
               <Button
-                variant="outline"
                 size="sm"
                 disabled={reinstate.isPending}
                 onClick={() => void onReinstate(employee.profile.name)}
