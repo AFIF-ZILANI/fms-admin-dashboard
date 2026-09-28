@@ -269,7 +269,6 @@ export type EmployeePayoutAccount = {
   branch_name: string | null;
   routing_number: string | null;
   holder_relation: string | null;
-  consent_doc_url: string | null;
   verified_by_id: string | null;
   verified_at: string | null;
   active_from: string;
