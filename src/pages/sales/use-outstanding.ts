@@ -11,7 +11,7 @@ type PaidByRefRow = { ref_id: string; total_paid: string };
  * already uses (GET /payments/total-paid).
  *
  * PAYROLL has no snapshot of its own (PayrollRecord stores only
- * final_salary) -- callers pass snapshotPaid="0" and snapshotDue=final_salary
+ * total_pay) -- callers pass snapshotPaid="0" and snapshotDue=total_pay
  * so the whole record starts as due, same as PaymentCreateDialog's ref
  * options already treat it.
  *

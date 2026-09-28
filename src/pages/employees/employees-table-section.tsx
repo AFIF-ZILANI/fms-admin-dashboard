@@ -62,7 +62,7 @@ export function EmployeesTableSection() {
       ),
     },
     { key: "role", header: "Role", render: (e) => EMPLOYEE_ROLE_LABELS[e.role] },
-    { key: "salary", header: "Salary", render: (e) => formatMoney(e.salary), numeric: true },
+    { key: "salary", header: "Reference salary", render: (e) => formatMoney(e.reference_salary), numeric: true },
     { key: "rating", header: "Rating", render: (e) => (e.rating ? `★ ${e.rating.toFixed(1)}` : "—"), numeric: true },
     { key: "joining_date", header: "Joined", render: (e) => new Date(e.joining_date).toLocaleDateString() },
     {

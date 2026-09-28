@@ -28,7 +28,8 @@ export function PerformanceLeaderboardCard() {
   const since = Date.now() - days * 86_400_000;
   const sumByEmployee = new Map<string, number>();
   for (const e of entries?.results ?? []) {
-    if (new Date(e.date).getTime() < since) continue;
+    if (e.status !== "ACTIVE") continue; // voided and disputed entries don't rank
+    if (new Date(e.incident_date).getTime() < since) continue;
     sumByEmployee.set(e.employee_id, (sumByEmployee.get(e.employee_id) ?? 0) + e.points);
   }
 

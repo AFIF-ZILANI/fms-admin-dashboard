@@ -14,8 +14,7 @@ import { Label } from "@/components/ui/label";
 import { usePostData } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 import {
-  PAYROLL_CLAMP_MAX,
-  PAYROLL_CLAMP_MIN,
+  computePay,
   type PayrollRecord,
   type PerformanceScoreEntry,
 } from "@/pages/employees/types";
@@ -24,11 +23,11 @@ type PayrollRunDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employeeId: string;
-  baselineSalary: string;
+  referenceSalary: string;
   scoreEntries: PerformanceScoreEntry[];
 };
 
-export function PayrollRunDialog({ open, onOpenChange, employeeId, baselineSalary, scoreEntries }: PayrollRunDialogProps) {
+export function PayrollRunDialog({ open, onOpenChange, employeeId, referenceSalary, scoreEntries }: PayrollRunDialogProps) {
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   // Reset to the current month on each open, without an effect (React docs'
   // "adjusting state during render" pattern) — dialog stays mounted between
@@ -44,19 +43,24 @@ export function PayrollRunDialog({ open, onOpenChange, employeeId, baselineSalar
     ["payroll-records"]
   );
 
-  // Preview only — mirrors payroll-record.service.ts's generate() formula
-  // exactly (sum this month's points, clamp to [-10, +20], apply to
-  // baseline). The server recomputes and locks it; this is just so the
-  // confirm button doesn't fire blind on an immutable write.
+  // Preview only — mirrors payroll-record.service.ts's generate() via the shared
+  // computePay(), so the two can't drift. The server recomputes and locks it;
+  // this is just so the confirm button doesn't fire blind on an immutable write.
   const [year, monthNum] = month.split("-").map(Number) as [number, number];
   const scoreSum = scoreEntries
+    // Only settled entries count, bucketed by when the incident happened.
+    .filter((e) => e.status === "ACTIVE")
     .filter((e) => {
-      const d = new Date(e.date);
+      const d = new Date(e.incident_date);
       return d.getUTCFullYear() === year && d.getUTCMonth() + 1 === monthNum;
     })
     .reduce((sum, e) => sum + e.points, 0);
-  const adjustmentPercent = Math.max(PAYROLL_CLAMP_MIN, Math.min(PAYROLL_CLAMP_MAX, scoreSum));
-  const finalSalary = parseFloat(baselineSalary) * (1 + adjustmentPercent / 100);
+  const {
+    adjustment_percent: adjustmentPercent,
+    fixed_wage: fixedWage,
+    allowance,
+    total_pay: totalPay,
+  } = computePay(parseFloat(referenceSalary), scoreSum);
 
   const onConfirm = () => {
     generatePayroll.mutate(
@@ -89,23 +93,27 @@ export function PayrollRunDialog({ open, onOpenChange, employeeId, baselineSalar
 
           <div className="flex flex-col gap-2 rounded-lg border border-border p-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Baseline salary</span>
-              <span className="tabular-nums">{formatMoney(baselineSalary)}</span>
+              <span className="text-muted-foreground">Fixed wage (guaranteed)</span>
+              <span className="tabular-nums">{formatMoney(fixedWage)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Score sum (this month)</span>
               <span className="tabular-nums">{scoreSum}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Adjustment (clamped)</span>
+              <span className="text-muted-foreground">Applied P (clamped)</span>
               <span className="tabular-nums">
                 {adjustmentPercent > 0 ? "+" : ""}
-                {adjustmentPercent}%
+                {adjustmentPercent}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Performance allowance</span>
+              <span className="tabular-nums">{formatMoney(allowance)}</span>
+            </div>
             <div className="flex justify-between font-medium">
-              <span>Final salary</span>
-              <span className="tabular-nums">{formatMoney(finalSalary)}</span>
+              <span>Total pay</span>
+              <span className="tabular-nums">{formatMoney(totalPay)}</span>
             </div>
           </div>
         </div>

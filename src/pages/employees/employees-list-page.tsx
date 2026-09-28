@@ -15,9 +15,9 @@ export function EmployeesListPage() {
   const totalEmployees = data?.total ?? employees.length;
   const active = employees.filter((e) => e.profile.is_active);
 
-  // Baseline monthly wage bill of everyone currently on staff. Payroll runs can
-  // adjust it by -10%/+20%, so this is the floor, not the settled figure.
-  const monthlyWageBill = active.reduce((sum, e) => sum + Number(e.salary), 0);
+  // Normal-month wage bill of everyone currently on staff, at R. A month's
+  // actual total lands between 90% and 120% of this, depending on score entries.
+  const monthlyWageBill = active.reduce((sum, e) => sum + Number(e.reference_salary), 0);
 
   return (
     <div className="flex flex-col gap-4">

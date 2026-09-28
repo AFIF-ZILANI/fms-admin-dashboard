@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Award, Banknote, CreditCard, Pencil, Plus, UserMinus, UserPlus, Wallet } from "lucide-react";
+import { ArrowLeft, Award, Banknote, CreditCard, Pencil, Plus, ShieldCheck, UserMinus, UserPlus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -90,14 +90,15 @@ export function EmployeeDetailPage() {
 
   const now = new Date();
   const mtdSum = entries
+    .filter((e) => e.status === "ACTIVE")
     .filter((e) => {
-      const d = new Date(e.date);
+      const d = new Date(e.incident_date);
       return d.getUTCFullYear() === now.getUTCFullYear() && d.getUTCMonth() === now.getUTCMonth();
     })
     .reduce((sum, e) => sum + e.points, 0);
 
   const scoreColumns: Column<PerformanceScoreEntry>[] = [
-    { key: "date", header: "Date", render: (e) => new Date(e.date).toLocaleDateString() },
+    { key: "date", header: "Incident", render: (e) => new Date(e.incident_date).toLocaleDateString() },
     { key: "criterion", header: "Criterion", render: (e) => humanizeEnum(e.criterion) },
     {
       key: "points",
@@ -119,11 +120,12 @@ export function EmployeeDetailPage() {
       header: "Month",
       render: (p) => new Date(p.month).toLocaleDateString(undefined, { year: "numeric", month: "long" }),
     },
-    { key: "baseline", header: "Baseline", render: (p) => formatMoney(p.baseline_salary), numeric: true },
+    { key: "fixed", header: "Fixed wage", render: (p) => formatMoney(p.fixed_wage), numeric: true },
     { key: "score_sum", header: "Score sum", render: (p) => p.score_sum, numeric: true },
-    { key: "adjustment", header: "Adjustment", render: (p) => `${parseFloat(p.adjustment_percent) > 0 ? "+" : ""}${p.adjustment_percent}%`, numeric: true },
-    { key: "final", header: "Final salary", render: (p) => formatMoney(p.final_salary), numeric: true },
-    { key: "due", header: "Due", render: (p) => formatMoney(trueAmounts(p.id, "0", p.final_salary).due), numeric: true },
+    { key: "adjustment", header: "P", render: (p) => `${p.adjustment_percent > 0 ? "+" : ""}${p.adjustment_percent}`, numeric: true },
+    { key: "allowance", header: "Allowance", render: (p) => formatMoney(p.allowance), numeric: true },
+    { key: "total", header: "Total pay", render: (p) => formatMoney(p.total_pay), numeric: true },
+    { key: "due", header: "Due", render: (p) => formatMoney(trueAmounts(p.id, "0", p.total_pay).due), numeric: true },
     {
       key: "actions",
       header: "",
@@ -216,7 +218,16 @@ export function EmployeeDetailPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Current salary" value={formatMoney(employee.salary)} icon={Wallet} />
+        <KPICard
+          label="Reference salary"
+          value={formatMoney(employee.reference_salary)}
+          icon={Wallet}
+        />
+        <KPICard
+          label="Fixed wage"
+          value={formatMoney(employee.fixed_wage)}
+          icon={ShieldCheck}
+        />
         <KPICard label="MTD score sum" value={mtdSum > 0 ? `+${mtdSum}` : mtdSum} icon={Award} />
         <KPICard label="Rating" value={employee.rating ? `★ ${employee.rating.toFixed(1)}` : "—"} icon={Award} />
       </div>
@@ -267,7 +278,7 @@ export function EmployeeDetailPage() {
           open={payrollOpen}
           onOpenChange={setPayrollOpen}
           employeeId={id}
-          baselineSalary={employee.salary}
+          referenceSalary={employee.reference_salary}
           scoreEntries={entries}
         />
       )}
