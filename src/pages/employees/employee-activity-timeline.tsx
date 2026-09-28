@@ -34,7 +34,7 @@ export function EmployeeActivityTimeline({ scoreEntries, payrollRecords }: Emplo
 
   const scoreRows: TimelineRow[] = scoreEntries.map((e) => ({
     id: `score-${e.id}`,
-    date: e.date,
+    date: e.incident_date,
     icon: Award,
     label: e.reason,
     amount: `${e.points > 0 ? "+" : ""}${e.points} pts`,
@@ -46,7 +46,7 @@ export function EmployeeActivityTimeline({ scoreEntries, payrollRecords }: Emplo
     date: p.month,
     icon: Banknote,
     label: "Payroll run",
-    amount: formatMoney(p.final_salary),
+    amount: formatMoney(p.total_pay),
     amountClassName: "",
   }));
 

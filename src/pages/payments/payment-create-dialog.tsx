@@ -146,7 +146,7 @@ function useRefOptions(refType: PaymentRefType | undefined, keepRefId?: string):
     return (payrollRecords?.results ?? []).map((p) => ({
       id: p.id,
       label: `${employees?.results.find((e) => e.id === p.employee_id)?.profile.name ?? "Employee"} · ${new Date(p.month).toLocaleDateString(undefined, { year: "numeric", month: "long" })}`,
-      due: parseFloat(p.final_salary),
+      due: parseFloat(p.total_pay),
     }));
   }
   return [];

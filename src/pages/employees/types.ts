@@ -87,7 +87,9 @@ export type Employee = {
   id: string;
   profile_id: string;
   role: EmployeeRole;
-  salary: string;
+  // R — the normal-month total. fixed_wage is 0.9 × R, derived by the server.
+  reference_salary: string;
+  fixed_wage: string;
   joining_date: string;
   rating: number | null;
 
@@ -187,14 +189,23 @@ export function criterionPoints(c: Criterion): number {
   return c === "OTHER" ? 0 : FIXED_CRITERION_POINTS[c];
 }
 
+export const SCORE_ENTRY_STATUSES = ["ACTIVE", "DISPUTED", "VOIDED"] as const;
+export type ScoreEntryStatus = (typeof SCORE_ENTRY_STATUSES)[number];
+
 export type PerformanceScoreEntry = {
   id: string;
   employee_id: string;
   given_by_id: string;
+  approved_by_id: string | null;
   criterion: Criterion;
   points: number;
   reason: string;
-  date: string;
+  /** The day it happened — what decides which month's payroll it lands in. */
+  incident_date: string;
+  notice_doc_url: string | null;
+  status: ScoreEntryStatus;
+  void_reason: string | null;
+  acknowledged_at: string | null;
   created_at: string;
   idempotency_key: string;
 };
@@ -203,12 +214,32 @@ export type PayrollRecord = {
   id: string;
   employee_id: string;
   month: string;
-  baseline_salary: string;
+  reference_salary: string;
+  fixed_wage: string;
   score_sum: number;
-  adjustment_percent: string;
-  final_salary: string;
+  adjustment_percent: number; // P — a clamped sum of integer points
+  allowance: string;
+  total_pay: string;
+  locked_at: string;
   created_at: string;
 };
 
 export const PAYROLL_CLAMP_MIN = -10;
 export const PAYROLL_CLAMP_MAX = 20;
+/** The guaranteed wage is this share of the reference salary. */
+export const FIXED_WAGE_RATIO = 0.9;
+/** Allowance at P = 0, as a percent of R — so a zero-entry month pays exactly R. */
+export const BASE_ALLOWANCE_PERCENT = 10;
+/** Points at or below this need written notice to the employee first. */
+export const NOTICE_REQUIRED_AT = -4;
+/** Ceiling on OTHER, per employee per month, summed absolute. */
+export const OTHER_MONTHLY_CAP = 5;
+
+/** Mirrors server/src/lib/payroll-math.ts — pay is an allowance on top of a
+ *  guaranteed wage, never a deduction from one. */
+export function computePay(referenceSalary: number, scoreSum: number) {
+  const adjustment_percent = Math.max(PAYROLL_CLAMP_MIN, Math.min(PAYROLL_CLAMP_MAX, scoreSum));
+  const fixed_wage = Math.round(referenceSalary * FIXED_WAGE_RATIO);
+  const allowance = Math.round((referenceSalary * (BASE_ALLOWANCE_PERCENT + adjustment_percent)) / 100);
+  return { adjustment_percent, fixed_wage, allowance, total_pay: fixed_wage + allowance };
+}

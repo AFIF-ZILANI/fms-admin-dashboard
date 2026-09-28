@@ -23,7 +23,7 @@ export function PayrollCostTrendChart() {
   const byMonth = new Map<string, number>();
   for (const r of data?.results ?? []) {
     const key = r.month.slice(0, 7);
-    byMonth.set(key, (byMonth.get(key) ?? 0) + parseFloat(r.final_salary));
+    byMonth.set(key, (byMonth.get(key) ?? 0) + parseFloat(r.total_pay));
   }
   const rows = Array.from(byMonth.entries())
     .sort(([a], [b]) => a.localeCompare(b))

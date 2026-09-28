@@ -17,20 +17,42 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePostData } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
-import { CRITERIA, criterionPoints, type PerformanceScoreEntry } from "@/pages/employees/types";
+import { ActorSelect } from "@/components/shared/actor-select";
+import {
+  CRITERIA,
+  NOTICE_REQUIRED_AT,
+  OTHER_MONTHLY_CAP,
+  criterionPoints,
+  type PerformanceScoreEntry,
+} from "@/pages/employees/types";
 
 const scoreEntrySchema = z
   .object({
     criterion: z.enum(CRITERIA, "Select a criterion"),
     points: z.coerce.number().int().optional(),
     reason: z.string().trim().min(1, "Reason is required"),
-    date: z.string().min(1, "Date is required"),
+    // The day it happened, not today — this is what decides which month's
+    // payroll the entry lands in.
+    incident_date: z.string().min(1, "Incident date is required"),
+    approved_by_id: z.string().optional(),
+    notice_doc_url: z.string().trim().optional(),
   })
   .refine(
     (data) =>
       data.criterion !== "OTHER" ||
       (data.points !== undefined && data.points !== 0 && Math.abs(data.points) <= 5),
     { message: "OTHER requires points between -5 and 5, excluding 0", path: ["points"] }
+  )
+  .refine((data) => data.criterion !== "OTHER" || !!data.approved_by_id, {
+    message: "An OTHER entry needs Owner approval",
+    path: ["approved_by_id"],
+  })
+  .refine(
+    (data) => {
+      const points = data.criterion === "OTHER" ? Number(data.points ?? 0) : criterionPoints(data.criterion);
+      return points > NOTICE_REQUIRED_AT || !!data.notice_doc_url?.trim();
+    },
+    { message: "Written notice must be on file first", path: ["notice_doc_url"] }
   );
 
 type ScoreEntryFormInput = z.input<typeof scoreEntrySchema>;
@@ -41,7 +63,9 @@ function blankScoreEntry(): ScoreEntryFormInput {
     criterion: undefined as unknown as ScoreEntryFormInput["criterion"],
     points: undefined,
     reason: "",
-    date: new Date().toISOString().slice(0, 10),
+    incident_date: new Date().toISOString().slice(0, 10),
+    approved_by_id: undefined,
+    notice_doc_url: "",
   };
 }
 
@@ -64,7 +88,12 @@ export function ScoreEntryDialog({ open, onOpenChange, employeeId }: ScoreEntryD
   }, [open, reset]);
 
   const criterion = useWatch({ control, name: "criterion" });
+  const otherPoints = useWatch({ control, name: "points" });
   const isOther = criterion === "OTHER";
+  const points = isOther ? Number(otherPoints ?? 0) : criterion ? criterionPoints(criterion) : 0;
+  // Written notice comes first for anything this heavy — the server refuses the
+  // entry without it, so the form asks rather than letting them lose the typing.
+  const needsNotice = points <= NOTICE_REQUIRED_AT;
 
   const createScoreEntry = usePostData<
     PerformanceScoreEntry,
@@ -75,6 +104,8 @@ export function ScoreEntryDialog({ open, onOpenChange, employeeId }: ScoreEntryD
     const payload = {
       ...values,
       points: isOther ? values.points : undefined,
+      approved_by_id: isOther ? values.approved_by_id : undefined,
+      notice_doc_url: values.notice_doc_url?.trim() || undefined,
       employee_id: employeeId,
       idempotency_key: crypto.randomUUID(),
     };
@@ -84,7 +115,12 @@ export function ScoreEntryDialog({ open, onOpenChange, employeeId }: ScoreEntryD
         onOpenChange(false);
       },
       onError: (error) => {
-        toast.error(error.fieldError("reason") ?? error.fieldError("points") ?? error.message);
+        toast.error(
+          error.fieldError("reason") ??
+            error.fieldError("points") ??
+            error.fieldError("approved_by_id") ??
+            error.message
+        );
       },
     });
   };
@@ -95,7 +131,8 @@ export function ScoreEntryDialog({ open, onOpenChange, employeeId }: ScoreEntryD
         <DialogHeader>
           <DialogTitle>Add score entry</DialogTitle>
           <DialogDescription>
-            Every fixed criterion has a set point value — only OTHER lets you set a custom ±1 to ±5.
+            Every fixed criterion has a set point value — only OTHER lets you set a custom ±1 to ±5,
+            and it needs Owner approval and stays within ±{OTHER_MONTHLY_CAP} for the month.
           </DialogDescription>
         </DialogHeader>
 
@@ -141,6 +178,27 @@ export function ScoreEntryDialog({ open, onOpenChange, employeeId }: ScoreEntryD
             </p>
           ) : null}
 
+          {isOther && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="approved_by_id">Approved by</Label>
+              <Controller
+                control={control}
+                name="approved_by_id"
+                render={({ field }) => (
+                  <ActorSelect
+                    id="approved_by_id"
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    invalid={!!errors.approved_by_id}
+                  />
+                )}
+              />
+              {errors.approved_by_id && (
+                <p className="text-xs text-destructive">{errors.approved_by_id.message}</p>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="reason">Reason</Label>
             <Input id="reason" {...register("reason")} aria-invalid={!!errors.reason} />
@@ -149,11 +207,40 @@ export function ScoreEntryDialog({ open, onOpenChange, employeeId }: ScoreEntryD
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="date">Date</Label>
-              <Input id="date" type="date" {...register("date")} aria-invalid={!!errors.date} />
-              {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
+              <Label htmlFor="incident_date">Incident date</Label>
+              <Input
+                id="incident_date"
+                type="date"
+                {...register("incident_date")}
+                aria-invalid={!!errors.incident_date}
+              />
+              {errors.incident_date ? (
+                <p className="text-xs text-destructive">{errors.incident_date.message}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Counts toward this month's payroll.</p>
+              )}
             </div>
           </div>
+
+          {needsNotice && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="notice_doc_url">Written notice</Label>
+              <Input
+                id="notice_doc_url"
+                placeholder="Link to the notice given to the employee"
+                {...register("notice_doc_url")}
+                aria-invalid={!!errors.notice_doc_url}
+              />
+              {errors.notice_doc_url ? (
+                <p className="text-xs text-destructive">{errors.notice_doc_url.message}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  An entry of {points} requires written notice to the employee first. Serious
+                  misconduct also goes through the show-cause process — points don't replace it.
+                </p>
+              )}
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

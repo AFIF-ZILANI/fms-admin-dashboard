@@ -16,6 +16,7 @@ import { PhoneInput } from "@/components/shared/phone-input";
 import { toE164, toLocalDigits } from "@/lib/phone";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
+import { formatMoney } from "@/lib/utils";
 import {
   EDUCATION_LABELS,
   EDUCATION_LEVELS,
@@ -23,6 +24,7 @@ import {
   EMPLOYEE_ROLE_LABELS,
   EMPLOYMENT_STATUSES,
   EMPLOYMENT_STATUS_LABELS,
+  FIXED_WAGE_RATIO,
   MARITAL_STATUSES,
   RELATIONSHIPS,
   RELATIONSHIP_OTHER,
@@ -52,7 +54,7 @@ const employeeSchema = z
     nid_number: z.string().trim().min(1, "NID number is required"),
 
     role: z.enum(EMPLOYEE_ROLES, "Select a role"),
-    salary: z.coerce.number().positive("Salary must be positive"),
+    reference_salary: z.coerce.number().positive("Reference salary must be positive"),
     joining_date: z.string().min(1, "Joining date is required"),
     employment_status: z.enum(EMPLOYMENT_STATUSES),
     probation_end_date: z.string().optional(),
@@ -88,7 +90,7 @@ const employeeSchema = z
     path: ["reference_phone"],
   });
 
-// z.coerce on salary makes the schema's input type differ from its output type —
+// z.coerce on reference_salary makes the schema's input type differ from its output type —
 // RHF's 3rd generic carries that through (same pattern as ItemFormPage).
 type EmployeeFormInput = z.input<typeof employeeSchema>;
 type EmployeeFormValues = z.output<typeof employeeSchema>;
@@ -103,7 +105,7 @@ function blank(): EmployeeFormInput {
     marital_status: undefined as unknown as MaritalStatus,
     nid_number: "",
     role: undefined as unknown as EmployeeFormInput["role"],
-    salary: undefined,
+    reference_salary: undefined,
     joining_date: new Date().toISOString().slice(0, 10),
     employment_status: "APPOINTED",
     probation_end_date: "",
@@ -134,7 +136,7 @@ function toFormValues(e: Employee): EmployeeFormInput {
     marital_status: e.marital_status as MaritalStatus,
     nid_number: e.nid_number ?? "",
     role: e.role,
-    salary: e.salary,
+    reference_salary: e.reference_salary,
     joining_date: date(e.joining_date),
     employment_status: e.employment_status,
     probation_end_date: date(e.probation_end_date),
@@ -225,6 +227,9 @@ export function EmployeeFormPage() {
   }
 
   const employmentStatus = useWatch({ control, name: "employment_status" });
+  // The appointment letter states the guaranteed wage, so show it as they type R
+  // rather than letting them discover it after saving.
+  const referenceSalary = Number(useWatch({ control, name: "reference_salary" })) || 0;
   const referenceKind = useWatch({ control, name: "reference_kind" });
   const emergencyRelation = useWatch({ control, name: "emergency_relation" });
 
@@ -305,7 +310,7 @@ export function EmployeeFormPage() {
         navigate(`/employees/${saved.id}`);
       },
       onError: (error) => {
-        toast.error(error.fieldError("mobile") ?? error.fieldError("salary") ?? error.message);
+        toast.error(error.fieldError("mobile") ?? error.fieldError("reference_salary") ?? error.message);
       },
     });
   };
@@ -429,15 +434,26 @@ export function EmployeeFormPage() {
                   )}
                 />
               </Field>
-              <Field id="salary" label="Monthly salary" error={errors.salary?.message}>
+              <Field
+                id="reference_salary"
+                label="Reference salary"
+                hint="normal-month total"
+                error={errors.reference_salary?.message}
+              >
                 <NumericInput
-                  id="salary"
+                  id="reference_salary"
                   allowDecimal
                   decimalPlaces={2}
                   placeholder="15000"
-                  {...register("salary")}
-                  aria-invalid={!!errors.salary}
+                  {...register("reference_salary")}
+                  aria-invalid={!!errors.reference_salary}
                 />
+                {referenceSalary > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Guaranteed fixed wage {formatMoney(Math.round(referenceSalary * FIXED_WAGE_RATIO))} ·
+                    allowance {formatMoney(0)}–{formatMoney(Math.round(referenceSalary * 0.3))}
+                  </p>
+                )}
               </Field>
               <Field id="joining_date" label="Joining date" error={errors.joining_date?.message}>
                 <Input
