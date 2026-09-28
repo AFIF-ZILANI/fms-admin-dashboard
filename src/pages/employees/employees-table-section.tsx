@@ -161,7 +161,7 @@ export function EmployeesTableSection() {
 
         <Button onClick={() => navigate("/employees/new")}>
           <Plus />
-          Add employee
+          Hire employee
         </Button>
       </div>
 
@@ -184,7 +184,7 @@ export function EmployeesTableSection() {
                 icon: Users,
                 title: "No employees yet",
                 description: "Add your first employee.",
-                action: { label: "Add employee", onClick: () => navigate("/employees/new") },
+                action: { label: "Hire employee", onClick: () => navigate("/employees/new") },
               }
         }
       />

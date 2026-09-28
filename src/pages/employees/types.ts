@@ -112,6 +112,8 @@ export type Employee = {
   reference_address: string | null;
   employment_status: EmploymentStatus;
   probation_end_date: string | null;
+  /** Their last day. Payroll is payable for this month, not later ones. */
+  terminated_at: string | null;
 
   created_at: string;
   updated_at: string;
