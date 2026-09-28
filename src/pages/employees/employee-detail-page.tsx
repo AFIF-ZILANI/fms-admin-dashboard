@@ -293,7 +293,18 @@ export function EmployeeDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Payroll history</CardTitle>
-          <Button size="sm" variant="outline" onClick={() => setPayrollOpen(true)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPayrollOpen(true)}
+            // A left employee is still owed their final month, so this stays
+            // available -- the server refuses only months after their last day.
+            title={
+              employee.terminated_at
+                ? `Last day ${new Date(employee.terminated_at).toLocaleDateString()} — only that month and earlier can be generated`
+                : undefined
+            }
+          >
             <Banknote />
             Run payroll
           </Button>
