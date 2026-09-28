@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ActorSelect } from "@/components/shared/actor-select";
 import { usePostData } from "@/lib/api";
 import {
   PAYOUT_METHODS,
@@ -34,7 +33,6 @@ const accountSchema = z
     routing_number: z.string().trim().optional(),
     holder_relation: z.string().trim().optional(),
     consent_doc_url: z.string().trim().optional(),
-    verified_by_id: z.string().optional(),
   })
   .refine((d) => d.method !== "BANK" || !!d.bank_name?.trim(), {
     message: "Bank name is required for a bank account",
@@ -101,7 +99,6 @@ export function PayoutAccountDialog({
         routing_number: blank(values.routing_number),
         holder_relation: blank(values.holder_relation),
         consent_doc_url: blank(values.consent_doc_url),
-        verified_by_id: blank(values.verified_by_id),
       },
       {
         onSuccess: () => {
@@ -187,24 +184,12 @@ export function PayoutAccountDialog({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="holder_relation">
-                Holder relation
-                <span className="ml-1 font-normal text-muted-foreground">(if not their own)</span>
-              </Label>
-              <Input id="holder_relation" placeholder="spouse, father…" {...register("holder_relation")} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="verified_by_id">Approved by</Label>
-              <Controller
-                control={control}
-                name="verified_by_id"
-                render={({ field }) => (
-                  <ActorSelect id="verified_by_id" value={field.value ?? ""} onChange={field.onChange} />
-                )}
-              />
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="holder_relation">
+              Holder relation
+              <span className="ml-1 font-normal text-muted-foreground">(if not their own)</span>
+            </Label>
+            <Input id="holder_relation" placeholder="spouse, father…" {...register("holder_relation")} />
           </div>
 
           {isThirdParty && (
