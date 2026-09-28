@@ -19,9 +19,14 @@ import { usePostData } from "@/lib/api";
 import {
   PAYOUT_METHODS,
   PAYOUT_METHOD_LABELS,
+  RELATIONSHIPS,
+  RELATIONSHIP_OTHER,
   type EmployeePayoutAccount,
   type PayoutMethod,
 } from "@/pages/employees/types";
+
+/** Select sentinel for "no relation" — the account is the employee's own. */
+const OWN_ACCOUNT = "__own__";
 
 const accountSchema = z
   .object({
@@ -81,7 +86,12 @@ export function PayoutAccountDialog({
   }
 
   const method = useWatch({ control, name: "method" });
-  const isThirdParty = !!useWatch({ control, name: "holder_relation" })?.trim();
+  const holderRelation = useWatch({ control, name: "holder_relation" }) ?? "";
+  const isThirdParty = !!holderRelation.trim() || holderRelation === " ";
+  // "Other" isn't a stored value — it just reveals a free-text box, so the
+  // dropdown shows it selected whenever the saved relation isn't a listed one.
+  const relationIsOther =
+    isThirdParty && !RELATIONSHIPS.includes(holderRelation as (typeof RELATIONSHIPS)[number]);
 
   const createAccount = usePostData<EmployeePayoutAccount, AccountFormValues & { employee_id: string }>(
     "/employee-payout-accounts",
@@ -184,12 +194,70 @@ export function PayoutAccountDialog({
             </div>
           )}
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="holder_relation">
-              Holder relation
-              <span className="ml-1 font-normal text-muted-foreground">(if not their own)</span>
-            </Label>
-            <Input id="holder_relation" placeholder="spouse, father…" {...register("holder_relation")} />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="holder_relation">Account holder</Label>
+              <Controller
+                control={control}
+                name="holder_relation"
+                render={({ field }) => (
+                  <Select
+                    value={
+                      !isThirdParty
+                        ? OWN_ACCOUNT
+                        : relationIsOther
+                          ? RELATIONSHIP_OTHER
+                          : (field.value ?? "")
+                    }
+                    onValueChange={(v) =>
+                      field.onChange(
+                        v === OWN_ACCOUNT ? "" : v === RELATIONSHIP_OTHER ? " " : v
+                      )
+                    }
+                  >
+                    <SelectTrigger id="holder_relation" className="w-full">
+                      <SelectValue>
+                        {(v: string) =>
+                          v === OWN_ACCOUNT || !v.trim()
+                            ? "The employee themselves"
+                            : v === RELATIONSHIP_OTHER
+                              ? RELATIONSHIP_OTHER
+                              : v
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={OWN_ACCOUNT}>The employee themselves</SelectItem>
+                      {RELATIONSHIPS.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {r}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={RELATIONSHIP_OTHER}>{RELATIONSHIP_OTHER}…</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            {relationIsOther && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="holder_relation_other">Specify</Label>
+                <Controller
+                  control={control}
+                  name="holder_relation"
+                  render={({ field }) => (
+                    <Input
+                      id="holder_relation_other"
+                      autoFocus
+                      placeholder="in-law, guardian…"
+                      value={field.value?.trim() === "" ? "" : (field.value ?? "")}
+                      onChange={(e) => field.onChange(e.target.value || " ")}
+                    />
+                  )}
+                />
+              </div>
+            )}
           </div>
 
           {isThirdParty && (
