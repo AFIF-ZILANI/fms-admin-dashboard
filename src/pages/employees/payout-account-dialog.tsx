@@ -37,7 +37,6 @@ const accountSchema = z
     branch_name: z.string().trim().optional(),
     routing_number: z.string().trim().optional(),
     holder_relation: z.string().trim().optional(),
-    consent_doc_url: z.string().trim().optional(),
   })
   .refine((d) => d.method !== "BANK" || !!d.bank_name?.trim(), {
     message: "Bank name is required for a bank account",
@@ -46,10 +45,6 @@ const accountSchema = z
   .refine((d) => !d.routing_number || /^\d{9}$/.test(d.routing_number), {
     message: "Routing number must be 9 digits",
     path: ["routing_number"],
-  })
-  .refine((d) => !d.holder_relation?.trim() || !!d.consent_doc_url?.trim(), {
-    message: "A third-party account needs the holder's signed consent on file",
-    path: ["consent_doc_url"],
   });
 
 type AccountFormValues = z.output<typeof accountSchema>;
@@ -108,14 +103,13 @@ export function PayoutAccountDialog({
         branch_name: blank(values.branch_name),
         routing_number: blank(values.routing_number),
         holder_relation: blank(values.holder_relation),
-        consent_doc_url: blank(values.consent_doc_url),
       },
       {
         onSuccess: () => {
           toast.success(replacing ? "Account replaced" : "Payout account added");
           onOpenChange(false);
         },
-        onError: (error) => toast.error(error.fieldError("consent_doc_url") ?? error.message),
+        onError: (error) => toast.error(error.fieldError("holder_relation") ?? error.message),
       }
     );
   };
@@ -260,24 +254,6 @@ export function PayoutAccountDialog({
             )}
           </div>
 
-          {isThirdParty && (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="consent_doc_url">Holder's signed consent</Label>
-              <Input
-                id="consent_doc_url"
-                placeholder="Link to the signed consent"
-                {...register("consent_doc_url")}
-                aria-invalid={!!errors.consent_doc_url}
-              />
-              {errors.consent_doc_url ? (
-                <p className="text-xs text-destructive">{errors.consent_doc_url.message}</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Wages paid into someone else's account need that person's written consent.
-                </p>
-              )}
-            </div>
-          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

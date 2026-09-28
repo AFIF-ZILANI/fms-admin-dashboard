@@ -49,7 +49,7 @@ export function PayoutAccountsCard({ employeeId }: { employeeId: string }) {
               </p>
               {active.holder_relation && (
                 <p className="mt-1 text-xs text-warning">
-                  Third-party account ({active.holder_relation}) — consent on file
+                  Third-party account — held by their {active.holder_relation.toLowerCase()}
                 </p>
               )}
             </div>
