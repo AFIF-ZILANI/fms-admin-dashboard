@@ -22,6 +22,7 @@ import { FinancePage } from "@/pages/finance/finance-page";
 import { EmployeesListPage } from "@/pages/employees/employees-list-page";
 import { EmployeeDetailPage } from "@/pages/employees/employee-detail-page";
 import { EmployeeFormPage } from "@/pages/employees/employee-form-page";
+import { PayslipPage } from "@/pages/employees/payslip-page";
 import { AnalyticsPage } from "@/pages/analytics/analytics-page";
 import { AlertsPage } from "@/pages/alerts/alerts-page";
 import { AuditLogPage } from "@/pages/audit-log/audit-log-page";
@@ -56,6 +57,7 @@ function App() {
         <Route path="employees/new" element={<EmployeeFormPage />} />
         <Route path="employees/:id" element={<EmployeeDetailPage />} />
         <Route path="employees/:id/edit" element={<EmployeeFormPage />} />
+        <Route path="employees/:id/payslip/:payrollId" element={<PayslipPage />} />
         <Route path="admins" element={<AdminsListPage />} />
         <Route path="alerts" element={<AlertsPage />} />
         <Route path="audit-log" element={<AuditLogPage />} />

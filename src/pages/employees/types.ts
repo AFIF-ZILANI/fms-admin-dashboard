@@ -293,3 +293,39 @@ export type PayrollPayout = {
   created_at: string;
   payroll_record: { id: string; month: string; total_pay: string };
 };
+
+/** Assembled server-side by GET /payroll-records/:id/payslip. The account is
+ *  masked to its last 4 digits there — the full number never reaches this. */
+export type Payslip = {
+  id: string;
+  month: string;
+  reference_salary: string;
+  fixed_wage: string;
+  score_sum: number;
+  adjustment_percent: number;
+  allowance: string;
+  total_pay: string;
+  employee: {
+    id: string;
+    name: string;
+    mobile: string;
+    role: EmployeeRole;
+    joining_date: string;
+  };
+  entries: Array<{
+    id: string;
+    criterion: Criterion;
+    points: number;
+    reason: string;
+    incident_date: string;
+  }>;
+  payout: {
+    method: PayoutMethod;
+    account_last4: string;
+    amount: string;
+    fee_paid_by_farm: string;
+    status: PayoutStatus;
+    transaction_ref: string | null;
+    paid_at: string | null;
+  } | null;
+};

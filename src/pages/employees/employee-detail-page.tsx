@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Award, Banknote, CreditCard, Pencil, Plus, ShieldCheck, UserMinus, UserPlus, Wallet } from "lucide-react";
+import { ArrowLeft, Award, Banknote, CreditCard, Pencil, Plus, ReceiptText, ShieldCheck, UserMinus, UserPlus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +17,7 @@ import { EmployeeActivityTimeline } from "@/pages/employees/employee-activity-ti
 import { ScoreEntryDialog } from "@/pages/employees/score-entry-dialog";
 import { PayrollRunDialog } from "@/pages/employees/payroll-run-dialog";
 import { EmployeeProfileCard } from "@/pages/employees/employee-profile-card";
+import { PayoutAccountsCard } from "@/pages/employees/payout-accounts-card";
 import {
   EMPLOYEE_ROLE_LABELS,
   EMPLOYMENT_STATUS_LABELS,
@@ -146,22 +147,25 @@ export function EmployeeDetailPage() {
       header: "",
       render: (p) => {
         const payout = payoutByRecord.get(p.id);
-        if (payout?.status === "CONFIRMED") {
-          return (
-            <p className="text-right text-xs text-muted-foreground">
-              {payout.transaction_ref ?? "receipt on file"}
-            </p>
-          );
-        }
         return (
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-1">
+            {payout?.status !== "CONFIRMED" && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Record payout"
+                onClick={() => setPayoutRecord(p)}
+              >
+                <CreditCard />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label="Record payout"
-              onClick={() => setPayoutRecord(p)}
+              aria-label="View payslip"
+              onClick={() => navigate(`/employees/${id}/payslip/${p.id}`)}
             >
-              <CreditCard />
+              <ReceiptText />
             </Button>
           </div>
         );
@@ -247,7 +251,7 @@ export function EmployeeDetailPage() {
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPICard
           label="Reference salary"
           value={formatMoney(employee.reference_salary)}
@@ -264,7 +268,9 @@ export function EmployeeDetailPage() {
 
       <EmployeeProfileCard employee={employee} />
 
-      <EmployeeActivityTimeline scoreEntries={entries} payrollRecords={records} />
+      {id && <PayoutAccountsCard employeeId={id} />}
+
+      <EmployeeActivityTimeline scoreEntries={entries} payrollRecords={records} employeeId={id ?? ""} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

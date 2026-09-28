@@ -4,8 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
-import type { Payment } from "@/pages/payments/types";
-import type { PayrollRecord, PerformanceScoreEntry } from "@/pages/employees/types";
+import type { PayrollPayout, PayrollRecord, PerformanceScoreEntry } from "@/pages/employees/types";
 
 type TimelineRow = {
   id: string;
@@ -19,18 +18,23 @@ type TimelineRow = {
 type EmployeeActivityTimelineProps = {
   scoreEntries: PerformanceScoreEntry[];
   payrollRecords: PayrollRecord[];
+  employeeId: string;
 };
 
-/** Merges score entries + payroll runs + payments this employee received
+/** Merges score entries + payroll runs + payouts this employee received
  * into one chronological feed -- the detailed tables below still carry
  * per-type columns (score criterion, payroll breakdown), this is just the
  * fast at-a-glance view a farm owner scrolls through. */
-export function EmployeeActivityTimeline({ scoreEntries, payrollRecords }: EmployeeActivityTimelineProps) {
-  const payrollRecordIds = new Set(payrollRecords.map((p) => p.id));
-  const { data: payments, isLoading } = useGetData<Paginated<Payment>>("/payments?ref_type=PAYROLL&limit=100", [
-    "payments",
-    "PAYROLL",
-  ]);
+export function EmployeeActivityTimeline({
+  scoreEntries,
+  payrollRecords,
+  employeeId,
+}: EmployeeActivityTimelineProps) {
+  // Salary money lives in PayrollPayout now, not the generic Payment ledger.
+  const { data: payouts, isLoading } = useGetData<Paginated<PayrollPayout>>(
+    `/payroll-payouts?employee_id=${employeeId}&limit=100`,
+    ["payroll-payouts", employeeId]
+  );
 
   const scoreRows: TimelineRow[] = scoreEntries.map((e) => ({
     id: `score-${e.id}`,
@@ -50,18 +54,18 @@ export function EmployeeActivityTimeline({ scoreEntries, payrollRecords }: Emplo
     amountClassName: "",
   }));
 
-  const paymentRows: TimelineRow[] = (payments?.results ?? [])
-    .filter((p) => payrollRecordIds.has(p.ref_id))
+  const payoutRows: TimelineRow[] = (payouts?.results ?? [])
+    .filter((p) => p.paid_at !== null)
     .map((p) => ({
-      id: `payment-${p.id}`,
-      date: p.payment_date,
+      id: `payout-${p.id}`,
+      date: p.paid_at!,
       icon: CreditCard,
-      label: "Payment recorded",
+      label: "Wage paid",
       amount: formatMoney(p.amount),
       amountClassName: "text-success",
     }));
 
-  const rows = [...scoreRows, ...payrollRows, ...paymentRows].sort(
+  const rows = [...scoreRows, ...payrollRows, ...payoutRows].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
