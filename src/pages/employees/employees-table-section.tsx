@@ -22,19 +22,38 @@ export function EmployeesTableSection() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<EmployeeRole | "ALL">("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
-  const { data, isLoading } = useGetData<Paginated<Employee>>("/employees?limit=100", ["employees"]);
+  const q = search.trim();
 
-  const allEmployees = data?.results ?? [];
+  // Filters narrow the whole set server-side, so a stale page could land out of
+  // range. Reset during render rather than in an effect — React's own "adjust
+  // state when a prop changes" pattern, and it avoids the cascading re-render
+  // an effect-driven setState causes here.
+  const filterKey = `${roleFilter}:${statusFilter}:${q}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (filterKey !== lastFilterKey) {
+    setLastFilterKey(filterKey);
+    setPage(1);
+  }
 
-  // No search endpoint for employees -- the page already fetches limit=100
-  // (same convention as ItemCatalogTab), so filtering in memory is instant.
-  const q = search.trim().toLowerCase();
-  const employees = allEmployees
-    .filter((e) => roleFilter === "ALL" || e.role === roleFilter)
-    .filter((e) => statusFilter === "ALL" || (statusFilter === "ACTIVE") === e.profile.is_active)
-    .filter((e) => !q || e.profile.name.toLowerCase().includes(q) || e.profile.mobile.includes(q));
+  // ponytail: no debounce on the search box -- farm scale; add one if the roster
+  // ever grows enough for the keystroke-per-request to matter.
+  const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+  if (roleFilter !== "ALL") query.set("role", roleFilter);
+  if (statusFilter !== "ALL") query.set("is_active", String(statusFilter === "ACTIVE"));
+  if (q) query.set("q", q);
 
+  const { data, isLoading } = useGetData<Paginated<Employee>>(`/employees?${query}`, [
+    "employees",
+    page,
+    roleFilter,
+    statusFilter,
+    q,
+  ]);
+
+  const employees = data?.results ?? [];
   const isFiltered = !!q || roleFilter !== "ALL" || statusFilter !== "ALL";
 
   const columns: Column<Employee>[] = [
@@ -146,9 +165,9 @@ export function EmployeesTableSection() {
         </Button>
       </div>
 
-      {isFiltered && (
+      {isFiltered && data && (
         <p className="text-xs text-muted-foreground">
-          {employees.length} {employees.length === 1 ? "match" : "matches"}
+          {data.total} {data.total === 1 ? "match" : "matches"}
         </p>
       )}
 
@@ -169,6 +188,27 @@ export function EmployeesTableSection() {
               }
         }
       />
+
+      {data && data.totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Page {data.page} of {data.totalPages} · {data.total} total
+          </span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= data.totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
