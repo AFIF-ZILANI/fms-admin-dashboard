@@ -10,7 +10,9 @@ type PaidByRefRow = { ref_id: string; total_paid: string };
  * same convention PaymentCreateDialog's own "Remaining due" display
  * already uses (GET /payments/total-paid).
  *
- * PAYROLL has no snapshot of its own (PayrollRecord stores only
+ * Payroll is not here: a salary payment is a PayrollPayout, which carries its
+ * own status rather than a running paid/due balance. Previously PayrollRecord
+ * had no snapshot of its own (it stored only
  * total_pay) -- callers pass snapshotPaid="0" and snapshotDue=total_pay
  * so the whole record starts as due, same as PaymentCreateDialog's ref
  * options already treat it.
@@ -18,7 +20,7 @@ type PaidByRefRow = { ref_id: string; total_paid: string };
  * Totals come from GET /payments/outstanding, which is unpaginated -- a
  * limit=100 list fetch silently dropped older payments, so any sale whose
  * payments fell off that page reverted to looking unpaid. */
-export function useOutstanding(refType: Extract<PaymentRefType, "SALE" | "BIRD_SALE" | "PURCHASE" | "PAYROLL">) {
+export function useOutstanding(refType: Extract<PaymentRefType, "SALE" | "BIRD_SALE" | "PURCHASE">) {
   const { data, isLoading, isError } = useGetData<PaidByRefRow[]>(
     `/payments/outstanding?ref_type=${refType}`,
     ["payments", "outstanding", refType]

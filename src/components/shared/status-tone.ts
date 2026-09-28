@@ -1,6 +1,6 @@
 import type { Tone } from "@/components/shared/status-badge";
 import type { AllocationType, AssetStatus, StockUnitStatus } from "@/pages/inventory/types";
-import type { EmploymentStatus } from "@/pages/employees/types";
+import type { EmploymentStatus, PayoutStatus } from "@/pages/employees/types";
 
 /** `is_active` recurs on Houses/Suppliers/Customers/Employees/Admins/Items — one mapping, reused everywhere. */
 export function activeStatus(isActive: boolean): { tone: Tone; label: string } {
@@ -36,4 +36,12 @@ export const EMPLOYMENT_STATUS_TONE: Record<EmploymentStatus, Tone> = {
   PROBATION: "warning",
   CONFIRMED: "success",
   TERMINATED: "neutral",
+};
+
+/** Shared across the payroll history table and the payout dialog. */
+export const PAYOUT_STATUS_TONE: Record<PayoutStatus, Tone> = {
+  PENDING: "warning",
+  SENT: "info",
+  FAILED: "critical",
+  CONFIRMED: "success",
 };
