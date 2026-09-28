@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Award, Banknote, CreditCard, Pencil, Plus, ReceiptText, ShieldCheck, UserMinus, UserPlus, Wallet } from "lucide-react";
+import { ArrowLeft, Award, Banknote, BadgeCheck, CreditCard, Hourglass, Pencil, Plus, ReceiptText, ShieldCheck, UserMinus, UserPlus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,7 +10,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus, EMPLOYMENT_STATUS_TONE, PAYOUT_STATUS_TONE } from "@/components/shared/status-tone";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useConfirm } from "@/components/shared/confirm-dialog";
-import { useGetData, usePostData, type Paginated } from "@/lib/api";
+import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
 import { toast } from "sonner";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { EmployeeActivityTimeline } from "@/pages/employees/employee-activity-timeline";
@@ -18,6 +18,7 @@ import { ScoreEntryDialog } from "@/pages/employees/score-entry-dialog";
 import { PayrollRunDialog } from "@/pages/employees/payroll-run-dialog";
 import { EmployeeProfileCard } from "@/pages/employees/employee-profile-card";
 import { PayoutAccountsCard } from "@/pages/employees/payout-accounts-card";
+import { StartProbationDialog } from "@/pages/employees/start-probation-dialog";
 import {
   EMPLOYEE_ROLE_LABELS,
   EMPLOYMENT_STATUS_LABELS,
@@ -34,6 +35,7 @@ export function EmployeeDetailPage() {
   const [scoreOpen, setScoreOpen] = useState(false);
   const [payrollOpen, setPayrollOpen] = useState(false);
   const [payoutRecord, setPayoutRecord] = useState<PayrollRecord | null>(null);
+  const [probationOpen, setProbationOpen] = useState(false);
 
   const { data: employee, isLoading } = useGetData<Employee>(`/employees/${id}`, ["employees", id]);
   usePageTitle(employee?.profile.name ?? "Employee");
@@ -55,6 +57,30 @@ export function EmployeeDetailPage() {
   const reinstate = usePostData<Employee, string>((eid) => `/employees/${eid}/reinstate`, [
     "employees",
   ]);
+
+  // Confirming is a plain status change -- the service clears the probation
+  // deadline on the way out, so there is nothing else to send.
+  const confirmEmployment = usePatchData<Employee, { employment_status: string }>(
+    () => `/employees/${id}`,
+    ["employees"]
+  );
+
+  const onConfirmEmployment = async (name: string) => {
+    const ok = await confirm({
+      title: `Confirm ${name}?`,
+      description:
+        "Probation ends and they become permanent staff. Issue the offer confirmation letter alongside this.",
+      confirmLabel: "Confirm employment",
+    });
+    if (!ok) return;
+    confirmEmployment.mutate(
+      { employment_status: "CONFIRMED" },
+      {
+        onSuccess: () => toast.success(`${name} confirmed`),
+        onError: (error) => toast.error(error.message),
+      }
+    );
+  };
 
   const onTerminate = async (name: string) => {
     const ok = await confirm({
@@ -224,6 +250,24 @@ export function EmployeeDetailPage() {
               <Pencil />
               Edit
             </Button>
+            {employee.employment_status === "APPOINTED" && (
+              <Button variant="outline" size="sm" onClick={() => setProbationOpen(true)}>
+                <Hourglass />
+                Start probation
+              </Button>
+            )}
+            {(employee.employment_status === "APPOINTED" ||
+              employee.employment_status === "PROBATION") && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={confirmEmployment.isPending}
+                onClick={() => void onConfirmEmployment(employee.profile.name)}
+              >
+                <BadgeCheck />
+                Confirm
+              </Button>
+            )}
             {employee.employment_status === "TERMINATED" ? (
               // Primary, not outline: on a terminated employee's page this is the
               // one thing you'd come here to do, and an outline button sits at the
@@ -329,6 +373,12 @@ export function EmployeeDetailPage() {
           scoreEntries={entries}
         />
       )}
+      <StartProbationDialog
+        open={probationOpen}
+        onOpenChange={setProbationOpen}
+        employee={employee}
+      />
+
       {confirmDialog}
 
       <PayoutDialog
