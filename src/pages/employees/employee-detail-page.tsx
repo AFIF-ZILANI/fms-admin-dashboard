@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { activeStatus, EMPLOYMENT_STATUS_TONE } from "@/components/shared/status-tone";
+import { activeStatus, EMPLOYMENT_STATUS_TONE, PAYOUT_STATUS_TONE } from "@/components/shared/status-tone";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useConfirm } from "@/components/shared/confirm-dialog";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
@@ -22,17 +22,17 @@ import {
   EMPLOYMENT_STATUS_LABELS,
   type Employee,
   type PayrollRecord,
+  type PayrollPayout,
   type PerformanceScoreEntry,
 } from "@/pages/employees/types";
-import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
-import { useOutstanding } from "@/pages/sales/use-outstanding";
+import { PayoutDialog } from "@/pages/employees/payout-dialog";
 
 export function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [scoreOpen, setScoreOpen] = useState(false);
   const [payrollOpen, setPayrollOpen] = useState(false);
-  const [paymentPayrollId, setPaymentPayrollId] = useState<string | null>(null);
+  const [payoutRecord, setPayoutRecord] = useState<PayrollRecord | null>(null);
 
   const { data: employee, isLoading } = useGetData<Employee>(`/employees/${id}`, ["employees", id]);
   usePageTitle(employee?.profile.name ?? "Employee");
@@ -45,7 +45,6 @@ export function EmployeeDetailPage() {
     `/payroll-records?employee_id=${id}&limit=100`,
     ["payroll-records", id]
   );
-  const { trueAmounts } = useOutstanding("PAYROLL");
   const { confirm, confirmDialog } = useConfirm();
 
   const terminate = usePostData<Employee, string>((eid) => `/employees/${eid}/terminate`, [
@@ -84,6 +83,14 @@ export function EmployeeDetailPage() {
       onError: (error) => toast.error(error.message),
     });
   };
+
+  const { data: payouts } = useGetData<Paginated<PayrollPayout>>(
+    `/payroll-payouts?employee_id=${id}&limit=100`,
+    ["payroll-payouts", id]
+  );
+  const payoutByRecord = new Map(
+    (payouts?.results ?? []).map((p) => [p.payroll_record.id, p])
+  );
 
   const entries = scoreEntries?.results ?? [];
   const records = payrollRecords?.results ?? [];
@@ -125,17 +132,40 @@ export function EmployeeDetailPage() {
     { key: "adjustment", header: "P", render: (p) => `${p.adjustment_percent > 0 ? "+" : ""}${p.adjustment_percent}`, numeric: true },
     { key: "allowance", header: "Allowance", render: (p) => formatMoney(p.allowance), numeric: true },
     { key: "total", header: "Total pay", render: (p) => formatMoney(p.total_pay), numeric: true },
-    { key: "due", header: "Due", render: (p) => formatMoney(trueAmounts(p.id, "0", p.total_pay).due), numeric: true },
+    {
+      key: "payout",
+      header: "Payout",
+      render: (p) => {
+        const payout = payoutByRecord.get(p.id);
+        if (!payout) return <StatusBadge tone="warning" label="Unpaid" />;
+        return <StatusBadge tone={PAYOUT_STATUS_TONE[payout.status]} label={humanizeEnum(payout.status)} />;
+      },
+    },
     {
       key: "actions",
       header: "",
-      render: (p) => (
-        <div className="flex justify-end">
-          <Button variant="ghost" size="icon-sm" aria-label="Record payment" onClick={() => setPaymentPayrollId(p.id)}>
-            <CreditCard />
-          </Button>
-        </div>
-      ),
+      render: (p) => {
+        const payout = payoutByRecord.get(p.id);
+        if (payout?.status === "CONFIRMED") {
+          return (
+            <p className="text-right text-xs text-muted-foreground">
+              {payout.transaction_ref ?? "receipt on file"}
+            </p>
+          );
+        }
+        return (
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Record payout"
+              onClick={() => setPayoutRecord(p)}
+            >
+              <CreditCard />
+            </Button>
+          </div>
+        );
+      },
       className: "text-right",
     },
   ];
@@ -284,11 +314,11 @@ export function EmployeeDetailPage() {
       )}
       {confirmDialog}
 
-      <PaymentCreateDialog
-        open={paymentPayrollId !== null}
-        onOpenChange={(open) => !open && setPaymentPayrollId(null)}
-        defaultRefType="PAYROLL"
-        defaultRefId={paymentPayrollId ?? undefined}
+      <PayoutDialog
+        open={payoutRecord !== null}
+        onOpenChange={(open) => !open && setPayoutRecord(null)}
+        employeeId={id ?? ""}
+        record={payoutRecord}
       />
     </div>
   );

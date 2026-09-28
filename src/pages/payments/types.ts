@@ -1,7 +1,9 @@
 export const PAYMENT_DIRECTIONS = ["INCOMING", "OUTGOING"] as const;
 export type PaymentDirection = (typeof PAYMENT_DIRECTIONS)[number];
 
-export const PAYMENT_REF_TYPES = ["SALE", "BIRD_SALE", "PURCHASE", "EXPENSE", "PAYROLL"] as const;
+// PAYROLL is absent on purpose: a salary payment is a PayrollPayout, which can
+// require proof of transfer. See server/docs/employee-payroll-design.md.
+export const PAYMENT_REF_TYPES = ["SALE", "BIRD_SALE", "PURCHASE", "EXPENSE"] as const;
 export type PaymentRefType = (typeof PAYMENT_REF_TYPES)[number];
 
 export const PAYMENT_METHODS = ["CASH", "BANK_TRANSFER", "MFS"] as const;

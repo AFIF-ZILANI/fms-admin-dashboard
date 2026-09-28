@@ -243,3 +243,53 @@ export function computePay(referenceSalary: number, scoreSum: number) {
   const allowance = Math.round((referenceSalary * (BASE_ALLOWANCE_PERCENT + adjustment_percent)) / 100);
   return { adjustment_percent, fixed_wage, allowance, total_pay: fixed_wage + allowance };
 }
+
+export const PAYOUT_METHODS = ["BANK", "BKASH", "NAGAD", "ROCKET", "CASH"] as const;
+export type PayoutMethod = (typeof PAYOUT_METHODS)[number];
+
+export const PAYOUT_METHOD_LABELS: Record<PayoutMethod, string> = {
+  BANK: "Bank transfer",
+  BKASH: "bKash",
+  NAGAD: "Nagad",
+  ROCKET: "Rocket",
+  CASH: "Cash",
+};
+
+export const PAYOUT_STATUSES = ["PENDING", "SENT", "FAILED", "CONFIRMED"] as const;
+export type PayoutStatus = (typeof PAYOUT_STATUSES)[number];
+
+/** Append-only: a change closes this row (active_to) and opens a new one. */
+export type EmployeePayoutAccount = {
+  id: string;
+  employee_id: string;
+  method: PayoutMethod;
+  account_name: string;
+  account_number: string;
+  bank_name: string | null;
+  branch_name: string | null;
+  routing_number: string | null;
+  holder_relation: string | null;
+  consent_doc_url: string | null;
+  verified_by_id: string | null;
+  verified_at: string | null;
+  active_from: string;
+  active_to: string | null;
+  created_at: string;
+};
+
+export type PayrollPayout = {
+  id: string;
+  payroll_record_id: string;
+  payout_account_id: string | null;
+  method: PayoutMethod;
+  account_number: string;
+  amount: string;
+  fee_paid_by_farm: string;
+  transaction_ref: string | null;
+  receipt_doc_url: string | null;
+  status: PayoutStatus;
+  paid_by_id: string | null;
+  paid_at: string | null;
+  created_at: string;
+  payroll_record: { id: string; month: string; total_pay: string };
+};
