@@ -189,10 +189,13 @@ export function EmployeesTableSection() {
         }
       />
 
-      {data && data.totalPages > 1 && (
+      {/* Shown even on a single page: hiding it leaves no way to tell whether the
+          table is paginated at all, and the count is worth having regardless. */}
+      {data && data.total > 0 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            Page {data.page} of {data.totalPages} · {data.total} total
+            Page {data.page} of {data.totalPages} · {data.total}{" "}
+            {data.total === 1 ? "employee" : "employees"}
           </span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
