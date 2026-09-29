@@ -252,6 +252,9 @@ export function EmployeeFormPage() {
   const roleCode = useWatch({ control, name: "role" });
   const selectedRole = roles.find((r) => r.code === roleCode);
   const overrideSalary = useWatch({ control, name: "override_salary" });
+  // True only while editing someone who currently has an override -- lets the
+  // form warn that unchecking moves their actual pay, not just a form default.
+  const hadOverride = isEdit && employee?.reference_salary != null;
   // The appointment letter states the guaranteed wage, so show it as they type R
   // rather than letting them discover it after saving. Off the override, R is
   // the role's standard -- salary isn't something you can drift into by accident.
@@ -282,14 +285,8 @@ export function EmployeeFormPage() {
     setPhotoError(null);
 
     const blankToUndefined = (v: string | undefined) => (v && v.trim() ? v : undefined);
-    // reference_salary is destructured out of `rest` too: the server validator
-    // (server/src/validators/employee.validator.ts) accepts it only as a
-    // positive number or an omitted key -- never null -- so there's no way to
-    // clear an existing override back to the role standard through this API.
-    // Unchecking the override on a NEW hire correctly sends no key at all
-    // (role standard applies); on an edit of an employee who already has an
-    // override, unchecking has no effect until the server accepts a way to
-    // clear it -- a real gap, not a bug in this form.
+    // reference_salary is destructured out of `rest` too: it's rebuilt below as
+    // an explicit override-amount-or-null, never left to the raw form value.
     const { reference_kind, override_salary, reference_salary, ...rest } = values;
 
     // The unused reference kind is sent as null, not omitted: on an edit, only an
@@ -322,9 +319,13 @@ export function EmployeeFormPage() {
       emergency_phone: toE164(values.emergency_phone),
       emergency_email: blankToUndefined(values.emergency_email),
       emergency_address: blankToUndefined(values.emergency_address),
-      // Sent only when the override is actually on -- an omitted key is what
-      // the server treats as "role standard applies" / "leave unchanged".
-      ...(override_salary ? { reference_salary } : {}),
+      // Explicit null when the override is off: the server now accepts null
+      // here specifically to mean "clear the override, use the role
+      // standard" (reference_salary: z.union([z.null(), positive-number]).optional()
+      // in server/src/validators/employee.validator.ts) -- an omitted key
+      // would mean "leave unchanged" on an edit, which is not what unchecking
+      // the box should do.
+      reference_salary: override_salary ? reference_salary : null,
       ...reference,
       // Explicit null, never an omitted key: on a PATCH an omitted key means
       // "leave unchanged", which is how a confirmed employee kept showing the
@@ -495,9 +496,15 @@ export function EmployeeFormPage() {
                       aria-invalid={!!errors.reference_salary}
                     />
                   ) : (
-                    <p className="text-sm text-muted-foreground">
+                    <p
+                      className={
+                        hadOverride ? "text-sm text-warning" : "text-sm text-muted-foreground"
+                      }
+                    >
                       {selectedRole
-                        ? `Uses role standard: ${formatMoney(selectedRole.reference_salary)}`
+                        ? hadOverride
+                          ? `Saving will move them onto the role standard: ${formatMoney(selectedRole.reference_salary)} (currently ${formatMoney(employee?.reference_salary ?? 0)})`
+                          : `Uses role standard: ${formatMoney(selectedRole.reference_salary)}`
                         : "Pick a role to see its standard salary"}
                     </p>
                   )}
