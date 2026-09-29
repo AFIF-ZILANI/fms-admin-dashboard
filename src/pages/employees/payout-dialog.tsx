@@ -15,13 +15,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiFetch, useGetData, type Paginated } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 import {
-  PAYOUT_METHODS,
   PAYOUT_METHOD_LABELS,
   type EmployeePayoutAccount,
-  type PayoutMethod,
   type PayrollRecord,
 } from "@/pages/employees/types";
 import { useQueryClient } from "@tanstack/react-query";
+
+const accountLabel = (a: EmployeePayoutAccount | undefined) =>
+  a ? `${PAYOUT_METHOD_LABELS[a.method]} · ${a.account_name} · ${a.account_number}` : "";
 
 type PayoutDialogProps = {
   open: boolean;
@@ -37,9 +38,11 @@ type PayoutDialogProps = {
  */
 export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutDialogProps) {
   const queryClient = useQueryClient();
-  const [method, setMethod] = useState<PayoutMethod>("BKASH");
+  // An account id, not a method: a method on its own can't be paid to, so the
+  // options are this employee's own accounts and nothing else. Wages are never
+  // paid in cash -- there would be nothing to audit.
+  const [accountId, setAccountId] = useState("");
   const [transactionRef, setTransactionRef] = useState("");
-  const [receiptUrl, setReceiptUrl] = useState("");
   const [feePaid, setFeePaid] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -48,22 +51,21 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
     ["employee-payout-accounts", employeeId],
     { enabled: open }
   );
-  const activeAccount = accounts?.results[0] ?? null;
+  const activeAccounts = accounts?.results ?? [];
 
   // Reset when the dialog opens on a different record, adjusted during render
   // rather than in an effect — React's own "reset state on prop change" pattern,
   // the same one ItemFormPage and EmployeeFormPage use.
-  const resetKey = open ? `${record?.id ?? ""}:${activeAccount?.id ?? ""}` : null;
+  const resetKey = open ? `${record?.id ?? ""}:${activeAccounts[0]?.id ?? ""}` : null;
   const [lastResetKey, setLastResetKey] = useState<string | null>(null);
   if (resetKey && resetKey !== lastResetKey) {
     setLastResetKey(resetKey);
-    setMethod(activeAccount?.method ?? "CASH");
+    setAccountId(activeAccounts[0]?.id ?? "");
     setTransactionRef("");
-    setReceiptUrl("");
     setFeePaid("");
   }
 
-  const isCash = method === "CASH";
+  const account = activeAccounts.find((a) => a.id === accountId);
 
   const onConfirm = async () => {
     if (!record) return;
@@ -84,17 +86,14 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
           method: "POST",
           body: JSON.stringify({
             payroll_record_id: record.id,
-            method,
-            account_number: activeAccount?.account_number ?? "CASH",
+            payout_account_id: accountId,
             ...(feePaid ? { fee_paid_by_farm: Number(feePaid) } : {}),
           }),
         }));
 
       await apiFetch(`/payroll-payouts/${payout.id}/mark-paid`, {
         method: "POST",
-        body: JSON.stringify(
-          isCash ? { receipt_doc_url: receiptUrl } : { transaction_ref: transactionRef }
-        ),
+        body: JSON.stringify({ transaction_ref: transactionRef }),
       });
 
       toast.success("Payout confirmed");
@@ -107,7 +106,7 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
     }
   };
 
-  const canConfirm = isCash ? !!receiptUrl.trim() : !!transactionRef.trim();
+  const canConfirm = !!account && !!transactionRef.trim();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -124,57 +123,49 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="payout-method">Method</Label>
-            <Select value={method} onValueChange={(v) => setMethod(v as PayoutMethod)}>
+            <Label htmlFor="payout-method">Pay to</Label>
+            <Select value={accountId} onValueChange={setAccountId}>
               <SelectTrigger id="payout-method" className="w-full">
-                <SelectValue>{(v: string) => PAYOUT_METHOD_LABELS[v as PayoutMethod]}</SelectValue>
+                <SelectValue>
+                  {(v: string) =>
+                    accountLabel(activeAccounts.find((a) => a.id === v)) || "No payout account"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {PAYOUT_METHODS.map((m) => (
-                  <SelectItem key={m} value={m}>
-                    {PAYOUT_METHOD_LABELS[m]}
+                {activeAccounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {accountLabel(a)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              {activeAccount
-                ? `On file: ${activeAccount.account_name} · ${activeAccount.account_number}`
-                : "No payout account on file for this employee."}
-            </p>
+            {activeAccounts.length === 0 && (
+              <p className="text-xs text-destructive">
+                No payout account on file for this employee — add one on their profile before
+                paying. Wages aren't paid in cash.
+              </p>
+            )}
           </div>
 
-          {isCash ? (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="receipt">Signed receipt</Label>
-              <Input
-                id="receipt"
-                placeholder="Link to the receipt they signed"
-                value={receiptUrl}
-                onChange={(e) => setReceiptUrl(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Cash is a documented exception — a signed receipt is required.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="txn">Transaction reference</Label>
-              <Input
-                id="txn"
-                placeholder="bKash TrxID or bank reference"
-                value={transactionRef}
-                onChange={(e) => setTransactionRef(e.target.value)}
-              />
-            </div>
-          )}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="txn">Transaction reference</Label>
+            <Input
+              id="txn"
+              placeholder="bKash TrxID or bank reference"
+              value={transactionRef}
+              onChange={(e) => setTransactionRef(e.target.value)}
+            />
+          </div>
 
-          {!isCash && (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="fee">Cash-out fee covered by the farm (optional)</Label>
-              <Input id="fee" inputMode="decimal" value={feePaid} onChange={(e) => setFeePaid(e.target.value)} />
-            </div>
-          )}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="fee">Cash-out fee covered by the farm (optional)</Label>
+            <Input id="fee" inputMode="decimal" value={feePaid} onChange={(e) => setFeePaid(e.target.value)} />
+            <p className="text-xs text-muted-foreground">
+              What the farm absorbed of the MFS fee, so the payslip shows them receiving the full
+              figure. Record it as an expense too.
+            </p>
+          </div>
         </div>
 
         <DialogFooter>

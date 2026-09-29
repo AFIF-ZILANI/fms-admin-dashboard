@@ -246,7 +246,9 @@ export function computePay(referenceSalary: number, scoreSum: number) {
   return { adjustment_percent, fixed_wage, allowance, total_pay: fixed_wage + allowance };
 }
 
-export const PAYOUT_METHODS = ["BANK", "BKASH", "NAGAD", "ROCKET", "CASH"] as const;
+// No CASH: a wage paid in cash leaves nothing to audit, so it goes to a bank
+// account or an MFS wallet. Mirrors PAYOUT_METHODS on the server.
+export const PAYOUT_METHODS = ["BANK", "BKASH", "NAGAD", "ROCKET"] as const;
 export type PayoutMethod = (typeof PAYOUT_METHODS)[number];
 
 export const PAYOUT_METHOD_LABELS: Record<PayoutMethod, string> = {
@@ -254,7 +256,6 @@ export const PAYOUT_METHOD_LABELS: Record<PayoutMethod, string> = {
   BKASH: "bKash",
   NAGAD: "Nagad",
   ROCKET: "Rocket",
-  CASH: "Cash",
 };
 
 export const PAYOUT_STATUSES = ["PENDING", "SENT", "FAILED", "CONFIRMED"] as const;
