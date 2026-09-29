@@ -17,6 +17,7 @@ import { formatMoney } from "@/lib/utils";
 import {
   PAYOUT_METHOD_LABELS,
   type EmployeePayoutAccount,
+  type PayoutFeeRates,
   type PayrollRecord,
 } from "@/pages/employees/types";
 import { useQueryClient } from "@tanstack/react-query";
@@ -43,7 +44,6 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
   // paid in cash -- there would be nothing to audit.
   const [accountId, setAccountId] = useState("");
   const [transactionRef, setTransactionRef] = useState("");
-  const [feePaid, setFeePaid] = useState("");
   const [busy, setBusy] = useState(false);
 
   const { data: accounts } = useGetData<Paginated<EmployeePayoutAccount>>(
@@ -62,10 +62,20 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
     setLastResetKey(resetKey);
     setAccountId(activeAccounts[0]?.id ?? "");
     setTransactionRef("");
-    setFeePaid("");
   }
 
+  const { data: feeRates } = useGetData<PayoutFeeRates>(
+    "/payroll-payouts/fee-rates",
+    ["payroll-payout-fee-rates"],
+    { enabled: open }
+  );
+
   const account = activeAccounts.find((a) => a.id === accountId);
+  const wage = Number(record?.total_pay ?? 0);
+  const rate = account && feeRates ? feeRates[account.method] : undefined;
+  // Preview only. The server derives the figure it stores from the same table,
+  // so this never becomes the number of record.
+  const fee = rate ? rate.flat + (wage * rate.percent) / 100 : null;
 
   const onConfirm = async () => {
     if (!record) return;
@@ -87,7 +97,6 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
           body: JSON.stringify({
             payroll_record_id: record.id,
             payout_account_id: accountId,
-            ...(feePaid ? { fee_paid_by_farm: Number(feePaid) } : {}),
           }),
         }));
 
@@ -158,14 +167,29 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="fee">Cash-out fee covered by the farm (optional)</Label>
-            <Input id="fee" inputMode="decimal" value={feePaid} onChange={(e) => setFeePaid(e.target.value)} />
-            <p className="text-xs text-muted-foreground">
-              What the farm absorbed of the MFS fee, so the payslip shows them receiving the full
-              figure. Record it as an expense too.
-            </p>
-          </div>
+          {account && (
+            <div className="rounded-md border bg-muted/40 p-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">To the employee</span>
+                <span className="tabular-nums">{formatMoney(wage)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Transfer fee · {PAYOUT_METHOD_LABELS[account.method]}
+                  {rate ? ` (${rate.percent ? `${rate.percent}%` : "flat"})` : ""}
+                </span>
+                <span className="tabular-nums">{fee === null ? "—" : formatMoney(fee)}</span>
+              </div>
+              <div className="mt-2 flex justify-between border-t pt-2 font-medium">
+                <span>Farm pays</span>
+                <span className="tabular-nums">{formatMoney(wage + (fee ?? 0))}</span>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                The employee receives the full {formatMoney(wage)} — the fee is on top, and is
+                recorded as a Salary transfer fee expense when you confirm.
+              </p>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
