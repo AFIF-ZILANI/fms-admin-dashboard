@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiFetch, useGetData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney, humanizeEnum } from "@/lib/utils";
+import type { PaymentInstrument } from "@/pages/payments/types";
 import {
   PAYOUT_METHOD_LABELS,
   type EmployeePayoutAccount,
@@ -21,6 +22,11 @@ import {
   type PayrollRecord,
 } from "@/pages/employees/types";
 import { useQueryClient } from "@tanstack/react-query";
+
+const instrumentLabel = (instruments: PaymentInstrument[], id: string) => {
+  const i = instruments.find((x) => x.id === id);
+  return i ? `${i.label} (${humanizeEnum(i.type)})` : "";
+};
 
 const accountLabel = (a: EmployeePayoutAccount | undefined) =>
   a ? `${PAYOUT_METHOD_LABELS[a.method]} · ${a.account_name} · ${a.account_number}` : "";
@@ -44,6 +50,7 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
   // paid in cash -- there would be nothing to audit.
   const [accountId, setAccountId] = useState("");
   const [transactionRef, setTransactionRef] = useState("");
+  const [fromInstrumentId, setFromInstrumentId] = useState("");
   const [busy, setBusy] = useState(false);
 
   const { data: accounts } = useGetData<Paginated<EmployeePayoutAccount>>(
@@ -62,7 +69,15 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
     setLastResetKey(resetKey);
     setAccountId(activeAccounts[0]?.id ?? "");
     setTransactionRef("");
+    setFromInstrumentId("");
   }
+
+  const { data: instruments } = useGetData<Paginated<PaymentInstrument>>(
+    "/payment-instruments?limit=100&is_active=true",
+    ["payment-instruments"],
+    { enabled: open }
+  );
+  const farmInstruments = (instruments?.results ?? []).filter((i) => i.owner_type === "ADMIN");
 
   const { data: feeRates } = useGetData<PayoutFeeRates>(
     "/payroll-payouts/fee-rates",
@@ -102,7 +117,10 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
 
       await apiFetch(`/payroll-payouts/${payout.id}/mark-paid`, {
         method: "POST",
-        body: JSON.stringify({ transaction_ref: transactionRef }),
+        body: JSON.stringify({
+          transaction_ref: transactionRef,
+          from_instrument_id: fromInstrumentId,
+        }),
       });
 
       toast.success("Payout confirmed");
@@ -115,7 +133,7 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
     }
   };
 
-  const canConfirm = !!account && !!transactionRef.trim();
+  const canConfirm = !!account && !!transactionRef.trim() && !!fromInstrumentId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -165,6 +183,33 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
               value={transactionRef}
               onChange={(e) => setTransactionRef(e.target.value)}
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="paid-from">Paid from</Label>
+            <Select value={fromInstrumentId} onValueChange={setFromInstrumentId}>
+              <SelectTrigger id="paid-from" className="w-full">
+                <SelectValue>
+                  {(v: string) => instrumentLabel(farmInstruments, v) || "Select an account"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {farmInstruments.map((i) => (
+                  <SelectItem key={i.id} value={i.id}>
+                    {instrumentLabel(farmInstruments, i.id)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {farmInstruments.length === 0 ? (
+              <p className="text-xs text-destructive">
+                No active farm account to pay from — add one under Payments first.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Which farm account the money left. Not guessed: it is this balance that drops.
+              </p>
+            )}
           </div>
 
           {account && (
