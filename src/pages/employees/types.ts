@@ -258,6 +258,11 @@ export const PAYOUT_METHOD_LABELS: Record<PayoutMethod, string> = {
   ROCKET: "Rocket",
 };
 
+/** What sending one wage costs the farm, by destination. Served by
+ *  GET /payroll-payouts/fee-rates so the preview and the stored figure can't
+ *  drift apart -- the server computes the one that gets written. */
+export type PayoutFeeRates = Record<PayoutMethod, { percent: number; flat: number }>;
+
 export const PAYOUT_STATUSES = ["PENDING", "SENT", "FAILED", "CONFIRMED"] as const;
 export type PayoutStatus = (typeof PAYOUT_STATUSES)[number];
 
