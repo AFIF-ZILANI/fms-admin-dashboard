@@ -330,3 +330,24 @@ export type Payslip = {
     paid_at: string | null;
   } | null;
 };
+
+/**
+ * Computed by GET /employees/kpis across the whole table — never reduced from a
+ * page of employees, which would quietly under-report once the roster outgrows
+ * one page.
+ */
+export type EmployeeKpis = {
+  active_employees: number;
+  wage_bill_projected: number;
+  unpaid_wages: number;
+  unpaid_runs: number;
+  labour_cost_per_bird: number | null;
+  last_month_wages: number;
+  live_birds: number;
+  payroll_missing: number;
+  no_payout_account: number;
+  probation_due: number;
+  negative_performers: number;
+  overdue_tasks: number;
+  payout_overdue: boolean;
+};

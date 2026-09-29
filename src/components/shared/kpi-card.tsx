@@ -13,10 +13,13 @@ type KPICardProps = {
   isError?: boolean;
   /** Small line under the value, e.g. to say a figure ignores the date range. */
   hint?: string;
+  /** Colours the value when the number itself is the problem — money owed past
+   * its due date, staff who can't be paid. Left off, a tile reads as neutral. */
+  tone?: "critical" | "warning";
 };
 
 /** label → value (32px, tabular) → icon, per docs/design.md §5. Reused on every page that opens with a stats row. */
-export function KPICard({ label, value, icon: Icon, isLoading, isError, hint }: KPICardProps) {
+export function KPICard({ label, value, icon: Icon, isLoading, isError, hint, tone }: KPICardProps) {
   return (
     <Card>
       <CardContent className="flex items-center justify-between gap-3">
@@ -27,7 +30,13 @@ export function KPICard({ label, value, icon: Icon, isLoading, isError, hint }: 
           ) : isError ? (
             <p className="mt-1 text-[32px] leading-none font-semibold text-muted-foreground">—</p>
           ) : (
-            <p className="mt-1 text-[32px] leading-none font-semibold tabular-nums">{value}</p>
+            <p
+              className={`mt-1 text-[32px] leading-none font-semibold tabular-nums ${
+                tone === "critical" ? "text-critical" : tone === "warning" ? "text-warning" : ""
+              }`}
+            >
+              {value}
+            </p>
           )}
           {hint && !isLoading && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
         </div>
