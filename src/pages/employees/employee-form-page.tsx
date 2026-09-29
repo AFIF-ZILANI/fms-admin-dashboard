@@ -168,6 +168,12 @@ function toFormValues(e: Employee): EmployeeFormInput {
   };
 }
 
+/** A deactivated role can still be an employee's current one (Finding 2) --
+ *  labelled so picking it off the list reads as a fact, not an active choice. */
+function roleLabel(r: EmployeeRoleConfig): string {
+  return r.is_active ? r.label : `${r.label} (inactive)`;
+}
+
 /** Label + field + error, the shape every field on this page repeats. */
 function Field({
   id,
@@ -214,6 +220,7 @@ export function EmployeeFormPage() {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<EmployeeFormInput, unknown, EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
@@ -242,13 +249,19 @@ export function EmployeeFormPage() {
   const referenceKind = useWatch({ control, name: "reference_kind" });
   const emergencyRelation = useWatch({ control, name: "emergency_relation" });
 
-  // Roles are configured in Settings now, not a fixed 3 -- only the active
-  // ones are offered here.
+  // Roles are configured in Settings now, not a fixed 3. Fetched unfiltered
+  // (same endpoint/key as the detail page and Settings card, so the cache is
+  // shared) and then filtered to active roles, plus -- on an edit -- whatever
+  // role this employee currently holds even if it's since been deactivated.
+  // A deactivated role is still a real fact about their pay; hiding it would
+  // make the form lie about who they are. New hires only ever see active ones,
+  // since employee is undefined until isEdit resolves it.
   const { data: rolesData } = useGetData<Paginated<EmployeeRoleConfig>>(
-    "/employee-roles?active=true&limit=100",
-    ["employee-roles", "active"]
+    "/employee-roles?limit=100",
+    ["employee-roles"]
   );
-  const roles = rolesData?.results ?? [];
+  const allRoles = rolesData?.results ?? [];
+  const roles = allRoles.filter((r) => r.is_active || r.code === employee?.role);
   const roleCode = useWatch({ control, name: "role" });
   const selectedRole = roles.find((r) => r.code === roleCode);
   const overrideSalary = useWatch({ control, name: "override_salary" });
@@ -455,13 +468,16 @@ export function EmployeeFormPage() {
                     <Select value={field.value ?? ""} onValueChange={field.onChange}>
                       <SelectTrigger id="role" className="w-full" aria-invalid={!!errors.role}>
                         <SelectValue>
-                          {(v: string) => roles.find((r) => r.code === v)?.label ?? "Select role"}
+                          {(v: string) => {
+                            const r = roles.find((role) => role.code === v);
+                            return r ? roleLabel(r) : "Select role";
+                          }}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {roles.map((r) => (
                           <SelectItem key={r.id} value={r.code}>
-                            {r.label}
+                            {roleLabel(r)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -481,7 +497,20 @@ export function EmployeeFormPage() {
                       control={control}
                       name="override_salary"
                       render={({ field }) => (
-                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            // The NumericInput below unmounts without
+                            // shouldUnregister, so a value typed (or a stray
+                            // "0" from an emptied field) survives in RHF state
+                            // and the object-level refine keeps rejecting it
+                            // even though the field is gone from the screen.
+                            // Clearing it here is what actually lets Save
+                            // succeed after unchecking.
+                            if (!checked) setValue("reference_salary", undefined, { shouldValidate: true });
+                          }}
+                        />
                       )}
                     />
                     Override the role&apos;s standard salary
