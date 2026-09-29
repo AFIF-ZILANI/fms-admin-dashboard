@@ -86,10 +86,13 @@ export type EmployeeProfile = {
 export type Employee = {
   id: string;
   profile_id: string;
-  role: EmployeeRole;
-  // R — the normal-month total. fixed_wage is 0.9 × R, derived by the server.
-  reference_salary: string;
-  fixed_wage: string;
+  // A role code from GET /employee-roles — no longer one of a fixed 3, since
+  // admins can add roles, so this is a plain string rather than EmployeeRole.
+  role: string;
+  // An override of the role's standard salary. Null means the role's figure
+  // applies. fixed_wage is gone from this type -- it's always 0.9 × the
+  // resolved salary, derived client-side, never stored on the employee.
+  reference_salary: string | null;
   joining_date: string;
   rating: number | null;
 
@@ -118,6 +121,21 @@ export type Employee = {
   created_at: string;
   updated_at: string;
   profile: EmployeeProfile;
+};
+
+/**
+ * A row from GET /employee-roles: the standard salary for a role, and how
+ * many employees currently hold it. Named EmployeeRoleConfig, not
+ * EmployeeRole -- that name is already the fixed MANAGER/WORKER/INTERN
+ * union above, used by the roster filter and existing labels.
+ */
+export type EmployeeRoleConfig = {
+  id: string;
+  code: string;
+  label: string;
+  reference_salary: string;
+  is_active: boolean;
+  employee_count: number;
 };
 
 /**

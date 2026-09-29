@@ -80,8 +80,17 @@ export function EmployeesTableSection() {
         </div>
       ),
     },
-    { key: "role", header: "Role", render: (e) => EMPLOYEE_ROLE_LABELS[e.role] },
-    { key: "salary", header: "Reference salary", render: (e) => formatMoney(e.reference_salary), numeric: true },
+    {
+      key: "role",
+      header: "Role",
+      render: (e) => EMPLOYEE_ROLE_LABELS[e.role as EmployeeRole] ?? e.role,
+    },
+    {
+      key: "salary",
+      header: "Reference salary",
+      render: (e) => (e.reference_salary ? formatMoney(e.reference_salary) : "Standard"),
+      numeric: true,
+    },
     { key: "rating", header: "Rating", render: (e) => (e.rating ? `★ ${e.rating.toFixed(1)}` : "—"), numeric: true },
     { key: "joining_date", header: "Joined", render: (e) => new Date(e.joining_date).toLocaleDateString() },
     {

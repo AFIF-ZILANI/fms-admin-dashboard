@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { NumericInput } from "@/components/utils/NumaricInput";
 import { ImageUpload, type UploadedImage } from "@/components/shared/image-upload";
 import { PhoneInput } from "@/components/shared/phone-input";
@@ -20,7 +21,6 @@ import { formatMoney } from "@/lib/utils";
 import {
   EDUCATION_LABELS,
   EDUCATION_LEVELS,
-  EMPLOYEE_ROLES,
   EMPLOYEE_ROLE_LABELS,
   EMPLOYMENT_STATUSES,
   EMPLOYMENT_STATUS_LABELS,
@@ -30,6 +30,8 @@ import {
   RELATIONSHIP_OTHER,
   type EducationLevel,
   type Employee,
+  type EmployeeRole,
+  type EmployeeRoleConfig,
   type EmploymentStatus,
   type MaritalStatus,
 } from "@/pages/employees/types";
@@ -53,8 +55,12 @@ const employeeSchema = z
     marital_status: z.enum(MARITAL_STATUSES, "Select a marital status"),
     nid_number: z.string().trim().min(1, "NID number is required"),
 
-    role: z.enum(EMPLOYEE_ROLES, "Select a role"),
-    reference_salary: z.coerce.number().positive("Reference salary must be positive"),
+    // Role codes now come from GET /employee-roles, not a fixed enum -- an
+    // admin can add roles, so this just checks something was picked.
+    role: z.string().min(1, "Select a role"),
+    // Opt-in override of the role's standard salary -- see override_salary below.
+    reference_salary: z.coerce.number().positive("Reference salary must be positive").optional(),
+    override_salary: z.boolean(),
     joining_date: z.string().min(1, "Joining date is required"),
     employment_status: z.enum(EMPLOYMENT_STATUSES),
     probation_end_date: z.string().optional(),
@@ -88,6 +94,10 @@ const employeeSchema = z
   .refine((d) => d.reference_kind !== "OUTSIDE" || (d.reference_phone ?? "").length >= 9, {
     message: "Enter a 9-10 digit number",
     path: ["reference_phone"],
+  })
+  .refine((d) => !d.override_salary || (d.reference_salary !== undefined && d.reference_salary > 0), {
+    message: "Enter the override amount",
+    path: ["reference_salary"],
   });
 
 // z.coerce on reference_salary makes the schema's input type differ from its output type —
@@ -104,8 +114,9 @@ function blank(): EmployeeFormInput {
     date_of_birth: "",
     marital_status: undefined as unknown as MaritalStatus,
     nid_number: "",
-    role: undefined as unknown as EmployeeFormInput["role"],
+    role: "",
     reference_salary: undefined,
+    override_salary: false,
     joining_date: new Date().toISOString().slice(0, 10),
     employment_status: "APPOINTED",
     probation_end_date: "",
@@ -136,7 +147,8 @@ function toFormValues(e: Employee): EmployeeFormInput {
     marital_status: e.marital_status as MaritalStatus,
     nid_number: e.nid_number ?? "",
     role: e.role,
-    reference_salary: e.reference_salary,
+    reference_salary: e.reference_salary ?? undefined,
+    override_salary: e.reference_salary !== null,
     joining_date: date(e.joining_date),
     employment_status: e.employment_status,
     probation_end_date: date(e.probation_end_date),
@@ -227,11 +239,24 @@ export function EmployeeFormPage() {
   }
 
   const employmentStatus = useWatch({ control, name: "employment_status" });
-  // The appointment letter states the guaranteed wage, so show it as they type R
-  // rather than letting them discover it after saving.
-  const referenceSalary = Number(useWatch({ control, name: "reference_salary" })) || 0;
   const referenceKind = useWatch({ control, name: "reference_kind" });
   const emergencyRelation = useWatch({ control, name: "emergency_relation" });
+
+  // Roles are configured in Settings now, not a fixed 3 -- only the active
+  // ones are offered here.
+  const { data: rolesData } = useGetData<Paginated<EmployeeRoleConfig>>(
+    "/employee-roles?active=true&limit=100",
+    ["employee-roles", "active"]
+  );
+  const roles = rolesData?.results ?? [];
+  const roleCode = useWatch({ control, name: "role" });
+  const selectedRole = roles.find((r) => r.code === roleCode);
+  const overrideSalary = useWatch({ control, name: "override_salary" });
+  // The appointment letter states the guaranteed wage, so show it as they type R
+  // rather than letting them discover it after saving. Off the override, R is
+  // the role's standard -- salary isn't something you can drift into by accident.
+  const enteredSalary = Number(useWatch({ control, name: "reference_salary" })) || 0;
+  const referenceSalary = overrideSalary ? enteredSalary : Number(selectedRole?.reference_salary ?? 0);
 
   // "Other" isn't stored — it just reveals a free-text box, so the dropdown
   // shows it selected whenever the saved relationship isn't one of the listed ones.
@@ -257,7 +282,15 @@ export function EmployeeFormPage() {
     setPhotoError(null);
 
     const blankToUndefined = (v: string | undefined) => (v && v.trim() ? v : undefined);
-    const { reference_kind, ...rest } = values;
+    // reference_salary is destructured out of `rest` too: the server validator
+    // (server/src/validators/employee.validator.ts) accepts it only as a
+    // positive number or an omitted key -- never null -- so there's no way to
+    // clear an existing override back to the role standard through this API.
+    // Unchecking the override on a NEW hire correctly sends no key at all
+    // (role standard applies); on an edit of an employee who already has an
+    // override, unchecking has no effect until the server accepts a way to
+    // clear it -- a real gap, not a bug in this form.
+    const { reference_kind, override_salary, reference_salary, ...rest } = values;
 
     // The unused reference kind is sent as null, not omitted: on an edit, only an
     // explicit null clears what was stored before the switch.
@@ -289,6 +322,9 @@ export function EmployeeFormPage() {
       emergency_phone: toE164(values.emergency_phone),
       emergency_email: blankToUndefined(values.emergency_email),
       emergency_address: blankToUndefined(values.emergency_address),
+      // Sent only when the override is actually on -- an omitted key is what
+      // the server treats as "role standard applies" / "leave unchanged".
+      ...(override_salary ? { reference_salary } : {}),
       ...reference,
       // Explicit null, never an omitted key: on a PATCH an omitted key means
       // "leave unchanged", which is how a confirmed employee kept showing the
@@ -418,15 +454,13 @@ export function EmployeeFormPage() {
                     <Select value={field.value ?? ""} onValueChange={field.onChange}>
                       <SelectTrigger id="role" className="w-full" aria-invalid={!!errors.role}>
                         <SelectValue>
-                          {(v: string) =>
-                            v ? EMPLOYEE_ROLE_LABELS[v as keyof typeof EMPLOYEE_ROLE_LABELS] : "Select role"
-                          }
+                          {(v: string) => roles.find((r) => r.code === v)?.label ?? "Select role"}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {EMPLOYEE_ROLES.map((r) => (
-                          <SelectItem key={r} value={r}>
-                            {EMPLOYEE_ROLE_LABELS[r]}
+                        {roles.map((r) => (
+                          <SelectItem key={r.id} value={r.code}>
+                            {r.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -440,14 +474,34 @@ export function EmployeeFormPage() {
                 hint="normal-month total"
                 error={errors.reference_salary?.message}
               >
-                <NumericInput
-                  id="reference_salary"
-                  allowDecimal
-                  decimalPlaces={2}
-                  placeholder="15000"
-                  {...register("reference_salary")}
-                  aria-invalid={!!errors.reference_salary}
-                />
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <Controller
+                      control={control}
+                      name="override_salary"
+                      render={({ field }) => (
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      )}
+                    />
+                    Override the role&apos;s standard salary
+                  </label>
+                  {overrideSalary ? (
+                    <NumericInput
+                      id="reference_salary"
+                      allowDecimal
+                      decimalPlaces={2}
+                      placeholder={selectedRole?.reference_salary ?? "15000"}
+                      {...register("reference_salary")}
+                      aria-invalid={!!errors.reference_salary}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {selectedRole
+                        ? `Uses role standard: ${formatMoney(selectedRole.reference_salary)}`
+                        : "Pick a role to see its standard salary"}
+                    </p>
+                  )}
+                </div>
                 {referenceSalary > 0 && (
                   <p className="text-xs text-muted-foreground">
                     Guaranteed fixed wage {formatMoney(Math.round(referenceSalary * FIXED_WAGE_RATIO))} ·
@@ -717,7 +771,7 @@ export function EmployeeFormPage() {
                         <SelectContent>
                           {referenceOptions.map((o) => (
                             <SelectItem key={o.id} value={o.id}>
-                              {o.profile.name} · {EMPLOYEE_ROLE_LABELS[o.role]}
+                              {o.profile.name} · {EMPLOYEE_ROLE_LABELS[o.role as EmployeeRole] ?? o.role}
                             </SelectItem>
                           ))}
                         </SelectContent>

@@ -8,6 +8,7 @@ import { InstrumentsTab } from "@/pages/payments/instruments-tab";
 import { StockUnitProvisionCard } from "@/pages/settings/stock-unit-provision-card";
 import { LookupManagerCard } from "@/pages/settings/lookup-manager-card";
 import { DevicesTab } from "@/pages/settings/devices-tab";
+import { RoleSalaryCard } from "@/pages/settings/role-salary-card";
 
 // Every tab here reuses the shared component its owning page already built
 // (Warehouses/Organizations from Inventory, Instruments from Payments) —
@@ -23,6 +24,7 @@ export function SettingsPage() {
         <TabsTrigger value="organizations">Organizations</TabsTrigger>
         <TabsTrigger value="coded-units">Coded Units</TabsTrigger>
         <TabsTrigger value="categories-units">Categories & Units</TabsTrigger>
+        <TabsTrigger value="roles">Roles & Salaries</TabsTrigger>
         <TabsTrigger value="devices">Devices</TabsTrigger>
         <TabsTrigger value="system">System</TabsTrigger>
       </TabsList>
@@ -55,6 +57,9 @@ export function SettingsPage() {
             icon={Truck}
           />
         </div>
+      </TabsContent>
+      <TabsContent value="roles">
+        <RoleSalaryCard />
       </TabsContent>
       <TabsContent value="devices">
         <DevicesTab />
