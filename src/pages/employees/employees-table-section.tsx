@@ -10,17 +10,27 @@ import { activeStatus, EMPLOYMENT_STATUS_TONE } from "@/components/shared/status
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 import {
-  EMPLOYEE_ROLES,
   EMPLOYEE_ROLE_LABELS,
   EMPLOYMENT_STATUS_LABELS,
   type Employee,
   type EmployeeRole,
+  type EmployeeRoleConfig,
 } from "@/pages/employees/types";
+
+/** The database is authoritative for a role's label; EMPLOYEE_ROLE_LABELS is
+ *  only the last-resort fallback for a code the API fetch hasn't returned
+ *  (e.g. while it's still loading). A rename in Settings must show up here,
+ *  not just on the Settings tab. */
+function roleLabel(roles: EmployeeRoleConfig[], code: string): string {
+  const r = roles.find((role) => role.code === code);
+  if (r) return r.is_active ? r.label : `${r.label} (inactive)`;
+  return EMPLOYEE_ROLE_LABELS[code as EmployeeRole] ?? code;
+}
 
 export function EmployeesTableSection() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<EmployeeRole | "ALL">("ALL");
+  const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
@@ -53,6 +63,15 @@ export function EmployeesTableSection() {
     q,
   ]);
 
+  // Same endpoint/key as the detail page, form and Settings card -- shares the
+  // cache instead of refetching. Unfiltered: the filter offers every role,
+  // including one an employee still holds after it was deactivated.
+  const { data: rolesData } = useGetData<Paginated<EmployeeRoleConfig>>(
+    "/employee-roles?limit=100",
+    ["employee-roles"]
+  );
+  const roles = rolesData?.results ?? [];
+
   const employees = data?.results ?? [];
   const isFiltered = !!q || roleFilter !== "ALL" || statusFilter !== "ALL";
 
@@ -83,7 +102,7 @@ export function EmployeesTableSection() {
     {
       key: "role",
       header: "Role",
-      render: (e) => EMPLOYEE_ROLE_LABELS[e.role as EmployeeRole] ?? e.role,
+      render: (e) => roleLabel(roles, e.role),
     },
     {
       key: "salary",
@@ -138,17 +157,17 @@ export function EmployeesTableSection() {
             )}
           </div>
 
-          <Select value={roleFilter} onValueChange={(v) => setRoleFilter((v ?? "ALL") as EmployeeRole | "ALL")}>
+          <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v ?? "ALL")}>
             <SelectTrigger className="w-40">
               <SelectValue>
-                {(v: EmployeeRole | "ALL" | "") => (v && v !== "ALL" ? EMPLOYEE_ROLE_LABELS[v] : "All roles")}
+                {(v: string) => (v && v !== "ALL" ? roleLabel(roles, v) : "All roles")}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All roles</SelectItem>
-              {EMPLOYEE_ROLES.map((role) => (
-                <SelectItem key={role} value={role}>
-                  {EMPLOYEE_ROLE_LABELS[role]}
+              {roles.map((r) => (
+                <SelectItem key={r.id} value={r.code}>
+                  {roleLabel(roles, r.code)}
                 </SelectItem>
               ))}
             </SelectContent>
