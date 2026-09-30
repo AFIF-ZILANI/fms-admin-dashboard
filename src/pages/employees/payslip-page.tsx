@@ -3,11 +3,13 @@ import { ArrowLeft, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePageTitle } from "@/components/layout/use-page-title";
-import { useGetData } from "@/lib/api";
+import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import {
   EMPLOYEE_ROLE_LABELS,
   PAYOUT_METHOD_LABELS,
+  type EmployeeRole,
+  type EmployeeRoleConfig,
   type Payslip,
 } from "@/pages/employees/types";
 
@@ -41,6 +43,18 @@ export function PayslipPage() {
     `/payroll-records/${payrollId}/payslip`,
     ["payslip", payrollId ?? ""]
   );
+
+  // Same endpoint/key as the other employee pages -- shares the cache. The
+  // database is authoritative for the role's label (a rename in Settings must
+  // show up on a document an employee reads as proof of their pay); the
+  // hardcoded map is only the fallback for a code it hasn't returned.
+  const { data: rolesData } = useGetData<Paginated<EmployeeRoleConfig>>(
+    "/employee-roles?limit=100",
+    ["employee-roles"]
+  );
+  const roleLabel =
+    rolesData?.results.find((r) => r.code === slip?.employee.role)?.label ??
+    (slip ? (EMPLOYEE_ROLE_LABELS[slip.employee.role as EmployeeRole] ?? slip.employee.role) : "");
 
   if (isLoading || !slip) {
     return (
@@ -87,7 +101,7 @@ export function PayslipPage() {
             <p className="text-xs text-muted-foreground">Employee</p>
             <p className="font-medium">{slip.employee.name}</p>
             <p className="text-muted-foreground">
-              {EMPLOYEE_ROLE_LABELS[slip.employee.role]} · {slip.employee.mobile}
+              {roleLabel} · {slip.employee.mobile}
             </p>
           </div>
           <div className="text-right">

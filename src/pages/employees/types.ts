@@ -1,8 +1,15 @@
+// GET /employee-roles is authoritative for a role's label and for which codes
+// exist at all -- an admin can add, rename or deactivate roles from Settings,
+// and that never touches this file. EMPLOYEE_ROLES / EMPLOYEE_ROLE_LABELS
+// below are a last-resort fallback only, for a code that fetch hasn't
+// returned yet (e.g. still loading) -- they already disagree with the
+// database (MANAGER reads "Manager" there, "General Manager" here) and are
+// not kept in sync with it.
 export const EMPLOYEE_ROLES = ["MANAGER", "WORKER", "INTERN"] as const;
 export type EmployeeRole = (typeof EMPLOYEE_ROLES)[number];
 
-// The farm's own words for the three roles (docs/employee_hire.md). The Owner
-// isn't here: they hold the trade licence, which is an Admins profile.
+// The farm's own words for the three original roles (docs/employee_hire.md).
+// The Owner isn't here: they hold the trade licence, which is an Admins profile.
 export const EMPLOYEE_ROLE_LABELS: Record<EmployeeRole, string> = {
   MANAGER: "General Manager",
   WORKER: "Shed Worker",
@@ -86,10 +93,13 @@ export type EmployeeProfile = {
 export type Employee = {
   id: string;
   profile_id: string;
-  role: EmployeeRole;
-  // R — the normal-month total. fixed_wage is 0.9 × R, derived by the server.
-  reference_salary: string;
-  fixed_wage: string;
+  // A role code from GET /employee-roles — no longer one of a fixed 3, since
+  // admins can add roles, so this is a plain string rather than EmployeeRole.
+  role: string;
+  // An override of the role's standard salary. Null means the role's figure
+  // applies. fixed_wage is gone from this type -- it's always 0.9 × the
+  // resolved salary, derived client-side, never stored on the employee.
+  reference_salary: string | null;
   joining_date: string;
   rating: number | null;
 
@@ -118,6 +128,21 @@ export type Employee = {
   created_at: string;
   updated_at: string;
   profile: EmployeeProfile;
+};
+
+/**
+ * A row from GET /employee-roles: the standard salary for a role, and how
+ * many employees currently hold it. Named EmployeeRoleConfig, not
+ * EmployeeRole -- that name is already the fixed MANAGER/WORKER/INTERN
+ * union above, used by the roster filter and existing labels.
+ */
+export type EmployeeRoleConfig = {
+  id: string;
+  code: string;
+  label: string;
+  reference_salary: string;
+  is_active: boolean;
+  employee_count: number;
 };
 
 /**
@@ -316,7 +341,9 @@ export type Payslip = {
     id: string;
     name: string;
     mobile: string;
-    role: EmployeeRole;
+    // Whatever role code the server sends -- not the fixed union; see the
+    // comment above EMPLOYEE_ROLES.
+    role: string;
     joining_date: string;
   };
   entries: Array<{

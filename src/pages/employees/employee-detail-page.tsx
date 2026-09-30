@@ -20,9 +20,10 @@ import { EmployeeProfileCard } from "@/pages/employees/employee-profile-card";
 import { PayoutAccountsCard } from "@/pages/employees/payout-accounts-card";
 import { StartProbationDialog } from "@/pages/employees/start-probation-dialog";
 import {
-  EMPLOYEE_ROLE_LABELS,
   EMPLOYMENT_STATUS_LABELS,
+  FIXED_WAGE_RATIO,
   type Employee,
+  type EmployeeRoleConfig,
   type PayrollRecord,
   type PayrollPayout,
   type PerformanceScoreEntry,
@@ -39,6 +40,14 @@ export function EmployeeDetailPage() {
 
   const { data: employee, isLoading } = useGetData<Employee>(`/employees/${id}`, ["employees", id]);
   usePageTitle(employee?.profile.name ?? "Employee");
+
+  // Resolves the role's label and standard salary — needed since reference_salary
+  // on the employee is now an override, not the figure itself, when it's null.
+  const { data: rolesData } = useGetData<Paginated<EmployeeRoleConfig>>(
+    "/employee-roles?limit=100",
+    ["employee-roles"]
+  );
+  const role = rolesData?.results.find((r) => r.code === employee?.role);
 
   const { data: scoreEntries } = useGetData<Paginated<PerformanceScoreEntry>>(
     `/performance-score-entries?employee_id=${id}&limit=100`,
@@ -235,7 +244,7 @@ export function EmployeeDetailPage() {
             <div className="min-w-0">
               <CardTitle className="text-xl">{employee.profile.name}</CardTitle>
               <p className="truncate text-sm text-muted-foreground">
-                {EMPLOYEE_ROLE_LABELS[employee.role]} · {employee.profile.mobile}
+                {role?.label ?? employee.role} · {employee.profile.mobile}
                 {employee.profile.email ? ` · ${employee.profile.email}` : ""}
               </p>
             </div>
@@ -298,12 +307,19 @@ export function EmployeeDetailPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPICard
           label="Reference salary"
-          value={formatMoney(employee.reference_salary)}
+          value={
+            employee.reference_salary
+              ? formatMoney(employee.reference_salary)
+              : formatMoney(role?.reference_salary ?? 0)
+          }
+          hint={employee.reference_salary ? "Override" : "Role standard"}
           icon={Wallet}
         />
         <KPICard
-          label="Fixed wage"
-          value={formatMoney(employee.fixed_wage)}
+          label="Fixed wage (guaranteed)"
+          value={formatMoney(
+            FIXED_WAGE_RATIO * Number(employee.reference_salary ?? role?.reference_salary ?? 0)
+          )}
           icon={ShieldCheck}
         />
         <KPICard label="MTD score sum" value={mtdSum > 0 ? `+${mtdSum}` : mtdSum} icon={Award} />
@@ -369,7 +385,7 @@ export function EmployeeDetailPage() {
           open={payrollOpen}
           onOpenChange={setPayrollOpen}
           employeeId={id}
-          referenceSalary={employee.reference_salary}
+          referenceSalary={employee.reference_salary ?? role?.reference_salary ?? "0"}
           scoreEntries={entries}
         />
       )}
