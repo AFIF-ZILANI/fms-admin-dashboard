@@ -18,6 +18,7 @@ import { toE164, toLocalDigits } from "@/lib/phone";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
+import { TempPasswordDialog, type TempCredentials } from "@/components/shared/temp-password-dialog";
 import {
   EDUCATION_LABELS,
   EDUCATION_LEVELS,
@@ -285,7 +286,9 @@ export function EmployeeFormPage() {
     (c) => c.profile.is_active && c.id !== id
   );
 
-  const createEmployee = usePostData<Employee, object>("/employees", ["employees"]);
+  // Hiring returns the new login's temp password once; the dialog must be dismissed before we leave.
+  const [hired, setHired] = useState<(TempCredentials & { id: string }) | null>(null);
+  const createEmployee = usePostData<Employee & { temp_password: string }, object>("/employees", ["employees"]);
   const updateEmployee = usePatchData<Employee, object>(() => `/employees/${id}`, ["employees"]);
 
   const onSubmit = (values: EmployeeFormValues) => {
@@ -355,8 +358,17 @@ export function EmployeeFormPage() {
 
     const mutation = isEdit ? updateEmployee : createEmployee;
     mutation.mutate(payload, {
-      onSuccess: (saved) => {
+      onSuccess: (saved: Employee & { temp_password?: string }) => {
         toast.success(isEdit ? "Employee updated" : `${values.name} hired`);
+        if (!isEdit && saved.temp_password) {
+          setHired({
+            id: saved.id,
+            name: values.name,
+            email: saved.profile.email,
+            password: saved.temp_password,
+          });
+          return;
+        }
         navigate(`/employees/${saved.id}`);
       },
       onError: (error) => {
@@ -864,6 +876,15 @@ export function EmployeeFormPage() {
           </Button>
         </div>
       </form>
+
+      <TempPasswordDialog
+        credentials={hired}
+        onClose={() => {
+          const id = hired?.id;
+          setHired(null);
+          if (id) navigate(`/employees/${id}`);
+        }}
+      />
     </div>
   );
 }

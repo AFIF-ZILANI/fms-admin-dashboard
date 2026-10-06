@@ -1,11 +1,13 @@
 import { Link } from "react-router";
-import { Bell } from "lucide-react";
+import { Bell, KeyRound, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrentPageTitle } from "@/components/layout/use-page-title";
+import { useAuth } from "@/lib/auth-context";
 import type { UseThemeProps } from "next-themes";
 
 export function TopBar({ theme }: { theme: UseThemeProps }) {
   const title = useCurrentPageTitle();
+  const { me, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background px-6">
@@ -59,6 +61,19 @@ export function TopBar({ theme }: { theme: UseThemeProps }) {
           render={<Link to="/alerts" />}
         >
           <Bell className="size-4" />
+        </Button>
+        <span className="hidden text-sm text-muted-foreground sm:inline">{me?.name}</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Change password"
+          nativeButton={false}
+          render={<Link to="/change-password" />}
+        >
+          <KeyRound className="size-4" />
+        </Button>
+        <Button variant="ghost" size="icon" aria-label="Log out" onClick={() => void logout()}>
+          <LogOut className="size-4" />
         </Button>
       </div>
     </header>

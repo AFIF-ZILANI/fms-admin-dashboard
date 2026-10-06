@@ -18,8 +18,11 @@ type Problem = {
   title: string;
   status: number;
   detail: string;
-  extensions?: { fields?: Record<string, string> };
+  extensions?: { fields?: Record<string, string>; code?: string };
 };
+
+/** Fired on a 401 from anywhere but /auth: the session is gone, AuthProvider sends the user to login. */
+export const UNAUTHORIZED_EVENT = "auth:unauthorized";
 
 /**
  * A non-2xx response, carrying the RFC 7807 problem the server sent (docs/api.md §1.2).
@@ -28,6 +31,8 @@ type Problem = {
 export class ApiError extends Error {
   status: number;
   fields?: Record<string, string>;
+  /** Machine-readable reason on some 4xx, e.g. PASSWORD_CHANGE_REQUIRED. */
+  code?: string;
 
   constructor(status: number, body: unknown) {
     const problem = toProblem(status, body);
@@ -35,6 +40,7 @@ export class ApiError extends Error {
     this.name = "ApiError";
     this.status = status;
     this.fields = problem.extensions?.fields;
+    this.code = problem.extensions?.code;
   }
 
   /** First rejection for a field, or undefined if that field was accepted — ready to attach to a form. */
@@ -73,6 +79,7 @@ export async function apiFetch<T>(endpoint: string, init?: RequestInit): Promise
   try {
     res = await fetch(`${BASE_URL}${endpoint}`, {
       ...init,
+      credentials: "include", // the session cookie
       headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers },
     });
   } catch {
@@ -81,13 +88,26 @@ export async function apiFetch<T>(endpoint: string, init?: RequestInit): Promise
     throw new ApiError(0, "Could not reach the server. Check that it's running and try again.");
   }
 
-  // 429 is plain text, not JSON (docs/api.md §1.2) — must branch before res.json().
+  // The global rate limiter's 429 is plain text, the login lockout's is JSON (docs/api.md §1.2) —
+  // either way read it as text first.
   if (res.status === 429) {
-    throw new ApiError(429, await res.text().catch(() => "Too many requests"));
+    const text = await res.text().catch(() => "Too many requests");
+    let body: unknown = text;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      /* plain text */
+    }
+    throw new ApiError(429, body);
   }
 
   const body = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(res.status, body);
+  if (!res.ok) {
+    if (res.status === 401 && !endpoint.startsWith("/auth/")) {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
+    throw new ApiError(res.status, body);
+  }
   return unwrap<T>(body as Envelope<unknown>);
 }
 

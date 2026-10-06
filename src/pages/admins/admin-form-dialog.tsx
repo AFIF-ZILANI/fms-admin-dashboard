@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,12 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePatchData, usePostData } from "@/lib/api";
-import type { Admin } from "@/pages/admins/types";
+import type { Admin, AdminCreated } from "@/pages/admins/types";
+import { TempPasswordDialog, type TempCredentials } from "@/components/shared/temp-password-dialog";
 
 const adminSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   mobile: z.string().trim().min(1, "Mobile is required"),
-  email: z.string().trim().optional(),
+  email: z.string().trim().email("A valid email is required -- it is their login"),
   address: z.string().trim().optional(),
 });
 
@@ -34,6 +35,7 @@ type AdminFormDialogProps = {
 
 export function AdminFormDialog({ open, onOpenChange, admin }: AdminFormDialogProps) {
   const isEdit = Boolean(admin);
+  const [created, setCreated] = useState<TempCredentials | null>(null);
 
   const {
     register,
@@ -61,38 +63,51 @@ export function AdminFormDialog({ open, onOpenChange, admin }: AdminFormDialogPr
     }
   }, [open, admin, reset]);
 
-  const createAdmin = usePostData<Admin, AdminFormValues>("/admins", ["admins"]);
+  const createAdmin = usePostData<AdminCreated, AdminFormValues>("/admins", ["admins"]);
   const updateAdmin = usePatchData<Admin, AdminFormValues>(`/admins/${admin?.id}`, ["admins"]);
-  const mutation = isEdit ? updateAdmin : createAdmin;
+
+  const onError = (error: { fieldError: (k: string) => string | undefined; message: string }) => {
+    let hadFieldError = false;
+    for (const key of ["name", "mobile", "email", "address"] as const) {
+      const message = error.fieldError(key);
+      if (message) {
+        setError(key, { message });
+        hadFieldError = true;
+      }
+    }
+    if (!hadFieldError) toast.error(error.message);
+  };
 
   const onSubmit = (values: AdminFormValues) => {
-    const payload = { ...values, email: values.email || undefined, address: values.address || undefined };
-    mutation.mutate(payload, {
-      onSuccess: () => {
-        toast.success(isEdit ? "Admin updated" : "Admin created");
-        onOpenChange(false);
-      },
-      onError: (error) => {
-        let hadFieldError = false;
-        for (const key of ["name", "mobile", "email", "address"] as const) {
-          const message = error.fieldError(key);
-          if (message) {
-            setError(key, { message });
-            hadFieldError = true;
-          }
-        }
-        if (!hadFieldError) toast.error(error.message);
-      },
-    });
+    const payload = { ...values, address: values.address || undefined };
+    if (isEdit) {
+      updateAdmin.mutate(payload, {
+        onSuccess: () => {
+          toast.success("Admin updated");
+          onOpenChange(false);
+        },
+        onError,
+      });
+    } else {
+      createAdmin.mutate(payload, {
+        onSuccess: (saved) => {
+          toast.success("Admin created");
+          setCreated({ name: saved.profile.name, email: saved.profile.email, password: saved.temp_password });
+          onOpenChange(false);
+        },
+        onError,
+      });
+    }
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit admin" : "Add admin"}</DialogTitle>
           <DialogDescription>
-            {isEdit ? "Update this admin's details." : "Register a new admin account. Flat permissions — every admin has full access."}
+            {isEdit ? "Update this admin's details." : "Register a new admin account. Every admin has full access. You'll get a temporary password to hand over."}
           </DialogDescription>
         </DialogHeader>
 
@@ -108,7 +123,7 @@ export function AdminFormDialog({ open, onOpenChange, admin }: AdminFormDialogPr
             {errors.mobile && <p className="text-xs text-destructive">{errors.mobile.message}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">Email (optional)</Label>
+            <Label htmlFor="email">Email (their login)</Label>
             <Input id="email" type="email" {...register("email")} aria-invalid={!!errors.email} />
             {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
           </div>
@@ -128,5 +143,7 @@ export function AdminFormDialog({ open, onOpenChange, admin }: AdminFormDialogPr
         </form>
       </DialogContent>
     </Dialog>
+    <TempPasswordDialog credentials={created} onClose={() => setCreated(null)} />
+    </>
   );
 }

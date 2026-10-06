@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { TempPasswordDialog, type TempCredentials } from "@/components/shared/temp-password-dialog";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Award, Banknote, BadgeCheck, CreditCard, Hourglass, Pencil, Plus, ReceiptText, ShieldCheck, UserMinus, UserPlus, Wallet } from "lucide-react";
+import { ArrowLeft, Award, Banknote, BadgeCheck, CreditCard, Hourglass, KeyRound, Pencil, Plus, ReceiptText, ShieldCheck, UserMinus, UserPlus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -58,6 +59,7 @@ export function EmployeeDetailPage() {
     ["payroll-records", id]
   );
   const { confirm, confirmDialog } = useConfirm();
+  const [resetCreds, setResetCreds] = useState<TempCredentials | null>(null);
 
   const terminate = usePostData<Employee, string>((eid) => `/employees/${eid}/terminate`, [
     "employees",
@@ -89,6 +91,25 @@ export function EmployeeDetailPage() {
         onError: (error) => toast.error(error.message),
       }
     );
+  };
+
+  const resetPassword = usePostData<{ temp_password: string }, string>(
+    (eid) => `/employees/${eid}/reset-password`,
+    ["employees"],
+  );
+
+  const onResetPassword = async (name: string, email: string | null) => {
+    const ok = await confirm({
+      title: `Reset ${name}'s password?`,
+      description:
+        "Their current password stops working and their phone is signed out. You'll get a temporary one to hand over.",
+      confirmLabel: "Reset password",
+    });
+    if (!ok || !id) return;
+    resetPassword.mutate(id, {
+      onSuccess: (res) => setResetCreds({ name, email, password: res.temp_password }),
+      onError: (error) => toast.error(error.message),
+    });
   };
 
   const onTerminate = async (name: string) => {
@@ -259,6 +280,15 @@ export function EmployeeDetailPage() {
               <Pencil />
               Edit
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={resetPassword.isPending}
+              onClick={() => void onResetPassword(employee.profile.name, employee.profile.email)}
+            >
+              <KeyRound />
+              Reset password
+            </Button>
             {employee.employment_status === "APPOINTED" && (
               <Button variant="outline" size="sm" onClick={() => setProbationOpen(true)}>
                 <Hourglass />
@@ -396,6 +426,7 @@ export function EmployeeDetailPage() {
       />
 
       {confirmDialog}
+      <TempPasswordDialog credentials={resetCreds} onClose={() => setResetCreds(null)} />
 
       <PayoutDialog
         open={payoutRecord !== null}
