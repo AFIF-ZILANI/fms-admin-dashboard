@@ -31,19 +31,25 @@ const instrumentLabel = (instruments: PaymentInstrument[], id: string) => {
 const accountLabel = (a: EmployeePayoutAccount | undefined) =>
   a ? `${PAYOUT_METHOD_LABELS[a.method]} · ${a.account_name} · ${a.account_number}` : "";
 
+/** A granted festival bonus to pay (the other thing a payout can settle). */
+export type PayoutBonus = { id: string; amount: string; event_name: string };
+
 type PayoutDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employeeId: string;
-  record: PayrollRecord | null;
+  /** Pay a month's wage... */
+  record?: PayrollRecord | null;
+  /** ...or a festival bonus. Exactly one of the two. */
+  bonus?: PayoutBonus | null;
 };
 
 /**
- * Pays a generated payroll. Creating the payout and confirming it are one
- * action here, but two writes on the server — the confirm is the one that
+ * Pays a generated payroll or a granted bonus. Creating the payout and confirming it
+ * are one action here, but two writes on the server — the confirm is the one that
  * demands proof, and it refuses without it.
  */
-export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutDialogProps) {
+export function PayoutDialog({ open, onOpenChange, employeeId, record = null, bonus = null }: PayoutDialogProps) {
   const queryClient = useQueryClient();
   // An account id, not a method: a method on its own can't be paid to, so the
   // options are this employee's own accounts and nothing else. Wages are never
@@ -63,7 +69,7 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
   // Reset when the dialog opens on a different record, adjusted during render
   // rather than in an effect — React's own "reset state on prop change" pattern,
   // the same one ItemFormPage and EmployeeFormPage use.
-  const resetKey = open ? `${record?.id ?? ""}:${activeAccounts[0]?.id ?? ""}` : null;
+  const resetKey = open ? `${record?.id ?? bonus?.id ?? ""}:${activeAccounts[0]?.id ?? ""}` : null;
   const [lastResetKey, setLastResetKey] = useState<string | null>(null);
   if (resetKey && resetKey !== lastResetKey) {
     setLastResetKey(resetKey);
@@ -86,31 +92,35 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
   );
 
   const account = activeAccounts.find((a) => a.id === accountId);
-  const wage = Number(record?.total_pay ?? 0);
+  const wage = Number(record?.total_pay ?? bonus?.amount ?? 0);
   const rate = account && feeRates ? feeRates[account.method] : undefined;
   // Preview only. The server derives the figure it stores from the same table,
   // so this never becomes the number of record.
   const fee = rate ? rate.flat + (wage * rate.percent) / 100 : null;
 
   const onConfirm = async () => {
-    if (!record) return;
+    if (!record && !bonus) return;
     setBusy(true);
     try {
       // Reuse an existing PENDING payout rather than creating a second one —
-      // a payroll record can only ever carry one.
+      // a payroll record or a bonus can only ever carry one.
       const existing = await apiFetch<Paginated<{ id: string }>>(
         `/payroll-payouts?employee_id=${employeeId}&limit=100`
       );
-      const found = (existing.results as Array<{ id: string; payroll_record: { id: string } }>).find(
-        (p) => p.payroll_record.id === record.id
-      );
+      const found = (
+        existing.results as Array<{
+          id: string;
+          payroll_record: { id: string } | null;
+          bonus: { id: string } | null;
+        }>
+      ).find((p) => (record ? p.payroll_record?.id === record.id : p.bonus?.id === bonus?.id));
 
       const payout =
         found ??
         (await apiFetch<{ id: string }>("/payroll-payouts", {
           method: "POST",
           body: JSON.stringify({
-            payroll_record_id: record.id,
+            ...(record ? { payroll_record_id: record.id } : { bonus_id: bonus?.id }),
             payout_account_id: accountId,
           }),
         }));
@@ -125,6 +135,7 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
 
       toast.success("Payout confirmed");
       void queryClient.invalidateQueries({ queryKey: ["payroll-payouts"] });
+      void queryClient.invalidateQueries({ queryKey: ["bonus-events"] });
       onOpenChange(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not confirm the payout");
@@ -143,7 +154,9 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
           <DialogDescription>
             {record
               ? `${formatMoney(record.total_pay)} for ${new Date(record.month).toLocaleDateString(undefined, { year: "numeric", month: "long" })}.`
-              : ""}{" "}
+              : bonus
+                ? `${formatMoney(bonus.amount)} festival bonus, ${bonus.event_name}.`
+                : ""}{" "}
             A payout can't be confirmed without proof of transfer.
           </DialogDescription>
         </DialogHeader>
@@ -151,7 +164,7 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="payout-method">Pay to</Label>
-            <Select value={accountId} onValueChange={setAccountId}>
+            <Select value={accountId} onValueChange={(v) => setAccountId(v ?? "")}>
               <SelectTrigger id="payout-method" className="w-full">
                 <SelectValue>
                   {(v: string) =>
@@ -187,7 +200,7 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record }: PayoutD
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="paid-from">Paid from</Label>
-            <Select value={fromInstrumentId} onValueChange={setFromInstrumentId}>
+            <Select value={fromInstrumentId} onValueChange={(v) => setFromInstrumentId(v ?? "")}>
               <SelectTrigger id="paid-from" className="w-full">
                 <SelectValue>
                   {(v: string) => instrumentLabel(farmInstruments, v) || "Select an account"}

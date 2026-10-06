@@ -67,6 +67,17 @@ export const RELATIONSHIP_OTHER = "Other";
 export const MARITAL_STATUSES = ["SINGLE", "MARRIED", "DIVORCED", "WIDOWED"] as const;
 export type MaritalStatus = (typeof MARITAL_STATUSES)[number];
 
+/** Optional, sensitive: it only decides who a festival bonus proposes. */
+export const RELIGIONS = ["ISLAM", "HINDU", "CHRISTIANITY", "BUDDHISM", "OTHER"] as const;
+export type Religion = (typeof RELIGIONS)[number];
+export const RELIGION_LABELS: Record<Religion, string> = {
+  ISLAM: "Islam",
+  HINDU: "Hinduism",
+  CHRISTIANITY: "Christianity",
+  BUDDHISM: "Buddhism",
+  OTHER: "Other",
+};
+
 export const EMPLOYMENT_STATUSES = ["APPOINTED", "PROBATION", "CONFIRMED", "TERMINATED"] as const;
 export type EmploymentStatus = (typeof EMPLOYMENT_STATUSES)[number];
 
@@ -110,6 +121,8 @@ export type Employee = {
   experience: string | null;
   experience_years: number | null;
   nid_number: string | null;
+  /** Only on the single-employee endpoints -- never the list. */
+  religion?: Religion | null;
   emergency_name: string | null;
   emergency_relation: string | null;
   emergency_phone: string | null;
@@ -311,7 +324,9 @@ export type EmployeePayoutAccount = {
 
 export type PayrollPayout = {
   id: string;
-  payroll_record_id: string;
+  /** Exactly one of payroll_record_id / bonus_id is set. */
+  payroll_record_id: string | null;
+  bonus_id: string | null;
   payout_account_id: string | null;
   method: PayoutMethod;
   account_number: string;
@@ -323,7 +338,8 @@ export type PayrollPayout = {
   paid_by_id: string | null;
   paid_at: string | null;
   created_at: string;
-  payroll_record: { id: string; month: string; total_pay: string };
+  payroll_record: { id: string; month: string; total_pay: string } | null;
+  bonus: { id: string; amount: string; event: { id: string; name: string } } | null;
 };
 
 /** Assembled server-side by GET /payroll-records/:id/payslip. The account is

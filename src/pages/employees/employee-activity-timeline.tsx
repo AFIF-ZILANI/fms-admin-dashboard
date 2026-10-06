@@ -30,7 +30,7 @@ export function EmployeeActivityTimeline({
   payrollRecords,
   employeeId,
 }: EmployeeActivityTimelineProps) {
-  // Salary money lives in PayrollPayout now, not the generic Payment ledger.
+  // Wage and bonus money lives in EmployeePayout, not the generic Payment ledger.
   const { data: payouts, isLoading } = useGetData<Paginated<PayrollPayout>>(
     `/payroll-payouts?employee_id=${employeeId}&limit=100`,
     ["payroll-payouts", employeeId]
@@ -60,7 +60,7 @@ export function EmployeeActivityTimeline({
       id: `payout-${p.id}`,
       date: p.paid_at!,
       icon: CreditCard,
-      label: "Wage paid",
+      label: p.bonus ? `Bonus paid · ${p.bonus.event.name}` : "Wage paid",
       amount: formatMoney(p.amount),
       amountClassName: "text-success",
     }));

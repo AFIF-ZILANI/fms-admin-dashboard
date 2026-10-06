@@ -145,8 +145,9 @@ export function EmployeeDetailPage() {
     `/payroll-payouts?employee_id=${id}&limit=100`,
     ["payroll-payouts", id]
   );
+  // Bonus payouts have no payroll record; they belong to the bonus screens, not the payslip rows.
   const payoutByRecord = new Map(
-    (payouts?.results ?? []).map((p) => [p.payroll_record.id, p])
+    (payouts?.results ?? []).flatMap((p) => (p.payroll_record ? [[p.payroll_record.id, p] as const] : []))
   );
 
   const entries = scoreEntries?.results ?? [];

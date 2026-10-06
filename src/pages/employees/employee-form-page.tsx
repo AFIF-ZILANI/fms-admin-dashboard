@@ -27,6 +27,8 @@ import {
   EMPLOYMENT_STATUS_LABELS,
   FIXED_WAGE_RATIO,
   MARITAL_STATUSES,
+  RELIGIONS,
+  RELIGION_LABELS,
   RELATIONSHIPS,
   RELATIONSHIP_OTHER,
   type EducationLevel,
@@ -35,6 +37,7 @@ import {
   type EmployeeRoleConfig,
   type EmploymentStatus,
   type MaritalStatus,
+  type Religion,
 } from "@/pages/employees/types";
 
 // Mirrors server/src/validators/employee.validator.ts. Everything docs/employee_hire.md
@@ -55,6 +58,8 @@ const employeeSchema = z
     date_of_birth: z.string().min(1, "Date of birth is required"),
     marital_status: z.enum(MARITAL_STATUSES, "Select a marital status"),
     nid_number: z.string().trim().min(1, "NID number is required"),
+    // "" = not recorded. Optional: it only decides who a festival bonus proposes.
+    religion: z.enum(["", ...RELIGIONS]).optional(),
 
     // Role codes now come from GET /employee-roles, not a fixed enum -- an
     // admin can add roles, so this just checks something was picked.
@@ -115,6 +120,7 @@ function blank(): EmployeeFormInput {
     date_of_birth: "",
     marital_status: undefined as unknown as MaritalStatus,
     nid_number: "",
+    religion: "",
     role: "",
     reference_salary: undefined,
     override_salary: false,
@@ -147,6 +153,7 @@ function toFormValues(e: Employee): EmployeeFormInput {
     date_of_birth: date(e.date_of_birth),
     marital_status: e.marital_status as MaritalStatus,
     nid_number: e.nid_number ?? "",
+    religion: e.religion ?? "",
     role: e.role,
     reference_salary: e.reference_salary ?? undefined,
     override_salary: e.reference_salary !== null,
@@ -332,6 +339,8 @@ export function EmployeeFormPage() {
     const payload = {
       ...rest,
       mobile: toE164(values.mobile),
+      // Explicit null when blank: on an edit only a null clears what was stored.
+      religion: values.religion ? values.religion : null,
       emergency_phone: toE164(values.emergency_phone),
       emergency_email: blankToUndefined(values.emergency_email),
       emergency_address: blankToUndefined(values.emergency_address),
@@ -456,6 +465,35 @@ export function EmployeeFormPage() {
                 </Field>
                 <Field id="nid_number" label="NID number" error={errors.nid_number?.message}>
                   <Input id="nid_number" {...register("nid_number")} aria-invalid={!!errors.nid_number} />
+                </Field>
+                <Field id="religion" label="Religion (optional)" error={errors.religion?.message}>
+                  <Controller
+                    control={control}
+                    name="religion"
+                    render={({ field }) => (
+                      <Select
+                        value={field.value || "none"}
+                        onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                      >
+                        <SelectTrigger id="religion" className="w-full">
+                          <SelectValue>
+                            {(v: string) => (v === "none" ? "Not recorded" : RELIGION_LABELS[v as Religion])}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Not recorded</SelectItem>
+                          {RELIGIONS.map((r) => (
+                            <SelectItem key={r} value={r}>
+                              {RELIGION_LABELS[r]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Used only to pick who a festival bonus is proposed to. Leave blank to decide by hand.
+                  </p>
                 </Field>
                 <Field id="email" label="Email" error={errors.email?.message}>
                   <Input id="email" type="email" {...register("email")} aria-invalid={!!errors.email} />

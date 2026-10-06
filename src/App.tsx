@@ -30,6 +30,8 @@ import { AnalyticsPage } from "@/pages/analytics/analytics-page";
 import { AlertsPage } from "@/pages/alerts/alerts-page";
 import { AuditLogPage } from "@/pages/audit-log/audit-log-page";
 import { SettingsPage } from "@/pages/settings/settings-page";
+import { BonusesListPage } from "@/pages/bonuses/bonuses-list-page";
+import { BonusEventDetailPage } from "@/pages/bonuses/bonus-event-detail-page";
 
 function App() {
   return (
@@ -65,7 +67,9 @@ function App() {
             <Route path="employees/:id" element={<EmployeeDetailPage />} />
             <Route path="employees/:id/edit" element={<EmployeeFormPage />} />
             <Route path="employees/:id/payslip/:payrollId" element={<PayslipPage />} />
-            <Route path="admins" element={<AdminsListPage />} />
+            <Route path="bonuses" element={<BonusesListPage />} />
+          <Route path="bonuses/:id" element={<BonusEventDetailPage />} />
+          <Route path="admins" element={<AdminsListPage />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="audit-log" element={<AuditLogPage />} />
             <Route path="settings" element={<SettingsPage />} />

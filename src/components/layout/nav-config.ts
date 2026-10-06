@@ -11,6 +11,7 @@ import {
   Landmark,
   UserCog,
   ShieldCheck,
+  Gift,
   Bell,
   History,
   Settings,
@@ -31,6 +32,7 @@ export const OPERATIONAL_NAV: NavItem[] = [
   { to: "/payments", label: "Payments", icon: Wallet },
   { to: "/finance", label: "Finance", icon: Landmark },
   { to: "/employees", label: "Employees", icon: UserCog },
+  { to: "/bonuses", label: "Bonuses", icon: Gift },
   { to: "/admins", label: "Admins", icon: ShieldCheck },
 ];
 
