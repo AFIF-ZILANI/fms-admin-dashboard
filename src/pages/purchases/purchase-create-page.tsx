@@ -324,7 +324,6 @@ export function PurchaseCreatePage() {
           {
             ref_type: "PURCHASE",
             ref_id: purchase.id,
-            direction: "OUTGOING",
             amount: paymentAmount,
             payment_date: payment.payment_date,
             from_instrument_id: payment.from_instrument_id,

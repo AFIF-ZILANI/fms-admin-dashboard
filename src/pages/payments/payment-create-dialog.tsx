@@ -24,7 +24,6 @@ import type { Expense } from "@/pages/finance/types";
 import type { Purchase } from "@/pages/purchases/types";
 import type { Sale, BirdSale } from "@/pages/sales/types";
 import {
-  PAYMENT_DIRECTIONS,
   PAYMENT_REF_TYPES,
   type Payment,
   type PaymentInstrument,
@@ -34,7 +33,6 @@ import {
 const paymentSchema = z.object({
   ref_type: z.enum(PAYMENT_REF_TYPES, "Select what this pays"),
   ref_id: z.string().min(1, "Select a record to pay"),
-  direction: z.enum(PAYMENT_DIRECTIONS, "Select a direction"),
   amount: z.coerce.number().positive("Must be positive"),
   payment_date: z.string().min(1, "Payment date is required"),
   from_instrument_id: z.string().min(1, "Select the paying instrument"),
@@ -46,18 +44,11 @@ const paymentSchema = z.object({
 type PaymentFormInput = z.input<typeof paymentSchema>;
 type PaymentFormValues = z.output<typeof paymentSchema>;
 
-const OUTGOING_REF_TYPES: readonly PaymentRefType[] = ["PURCHASE", "EXPENSE"];
-
 function blankPayment(defaults?: { ref_type?: PaymentRefType; ref_id?: string }): PaymentFormInput {
   const ref_type = (defaults?.ref_type ?? undefined) as unknown as PaymentFormInput["ref_type"];
-  const direction =
-    defaults?.ref_type === undefined
-      ? (undefined as unknown as PaymentFormInput["direction"])
-      : ((OUTGOING_REF_TYPES.includes(defaults.ref_type) ? "OUTGOING" : "INCOMING") as unknown as PaymentFormInput["direction"]);
   return {
     ref_type,
     ref_id: defaults?.ref_id ?? "",
-    direction,
     amount: undefined,
     payment_date: new Date().toISOString().slice(0, 10),
     from_instrument_id: "",
@@ -237,8 +228,6 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
                     onValueChange={(v) => {
                       field.onChange(v);
                       setValue("ref_id", "");
-                      const outgoing = v === "PURCHASE" || v === "EXPENSE";
-                      setValue("direction", outgoing ? "OUTGOING" : "INCOMING");
                     }}
                   >
                     <SelectTrigger id="ref_type" className="w-full" aria-invalid={!!errors.ref_type}>
@@ -288,29 +277,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
             </p>
           )}
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="direction">Direction</Label>
-              <Controller
-                control={control}
-                name="direction"
-                render={({ field }) => (
-                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                    <SelectTrigger id="direction" className="w-full" aria-invalid={!!errors.direction}>
-                      <SelectValue>{(v: string) => (v ? humanizeEnum(v) : "Select")}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_DIRECTIONS.map((d) => (
-                        <SelectItem key={d} value={d}>
-                          {humanizeEnum(d)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.direction && <p className="text-xs text-destructive">{errors.direction.message}</p>}
-            </div>
+          <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="amount">Amount</Label>
               <Input id="amount" type="number" step="0.01" {...register("amount")} aria-invalid={!!errors.amount} />
