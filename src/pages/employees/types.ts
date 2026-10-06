@@ -333,7 +333,6 @@ export type PayrollPayout = {
   amount: string;
   fee_paid_by_farm: string;
   transaction_ref: string | null;
-  receipt_doc_url: string | null;
   status: PayoutStatus;
   paid_by_id: string | null;
   paid_at: string | null;

@@ -5,6 +5,5 @@ export type Doctor = {
   position: string | null;
   degrees: string[];
   institution: string | null;
-  rating: number | null;
   profile: { id: string; name: string };
 };
