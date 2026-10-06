@@ -3,7 +3,7 @@
 Design system for the ZeroD Farms Management System **Admin Web Dashboard**
 (the 15-page operator console — Analytics, Batches, Houses, Inventory,
 Suppliers, Customers, Sales, Purchases, Payments, Finance, Employees, Admins,
-Alerts, Audit Log, Settings — see `docs/FEATURES.md` §2). Scope is the web
+Alerts, Audit Log, Settings — see `server/docs/FEATURES.md` §2). Scope is the web
 dashboard only; the Employee mobile app is a separate client and may adopt
 its own layout patterns, but should share the brand color and tone defined
 here.
@@ -27,7 +27,7 @@ labeled so nobody mistakes a recommendation for shipped state.
    label alongside its color (colorblind-safe, screenshot/print-safe).
 4. **One status vocabulary, everywhere.** `RUNNING/CLOSED/SOLD`,
    `ACTIVE/RETIRED/DISPOSED`, `ACTIVE/RESOLVED`, and Alert levels
-   `INFO/WARNING/CRITICAL` (`docs/FEATURES.md` §2.13) must map to the same
+   `INFO/WARNING/CRITICAL` (`server/docs/FEATURES.md` §2.13) must map to the same
    colors on every page — a CRITICAL alert badge and a CRITICAL row
    highlight use the same token.
 5. **Dark mode is not an afterthought.** Admins run this at all hours in a
@@ -75,7 +75,7 @@ rows, badges, or charts — that's what semantic colors (2.3) are for.
 
 ### 2.3 Semantic / status colors — proposed
 
-Maps directly to the domain vocabulary in `docs/FEATURES.md` (Alerts §2.13,
+Maps directly to the domain vocabulary in `server/docs/FEATURES.md` (Alerts §2.13,
 Batch/House/Item statuses). Add these next to the existing tokens in
 `index.css`, following the same `--color-x` / `.dark` pattern:
 
@@ -191,4 +191,4 @@ than improvising hues by hand.
 | shadcn config (style, base color, aliases) | `components.json` |
 | Button variants (reference pattern for new components) | `src/components/ui/button.tsx` |
 | `cn()` class merge helper | `src/lib/utils.ts` |
-| Feature/page inventory this system serves | `docs/FEATURES.md` |
+| Feature/page inventory this system serves | `server/docs/FEATURES.md` |

@@ -1,8 +1,8 @@
 # ZeroD Farms Management System — Admin Web Dashboard PRD
 
 **Status:** Build-ready blueprint · **Scope:** Admin Web Dashboard only (15 pages)
-**Companion docs:** `docs/FEATURES.md` (functional spec this PRD is built on), `docs/design.md`
-(design system this PRD applies), `docs/api.md` (endpoints this PRD wires up),
+**Companion docs:** `server/docs/FEATURES.md` (functional spec this PRD is built on), `docs/design.md`
+(design system this PRD applies), `server/docs/api.md` (endpoints this PRD wires up),
 `server/prisma/schema.prisma` (data model this PRD's fields are drawn from).
 
 This document is the single source of truth for building every page. Each page section
@@ -29,7 +29,7 @@ supports multi-user roles but the enforcement layer doesn't exist yet (see §5).
 | Persona | Who | Uses |
 | --- | --- | --- |
 | Owner/Admin | The farm operator — the only user of this dashboard in v1 | All 15 pages, full access |
-| Employee (Manager/Worker/Intern) | Field staff | **Not** this dashboard — a separate Employee Mobile App (`docs/FEATURES.md` §3), out of scope here |
+| Employee (Manager/Worker/Intern) | Field staff | **Not** this dashboard — a separate Employee Mobile App (`server/docs/FEATURES.md` §3), out of scope here |
 
 Suppliers, Customers, and Doctors are records managed *by* the Admin — they have no login
 and no page of their own beyond the CRUD pages listed below.
@@ -37,7 +37,7 @@ and no page of their own beyond the CRUD pages listed below.
 ### 1.3 Scope boundary
 
 This PRD covers the **Admin Web Dashboard** and nothing else. The Employee Mobile App has
-its own confirmed feature set (`docs/FEATURES.md` §3 — Login, Home, QR Scan, daily logging
+its own confirmed feature set (`server/docs/FEATURES.md` §3 — Login, Home, QR Scan, daily logging
 forms, offline-first sync) and gets its own PRD when that build starts. Don't pull mobile
 screens into this document or this build pass.
 
@@ -144,7 +144,7 @@ what the UI must do.
 Builders should not scope-creep these into the current pass:
 
 - **No auth/permission enforcement.** Schema and the permission matrix
-  (`docs/FEATURES.md` §3.5) are ready; no middleware exists. Every page ships full access
+  (`server/docs/FEATURES.md` §3.5) are ready; no middleware exists. Every page ships full access
   for now — build the permission-gating hooks as no-ops you can wire up later, don't skip
   building them at all.
 - **Bird-days shared-cost allocation is unbuilt (v2).** The Finance page's shared-period
@@ -668,8 +668,7 @@ Build in dependency order, not spec order:
 - Auth/role enforcement layer — schema and permission matrix ready, no middleware yet.
 - Bird-days shared-cost allocation formula (v2) — needs real overlapping-batch data to
   validate against.
-- Employee Mobile App — feature set defined (`docs/FEATURES.md` §3), offline-sync
-  implementation and UI design are a separate PRD.
+- Employee Mobile App — built; see `mobile/docs/PRD.md`.
 - FCR calculation — needs a feed-to-weight unit conversion table that doesn't exist yet.
 - Audit Log write-side (Prisma middleware) — the page above is read-only and ready; the
   populate mechanism is separate backend work.
