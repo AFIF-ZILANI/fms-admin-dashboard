@@ -22,22 +22,88 @@ import {
   Tags,
   Smartphone,
   KeyRound,
+  ChartColumn,
+  BookOpen,
+  TriangleAlert,
+  Wheat,
+  Wrench,
+  SlidersHorizontal,
+  Split,
+  Inbox,
+  Receipt,
+  TrendingDown,
+  ChartLine,
   type LucideIcon,
 } from "lucide-react";
 
-export type NavItem = { to: string; label: string; icon: LucideIcon };
+export type NavChild = { to: string; label: string; icon: LucideIcon };
+export type NavItem = { to: string; label: string; icon: LucideIcon; children?: NavChild[] };
+
+// A section's pages are the sidebar's sub-navigation (no in-page tab row). Query-based children
+// (?tab=) keep every existing detail route and "Back to ..." link working; first child is the default.
+const tab = (base: string, id: string, label: string, icon: LucideIcon): NavChild => ({
+  to: `${base}?tab=${id}`,
+  label,
+  icon,
+});
 
 export const OPERATIONAL_NAV: NavItem[] = [
   { to: "/analytics", label: "Analytics", icon: LayoutDashboard },
   { to: "/batches", label: "Batches", icon: Bird },
   { to: "/houses", label: "Houses", icon: Home },
-  { to: "/inventory", label: "Inventory", icon: Package },
+  {
+    to: "/inventory",
+    label: "Inventory",
+    icon: Package,
+    children: [
+      tab("/inventory", "analytics", "Analytics", ChartColumn),
+      tab("/inventory", "stock-ledger", "Stock ledger", BookOpen),
+      tab("/inventory", "items", "Item catalog", Package),
+      tab("/inventory", "low-stock", "Low stock", TriangleAlert),
+      tab("/inventory", "consumption-log", "Consumption log", Wheat),
+      tab("/inventory", "assets", "Assets", Wrench),
+      tab("/inventory", "adjustments", "Adjustments", SlidersHorizontal),
+      tab("/inventory", "organizations", "Organizations", Factory),
+      tab("/inventory", "coded-units", "Coded units", QrCode),
+      tab("/inventory", "stock-allocation", "Stock allocation", Split),
+      tab("/inventory", "warehouses", "Warehouses", Warehouse),
+    ],
+  },
   { to: "/suppliers", label: "Suppliers", icon: Truck },
   { to: "/customers", label: "Customers", icon: Users },
-  { to: "/sales", label: "Sales", icon: ShoppingCart },
+  {
+    to: "/sales",
+    label: "Sales",
+    icon: ShoppingCart,
+    children: [
+      tab("/sales", "overview", "Overview", ChartColumn),
+      tab("/sales", "birds", "Bird sales", Bird),
+      tab("/sales", "regular", "Regular sales", ShoppingCart),
+      tab("/sales", "incoming", "Incoming", Inbox),
+    ],
+  },
   { to: "/purchases", label: "Purchases", icon: ShoppingBag },
-  { to: "/payments", label: "Payments", icon: Wallet },
-  { to: "/finance", label: "Finance", icon: Landmark },
+  {
+    to: "/payments",
+    label: "Payments",
+    icon: Wallet,
+    children: [
+      tab("/payments", "payments", "Payments", Wallet),
+      tab("/payments", "instruments", "Instruments", CreditCard),
+    ],
+  },
+  {
+    to: "/finance",
+    label: "Finance",
+    icon: Landmark,
+    children: [
+      tab("/finance", "overview", "Overview", ChartColumn),
+      tab("/finance", "expenses", "Expenses", Receipt),
+      tab("/finance", "depreciation", "Depreciation", TrendingDown),
+      tab("/finance", "shared-costs", "Shared costs", Split),
+      tab("/finance", "pnl", "Batch P&L", ChartLine),
+    ],
+  },
   { to: "/employees", label: "Employees", icon: UserCog },
   { to: "/bonuses", label: "Bonuses", icon: Gift },
   { to: "/admins", label: "Admins", icon: ShieldCheck },
@@ -46,19 +112,21 @@ export const OPERATIONAL_NAV: NavItem[] = [
 export const SYSTEM_NAV: NavItem[] = [
   { to: "/alerts", label: "Alerts", icon: Bell },
   { to: "/audit-log", label: "Audit Log", icon: History },
-  { to: "/settings", label: "Settings", icon: Settings },
-];
-
-/** Shown under Settings in the sidebar while a settings page is open; the page maps each id to its content. */
-export const SETTINGS_NAV: { id: string; label: string; icon: LucideIcon }[] = [
-  { id: "warehouses", label: "Warehouses", icon: Warehouse },
-  { id: "instruments", label: "Payment instruments", icon: CreditCard },
-  { id: "organizations", label: "Organizations", icon: Factory },
-  { id: "coded-units", label: "Coded units", icon: QrCode },
-  { id: "categories-units", label: "Categories & units", icon: Tags },
-  { id: "roles", label: "Roles & salaries", icon: UserCog },
-  { id: "devices", label: "Devices", icon: Smartphone },
-  { id: "account", label: "Password", icon: KeyRound },
+  {
+    to: "/settings",
+    label: "Settings",
+    icon: Settings,
+    children: [
+      { to: "/settings/warehouses", label: "Warehouses", icon: Warehouse },
+      { to: "/settings/instruments", label: "Payment instruments", icon: CreditCard },
+      { to: "/settings/organizations", label: "Organizations", icon: Factory },
+      { to: "/settings/coded-units", label: "Coded units", icon: QrCode },
+      { to: "/settings/categories-units", label: "Categories & units", icon: Tags },
+      { to: "/settings/roles", label: "Roles & salaries", icon: UserCog },
+      { to: "/settings/devices", label: "Devices", icon: Smartphone },
+      { to: "/settings/account", label: "Password", icon: KeyRound },
+    ],
+  },
 ];
 
 export const ALL_NAV = [...OPERATIONAL_NAV, ...SYSTEM_NAV];
