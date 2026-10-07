@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Bell, KeyRound, LogOut } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrentPageTitle } from "@/components/layout/use-page-title";
 import { useAuth } from "@/lib/auth-context";
@@ -63,15 +63,6 @@ export function TopBar({ theme }: { theme: UseThemeProps }) {
           <Bell className="size-4" />
         </Button>
         <span className="hidden text-sm text-muted-foreground sm:inline">{me?.name}</span>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Change password"
-          nativeButton={false}
-          render={<Link to="/change-password" />}
-        >
-          <KeyRound className="size-4" />
-        </Button>
         <Button variant="ghost" size="icon" aria-label="Log out" onClick={() => void logout()}>
           <LogOut className="size-4" />
         </Button>
