@@ -72,7 +72,8 @@ function App() {
           <Route path="admins" element={<AdminsListPage />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="audit-log" element={<AuditLogPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings" element={<Navigate to="/settings/warehouses" replace />} />
+            <Route path="settings/:section" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/analytics" replace />} />
           </Route>
         </Route>

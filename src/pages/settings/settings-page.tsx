@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, Navigate, useParams } from "react-router";
 import {
   CreditCard,
   Factory,
@@ -18,7 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePageTitle } from "@/components/layout/use-page-title";
-import { cn } from "@/lib/utils";
 import { WarehousesTab } from "@/pages/inventory/warehouses-tab";
 import { OrganizationsTab } from "@/pages/inventory/organizations-tab";
 import { InstrumentsTab } from "@/pages/payments/instruments-tab";
@@ -108,49 +107,18 @@ const GROUPS: Group[] = [
 const ALL = GROUPS.flatMap((g) => g.sections);
 
 export function SettingsPage() {
-  usePageTitle("Settings");
-  const [params, setParams] = useSearchParams();
-  // The section lives in the URL so a refresh, back button or shared link lands on the same page.
-  const active = ALL.find((s) => s.id === params.get("section")) ?? ALL[0]!;
+  const { section } = useParams();
+  const active = ALL.find((s) => s.id === section);
+  usePageTitle(active ? `Settings · ${active.label}` : "Settings");
+  if (!active) return <Navigate to="/settings/warehouses" replace />;
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row md:gap-8">
-      <nav aria-label="Settings sections" className="shrink-0 md:w-56">
-        <div className="flex gap-4 overflow-x-auto md:sticky md:top-20 md:flex-col md:gap-5 md:overflow-visible">
-          {GROUPS.map((group) => (
-            <div key={group.label} className="flex shrink-0 flex-col gap-1">
-              <p className="px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{group.label}</p>
-              <div className="flex gap-1 md:flex-col">
-                {group.sections.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    aria-current={s.id === active.id ? "page" : undefined}
-                    onClick={() => setParams({ section: s.id }, { replace: true })}
-                    className={cn(
-                      "flex items-center gap-2 whitespace-nowrap rounded-md px-2 py-1.5 text-left text-sm transition-colors",
-                      s.id === active.id
-                        ? "bg-muted font-medium text-foreground"
-                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                    )}
-                  >
-                    <s.icon className="size-4 shrink-0" />
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </nav>
-
-      <section className="min-w-0 flex-1">
-        <header className="mb-4 border-b border-border pb-4">
-          <h2 className="text-lg font-semibold tracking-tight">{active.label}</h2>
-          <p className="text-sm text-muted-foreground">{active.description}</p>
-        </header>
-        {active.content}
-      </section>
-    </div>
+    <section>
+      <header className="mb-4">
+        <h2 className="text-lg font-semibold tracking-tight">{active.label}</h2>
+        <p className="text-sm text-muted-foreground">{active.description}</p>
+      </header>
+      {active.content}
+    </section>
   );
 }

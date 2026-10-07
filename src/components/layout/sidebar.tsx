@@ -1,18 +1,20 @@
-import { NavLink } from "react-router";
+import { NavLink, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 import {
   OPERATIONAL_NAV,
+  SETTINGS_NAV,
   SYSTEM_NAV,
   type NavItem,
 } from "@/components/layout/nav-config";
 import { type UseThemeProps } from "next-themes";
 
 function NavGroup({ items }: { items: NavItem[] }) {
+  const inSettings = useLocation().pathname.startsWith("/settings");
   return (
     <div className="flex flex-col gap-0.5">
       {items.map(({ to, label, icon: Icon }) => (
+        <div key={to} className="flex flex-col gap-0.5">
         <NavLink
-          key={to}
           to={to}
           className={({ isActive }) =>
             cn(
@@ -27,6 +29,28 @@ function NavGroup({ items }: { items: NavItem[] }) {
           <Icon className="size-4 shrink-0" />
           <span className="hidden lg:inline">{label}</span>
         </NavLink>
+        {to === "/settings" && inSettings && (
+          <div className="ml-5 hidden flex-col gap-0.5 border-l border-sidebar-border pl-2 lg:flex">
+            {SETTINGS_NAV.map(({ id, label: subLabel, icon: SubIcon }) => (
+              <NavLink
+                key={id}
+                to={`/settings/${id}`}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors",
+                    isActive
+                      ? "bg-muted font-medium text-foreground"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  )
+                }
+              >
+                <SubIcon className="size-3.5 shrink-0" />
+                {subLabel}
+              </NavLink>
+            ))}
+          </div>
+        )}
+        </div>
       ))}
     </div>
   );
