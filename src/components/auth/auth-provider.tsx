@@ -28,20 +28,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
   }, [queryClient]);
 
+  // Nothing from a previous person's session may survive. Not queryClient.clear(): that deletes the "me"
+  // query the provider's observer is still watching, so the new value lands in a fresh query nobody
+  // reads and the screen never changes (login looked like it did nothing).
+  const dropOtherSessionData = (profile: Me | null) => {
+    queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== ME_KEY[0] });
+    queryClient.setQueryData(ME_KEY, profile);
+  };
+
   const login = async (email: string, password: string) => {
     const res = await apiFetch<{ profile: Me }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    queryClient.clear(); // nothing from a previous person's session
-    queryClient.setQueryData(ME_KEY, res.profile);
+    dropOtherSessionData(res.profile);
     return res.profile;
   };
 
   const logout = async () => {
     await apiFetch("/auth/logout", { method: "POST" }).catch(() => undefined);
-    queryClient.clear();
-    queryClient.setQueryData(ME_KEY, null);
+    dropOtherSessionData(null);
   };
 
   return (
