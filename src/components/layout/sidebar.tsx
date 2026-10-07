@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 import {
@@ -10,12 +11,22 @@ import { type UseThemeProps } from "next-themes";
 
 function NavGroup({ items }: { items: NavItem[] }) {
   const inSettings = useLocation().pathname.startsWith("/settings");
+  // Clicking Settings while it is open folds the sub-navigation away; leaving Settings forgets the fold,
+  // so coming back always opens it.
+  const [folded, setFolded] = useState(false);
+  if (!inSettings && folded) setFolded(false);
   return (
     <div className="flex flex-col gap-0.5">
       {items.map(({ to, label, icon: Icon }) => (
         <div key={to} className="flex flex-col gap-0.5">
         <NavLink
           to={to}
+          onClick={(e) => {
+            if (to === "/settings" && inSettings) {
+              e.preventDefault();
+              setFolded((f) => !f);
+            }
+          }}
           className={({ isActive }) =>
             cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -29,7 +40,7 @@ function NavGroup({ items }: { items: NavItem[] }) {
           <Icon className="size-4 shrink-0" />
           <span className="hidden lg:inline">{label}</span>
         </NavLink>
-        {to === "/settings" && inSettings && (
+        {to === "/settings" && inSettings && !folded && (
           <div className="mt-1.5 mb-4 ml-5 hidden flex-col gap-0.5 border-l border-sidebar-border pl-2 lg:flex">
             {SETTINGS_NAV.map(({ id, label: subLabel, icon: SubIcon }) => (
               <NavLink
