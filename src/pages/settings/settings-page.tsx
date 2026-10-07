@@ -113,7 +113,7 @@ export function SettingsPage() {
   if (!active) return <Navigate to="/settings/warehouses" replace />;
 
   return (
-    <section>
+    <section key={active.id} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
       <header className="mb-4">
         <h2 className="text-lg font-semibold tracking-tight">{active.label}</h2>
         <p className="text-sm text-muted-foreground">{active.description}</p>
