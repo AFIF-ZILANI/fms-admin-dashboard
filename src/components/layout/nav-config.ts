@@ -117,10 +117,6 @@ export const SYSTEM_NAV: NavItem[] = [
     label: "Settings",
     icon: Settings,
     children: [
-      { to: "/settings/warehouses", label: "Warehouses", icon: Warehouse },
-      { to: "/settings/instruments", label: "Payment instruments", icon: CreditCard },
-      { to: "/settings/organizations", label: "Organizations", icon: Factory },
-      { to: "/settings/coded-units", label: "Coded units", icon: QrCode },
       { to: "/settings/categories-units", label: "Categories & units", icon: Tags },
       { to: "/settings/roles", label: "Roles & salaries", icon: UserCog },
       { to: "/settings/devices", label: "Devices", icon: Smartphone },

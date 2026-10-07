@@ -1,27 +1,19 @@
 import type { ReactNode } from "react";
 import { Link, Navigate, useParams } from "react-router";
 import {
-  CreditCard,
-  Factory,
   KeyRound,
   Layers,
   Package,
-  QrCode,
   Ruler,
   Smartphone,
   Tags,
   Truck,
   UserCog,
-  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePageTitle } from "@/components/layout/use-page-title";
-import { WarehousesTab } from "@/pages/inventory/warehouses-tab";
-import { OrganizationsTab } from "@/pages/inventory/organizations-tab";
-import { InstrumentsTab } from "@/pages/payments/instruments-tab";
-import { StockUnitProvisionCard } from "@/pages/settings/stock-unit-provision-card";
 import { LookupManagerCard } from "@/pages/settings/lookup-manager-card";
 import { DevicesTab } from "@/pages/settings/devices-tab";
 import { RoleSalaryCard } from "@/pages/settings/role-salary-card";
@@ -34,17 +26,8 @@ type Group = { label: string; sections: Section[] };
 // per PRD.md §6.15, Settings hosts them, it doesn't fork its own forms.
 const GROUPS: Group[] = [
   {
-    label: "Farm",
-    sections: [
-      { id: "warehouses", label: "Warehouses", description: "Where stock is stored.", icon: Warehouse, content: <WarehousesTab /> },
-      { id: "instruments", label: "Payment instruments", description: "The farm's wallets, bank and mobile accounts.", icon: CreditCard, content: <InstrumentsTab /> },
-      { id: "organizations", label: "Organizations", description: "Manufacturers, importers and distributors.", icon: Factory, content: <OrganizationsTab /> },
-    ],
-  },
-  {
     label: "Catalog",
     sections: [
-      { id: "coded-units", label: "Coded units", description: "Provision QR-coded stock units.", icon: QrCode, content: <StockUnitProvisionCard /> },
       {
         id: "categories-units",
         label: "Categories & units",
@@ -110,7 +93,7 @@ export function SettingsPage() {
   const { section } = useParams();
   const active = ALL.find((s) => s.id === section);
   usePageTitle(active ? `Settings · ${active.label}` : "Settings");
-  if (!active) return <Navigate to="/settings/warehouses" replace />;
+  if (!active) return <Navigate to="/settings/categories-units" replace />;
 
   return (
     <section key={active.id} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
