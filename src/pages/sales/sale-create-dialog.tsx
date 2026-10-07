@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
+import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import type { Item } from "@/pages/inventory/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 import type { Customer } from "@/pages/customers/types";
@@ -37,8 +38,13 @@ const saleSchema = z.object({
   customer_id: z.string().optional(),
   sale_date: z.string().min(1, "Sale date is required"),
   paid_amount: optionalNumber(z.coerce.number().nonnegative("Must be 0 or more")),
+  // Required when something was paid: which of the farm's accounts it went into.
+  paid_to_instrument_id: z.string().optional(),
   items: z.array(lineSchema).min(1, "Add at least one line item"),
-});
+}).refine((d) => !(Number(d.paid_amount) > 0) || !!d.paid_to_instrument_id, {
+    message: "Choose the account the money went into",
+    path: ["paid_to_instrument_id"],
+  });
 
 type SaleFormInput = z.input<typeof saleSchema>;
 type SaleFormValues = z.output<typeof saleSchema>;
@@ -57,6 +63,7 @@ function blankSale(): SaleFormInput {
     customer_id: "",
     sale_date: new Date().toISOString().slice(0, 10),
     paid_amount: "",
+    paid_to_instrument_id: "",
     items: [blankLine()],
   };
 }
@@ -82,6 +89,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
   const watchedItems = useWatch({ control, name: "items" });
+  const watchedPaid = useWatch({ control, name: "paid_amount" });
 
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
@@ -101,6 +109,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
     const payload = {
       ...values,
       customer_id: values.customer_id || undefined,
+      paid_to_instrument_id: values.paid_to_instrument_id || undefined,
     };
     createSale.mutate(payload, {
       onSuccess: (sale) => {
@@ -113,7 +122,9 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
       },
       onError: (error) => {
         const message =
-          error.fieldError("sale_date") ?? error.fieldError("paid_amount");
+          error.fieldError("sale_date") ??
+          error.fieldError("paid_amount") ??
+          error.fieldError("paid_to_instrument_id");
         toast.error(message ?? error.message);
       },
     });
@@ -178,6 +189,26 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
               <Input id="paid_amount" type="number" step="0.01" {...register("paid_amount")} />
               {errors.paid_amount && <p className="text-xs text-destructive">{errors.paid_amount.message}</p>}
             </div>
+            {Number(watchedPaid) > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="paid_to_instrument_id">Paid into</Label>
+                <Controller
+                  control={control}
+                  name="paid_to_instrument_id"
+                  render={({ field }) => (
+                    <FarmAccountSelect
+                      id="paid_to_instrument_id"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      invalid={!!errors.paid_to_instrument_id}
+                    />
+                  )}
+                />
+                {errors.paid_to_instrument_id && (
+                  <p className="text-xs text-destructive">{errors.paid_to_instrument_id.message}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-2 rounded-lg border border-border p-3">

@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { cn, formatMoney, humanizeEnum } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
+import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import type { Batch } from "@/pages/batches/types";
 import type { Customer } from "@/pages/customers/types";
 import { BIRD_GRADES, type BirdSale } from "@/pages/sales/types";
@@ -42,6 +43,12 @@ const birdSaleSchema = z
     avg_weight_g: optionalNumber(z.coerce.number().positive()),
     price_per_kg: z.coerce.number().positive("Must be positive"),
     paid_amount: optionalNumber(z.coerce.number().nonnegative()),
+    // Required when something was paid: which of the farm's accounts it went into.
+    paid_to_instrument_id: z.string().optional(),
+  })
+  .refine((d) => !(Number(d.paid_amount) > 0) || !!d.paid_to_instrument_id, {
+    message: "Choose the account the money went into",
+    path: ["paid_to_instrument_id"],
   })
   .refine(
     (data) =>
@@ -80,6 +87,7 @@ function blankBirdSale(): BirdSaleFormInput {
     avg_weight_g: "",
     price_per_kg: undefined,
     paid_amount: "",
+    paid_to_instrument_id: "",
   };
 }
 
@@ -109,6 +117,7 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
   const netWeight = useWatch({ control, name: "net_weight" });
   const pricePerKg = useWatch({ control, name: "price_per_kg" });
   const birdsCount = useWatch({ control, name: "birds_count" });
+  const watchedPaid = useWatch({ control, name: "paid_amount" });
   const totalWeight = useWatch({ control, name: "total_weight" });
   const totalKatha = useWatch({ control, name: "total_katha" });
 
@@ -146,7 +155,11 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
   }, [totalKatha, totalWeight, getValues, setValue]);
 
   const onSubmit = (values: BirdSaleFormValues) => {
-    const payload = { ...values, customer_id: values.customer_id || undefined };
+    const payload = {
+      ...values,
+      customer_id: values.customer_id || undefined,
+      paid_to_instrument_id: values.paid_to_instrument_id || undefined,
+    };
     createBirdSale.mutate(payload, {
       onSuccess: (birdSale) => {
         // Also ["batches"]: the sale decrements BatchHouseBalance server-side,
@@ -160,7 +173,8 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
       onError: (error) => {
         const message =
           error.fieldError("sale_date") ??
-          error.fieldError("birds_count");
+          error.fieldError("birds_count") ??
+          error.fieldError("paid_to_instrument_id");
         toast.error(message ?? error.message);
       },
     });
@@ -366,6 +380,26 @@ export function BirdSaleCreateDialog({ open, onOpenChange }: BirdSaleCreateDialo
               <Label htmlFor="paid_amount">Paid amount (optional, default 0)</Label>
               <Input id="paid_amount" type="number" step="0.01" {...register("paid_amount")} />
             </div>
+            {Number(watchedPaid) > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="paid_to_instrument_id">Paid into</Label>
+                <Controller
+                  control={control}
+                  name="paid_to_instrument_id"
+                  render={({ field }) => (
+                    <FarmAccountSelect
+                      id="paid_to_instrument_id"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      invalid={!!errors.paid_to_instrument_id}
+                    />
+                  )}
+                />
+                {errors.paid_to_instrument_id && (
+                  <p className="text-xs text-destructive">{errors.paid_to_instrument_id.message}</p>
+                )}
+              </div>
+            )}
           </div>
 
           </div>

@@ -30,16 +30,29 @@ import {
   type PaymentRefType,
 } from "@/pages/payments/types";
 
-const paymentSchema = z.object({
+/** Money coming in from a customer has no account of ours to leave, so it names only where it landed. */
+const INCOMING_REF_TYPES: readonly PaymentRefType[] = ["SALE", "BIRD_SALE"];
+
+const paymentSchema = z
+  .object({
   ref_type: z.enum(PAYMENT_REF_TYPES, "Select what this pays"),
   ref_id: z.string().min(1, "Select a record to pay"),
   amount: z.coerce.number().positive("Must be positive"),
   payment_date: z.string().min(1, "Payment date is required"),
-  from_instrument_id: z.string().min(1, "Select the paying instrument"),
+  from_instrument_id: z.string().optional(),
   to_instrument_id: z.string().optional(),
   transaction_ref: z.string().trim().optional(),
   note: z.string().trim().optional(),
-});
+  })
+  .superRefine((d, ctx) => {
+    const incoming = INCOMING_REF_TYPES.includes(d.ref_type);
+    if (incoming && !d.to_instrument_id) {
+      ctx.addIssue({ code: "custom", path: ["to_instrument_id"], message: "Select the account it was received into" });
+    }
+    if (!incoming && !d.from_instrument_id) {
+      ctx.addIssue({ code: "custom", path: ["from_instrument_id"], message: "Select the account it was paid from" });
+    }
+  });
 
 type PaymentFormInput = z.input<typeof paymentSchema>;
 type PaymentFormValues = z.output<typeof paymentSchema>;
@@ -154,6 +167,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
   }, [open, reset, defaultRefType, defaultRefId]);
 
   const refType = useWatch({ control, name: "ref_type" });
+  const incoming = !!refType && INCOMING_REF_TYPES.includes(refType as PaymentRefType);
   const refId = useWatch({ control, name: "ref_id" });
   const refOptions = useRefOptions(refType, defaultRefId);
   const selectedRef = refOptions.find((r) => r.id === refId);
@@ -181,6 +195,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
   const onSubmit = (values: PaymentFormValues) => {
     const payload = {
       ...values,
+      from_instrument_id: values.from_instrument_id || undefined,
       to_instrument_id: values.to_instrument_id || undefined,
       transaction_ref: values.transaction_ref || undefined,
       note: values.note || undefined,
@@ -295,52 +310,83 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
             </div>
           </div>
 
+          {/* Which side of the money is the farm's: coming in names where it landed, going out names where
+              it came from. A customer paying us has no account of ours to leave, so there is no "from". */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="from_instrument_id">From instrument</Label>
-              <Controller
-                control={control}
-                name="from_instrument_id"
-                render={({ field }) => (
-                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                    <SelectTrigger id="from_instrument_id" className="w-full" aria-invalid={!!errors.from_instrument_id}>
-                      <SelectValue>{(v: string) => instrumentLabel(v) || "Select instrument"}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(instruments?.results ?? []).map((i) => (
-                        <SelectItem key={i.id} value={i.id}>
-                          {i.label} ({humanizeEnum(i.type)})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            {incoming ? (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="to_instrument_id">Received into</Label>
+                <Controller
+                  control={control}
+                  name="to_instrument_id"
+                  render={({ field }) => (
+                    <Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v ?? "")}>
+                      <SelectTrigger id="to_instrument_id" className="w-full" aria-invalid={!!errors.to_instrument_id}>
+                        <SelectValue>{(v: string) => instrumentLabel(v) || "Select account"}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(instruments?.results ?? []).map((i) => (
+                          <SelectItem key={i.id} value={i.id}>
+                            {i.label} ({humanizeEnum(i.type)})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.to_instrument_id && (
+                  <p className="text-xs text-destructive">{errors.to_instrument_id.message}</p>
                 )}
-              />
-              {errors.from_instrument_id && (
-                <p className="text-xs text-destructive">{errors.from_instrument_id.message}</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="to_instrument_id">To instrument (optional)</Label>
-              <Controller
-                control={control}
-                name="to_instrument_id"
-                render={({ field }) => (
-                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                    <SelectTrigger id="to_instrument_id" className="w-full">
-                      <SelectValue>{(v: string) => instrumentLabel(v) || "None"}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(instruments?.results ?? []).map((i) => (
-                        <SelectItem key={i.id} value={i.id}>
-                          {i.label} ({humanizeEnum(i.type)})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="from_instrument_id">Paid from</Label>
+                  <Controller
+                    control={control}
+                    name="from_instrument_id"
+                    render={({ field }) => (
+                      <Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v ?? "")}>
+                        <SelectTrigger id="from_instrument_id" className="w-full" aria-invalid={!!errors.from_instrument_id}>
+                          <SelectValue>{(v: string) => instrumentLabel(v) || "Select account"}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(instruments?.results ?? []).map((i) => (
+                            <SelectItem key={i.id} value={i.id}>
+                              {i.label} ({humanizeEnum(i.type)})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.from_instrument_id && (
+                    <p className="text-xs text-destructive">{errors.from_instrument_id.message}</p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="to_instrument_id">To account (optional)</Label>
+                  <Controller
+                    control={control}
+                    name="to_instrument_id"
+                    render={({ field }) => (
+                      <Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v ?? "")}>
+                        <SelectTrigger id="to_instrument_id" className="w-full">
+                          <SelectValue>{(v: string) => instrumentLabel(v) || "None"}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(instruments?.results ?? []).map((i) => (
+                            <SelectItem key={i.id} value={i.id}>
+                              {i.label} ({humanizeEnum(i.type)})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
