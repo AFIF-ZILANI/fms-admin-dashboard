@@ -22,6 +22,7 @@ import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatMoney } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
 import { FarmAccountSelect } from "@/components/shared/farm-account-select";
+import type { Warehouse } from "@/pages/inventory/types";
 import type { Item } from "@/pages/inventory/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 import type { Customer } from "@/pages/customers/types";
@@ -37,6 +38,7 @@ const lineSchema = z.object({
 const saleSchema = z.object({
   customer_id: z.string().optional(),
   sale_date: z.string().min(1, "Sale date is required"),
+  warehouse_id: z.string().min(1, "Choose the warehouse the stock comes from"),
   paid_amount: optionalNumber(z.coerce.number().nonnegative("Must be 0 or more")),
   // Required when something was paid: which of the farm's accounts it went into.
   paid_to_instrument_id: z.string().optional(),
@@ -62,6 +64,7 @@ function blankSale(): SaleFormInput {
   return {
     customer_id: "",
     sale_date: new Date().toISOString().slice(0, 10),
+    warehouse_id: "",
     paid_amount: "",
     paid_to_instrument_id: "",
     items: [blankLine()],
@@ -92,6 +95,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
   const watchedPaid = useWatch({ control, name: "paid_amount" });
 
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
+  const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
   const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
 
@@ -181,6 +185,31 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
               />
               {errors.sale_date && <p className="text-xs text-destructive">{errors.sale_date.message}</p>}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="warehouse_id">Take stock from</Label>
+            <Controller
+              control={control}
+              name="warehouse_id"
+              render={({ field }) => (
+                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                  <SelectTrigger id="warehouse_id" className="w-full" aria-invalid={!!errors.warehouse_id}>
+                    <SelectValue>
+                      {(v: string) => warehouses?.results.find((w) => w.id === v)?.name ?? "Select a warehouse"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(warehouses?.results ?? []).map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.warehouse_id && <p className="text-xs text-destructive">{errors.warehouse_id.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
