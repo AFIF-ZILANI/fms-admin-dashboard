@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { Link, Navigate, useParams } from "react-router";
+import { Navigate, useParams } from "react-router";
 import {
-  KeyRound,
+  UserRound,
   Layers,
   Package,
   Ruler,
@@ -11,11 +11,10 @@ import {
   UserCog,
   type LucideIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { LookupManagerCard } from "@/pages/settings/lookup-manager-card";
 import { DevicesTab } from "@/pages/settings/devices-tab";
+import { AccountSection } from "@/pages/settings/account-section";
 import { RoleSalaryCard } from "@/pages/settings/role-salary-card";
 
 type Section = { id: string; label: string; description: string; icon: LucideIcon; content: ReactNode };
@@ -66,22 +65,10 @@ const GROUPS: Group[] = [
     sections: [
       {
         id: "account",
-        label: "Password",
-        description: "Sign-in security for your account.",
-        icon: KeyRound,
-        content: (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Change password</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-start gap-3 text-sm text-muted-foreground">
-              Changing your password signs you out on every other device.
-              <Button variant="outline" nativeButton={false} render={<Link to="/change-password" />}>
-                <KeyRound className="size-4" /> Change password
-              </Button>
-            </CardContent>
-          </Card>
-        ),
+        label: "Account",
+        description: "Your profile, password and sign-in.",
+        icon: UserRound,
+        content: <AccountSection />,
       },
     ],
   },

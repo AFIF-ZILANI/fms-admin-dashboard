@@ -21,7 +21,7 @@ import {
   QrCode,
   Tags,
   Smartphone,
-  KeyRound,
+  UserRound,
   ChartColumn,
   BookOpen,
   TriangleAlert,
@@ -120,7 +120,7 @@ export const SYSTEM_NAV: NavItem[] = [
       { to: "/settings/categories-units", label: "Categories & units", icon: Tags },
       { to: "/settings/roles", label: "Roles & salaries", icon: UserCog },
       { to: "/settings/devices", label: "Devices", icon: Smartphone },
-      { to: "/settings/account", label: "Password", icon: KeyRound },
+      { to: "/settings/account", label: "Account", icon: UserRound },
     ],
   },
 ];
