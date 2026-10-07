@@ -1,4 +1,6 @@
-import { Layers, Package, Ruler, Truck } from "lucide-react";
+import { Link } from "react-router";
+import { KeyRound, Layers, Package, Ruler, Truck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePageTitle } from "@/components/layout/use-page-title";
@@ -26,6 +28,7 @@ export function SettingsPage() {
         <TabsTrigger value="categories-units">Categories & Units</TabsTrigger>
         <TabsTrigger value="roles">Roles & Salaries</TabsTrigger>
         <TabsTrigger value="devices">Devices</TabsTrigger>
+        <TabsTrigger value="account">Account</TabsTrigger>
         <TabsTrigger value="system">System</TabsTrigger>
       </TabsList>
       <TabsContent value="warehouses">
@@ -63,6 +66,19 @@ export function SettingsPage() {
       </TabsContent>
       <TabsContent value="devices">
         <DevicesTab />
+      </TabsContent>
+      <TabsContent value="account">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Password</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-start gap-3 text-sm text-muted-foreground">
+            Changing your password signs you out on every other device.
+            <Button variant="outline" nativeButton={false} render={<Link to="/change-password" />}>
+              <KeyRound className="size-4" /> Change password
+            </Button>
+          </CardContent>
+        </Card>
       </TabsContent>
       <TabsContent value="system">
         <Card>
