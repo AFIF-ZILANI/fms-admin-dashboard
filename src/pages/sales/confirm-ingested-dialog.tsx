@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
@@ -55,6 +56,8 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
   const [totalWeight, setTotalWeight] = useState(String(figures.totalWeight));
   const [pricePerKg, setPricePerKg] = useState(figures.pricePerKg.toFixed(2));
   const [paidAmount, setPaidAmount] = useState(String(row.payload.received_amount));
+  // Required when anything was received: which of the farm's accounts it went into.
+  const [paidInto, setPaidInto] = useState("");
   const [discount, setDiscount] = useState(
     String(Math.max(0, row.payload.final_amount - row.payload.received_amount))
   );
@@ -105,6 +108,7 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
         net_weight: Number(netWeight),
         price_per_kg: Number(pricePerKg),
         paid_amount: Number(paidAmount),
+        ...(Number(paidAmount) > 0 ? { paid_to_instrument_id: paidInto } : {}),
         discount_amount: Number(discount),
         ...(customerId ? { customer_id: customerId } : {}),
       },
@@ -119,7 +123,8 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
           toast.success("Sale confirmed");
           onOpenChange(false);
         },
-        onError: (error) => toast.error(error.fieldError("amount") ?? error.message),
+        onError: (error) =>
+          toast.error(error.fieldError("amount") ?? error.fieldError("paid_to_instrument_id") ?? error.message),
       }
     );
   };
@@ -364,6 +369,12 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
                 onChange={(e) => setPaidAmount(e.target.value)}
               />
             </div>
+            {Number(paidAmount) > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="ci_paid_into">Paid into</Label>
+                <FarmAccountSelect id="ci_paid_into" value={paidInto} onChange={setPaidInto} invalid={!paidInto} />
+              </div>
+            )}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="ci_discount">Discount</Label>
               <Input
@@ -407,7 +418,7 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
           >
             Dismiss
           </Button>
-          <Button onClick={handleConfirm} disabled={confirm.isPending}>
+          <Button onClick={handleConfirm} disabled={confirm.isPending || (Number(paidAmount) > 0 && !paidInto)}>
             Confirm sale
           </Button>
         </DialogFooter>

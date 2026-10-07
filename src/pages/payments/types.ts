@@ -22,7 +22,8 @@ export type Payment = {
   direction: PaymentDirection;
   ref_type: PaymentRefType;
   ref_id: string;
-  from_instrument_id: string;
+  /** Null for money received from a customer: it names only where it landed (`to_instrument_id`). */
+  from_instrument_id: string | null;
   to_instrument_id: string | null;
   transaction_ref: string | null;
   handled_by_id: string | null;
