@@ -30,7 +30,7 @@ function NavGroup({ items }: { items: NavItem[] }) {
           <span className="hidden lg:inline">{label}</span>
         </NavLink>
         {to === "/settings" && inSettings && (
-          <div className="ml-5 hidden flex-col gap-0.5 border-l border-sidebar-border pl-2 lg:flex">
+          <div className="mt-1.5 mb-4 ml-5 hidden flex-col gap-0.5 border-l border-sidebar-border pl-2 lg:flex">
             {SETTINGS_NAV.map(({ id, label: subLabel, icon: SubIcon }) => (
               <NavLink
                 key={id}
