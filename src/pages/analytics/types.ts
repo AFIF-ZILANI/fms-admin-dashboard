@@ -18,11 +18,21 @@ export type BatchPerformance = {
   actual_end_date: string | null;
   latest_average_weight_grams: string | null;
   latest_weight_date: string | null;
+  /** Null when any of the batch's feed has no kg conversion -- a partial total would flatter FCR. */
+  feed_kg: number | null;
+  /** Null until the batch has a weighing. */
+  weight_gain_kg: number | null;
+  fcr: number | null;
+  cost_to_date: string;
+  cost_per_kg: string | null;
 };
 
 export type MortalityTrendPoint = {
   date: string;
   died: number;
+  birds_alive: number;
+  /** died / birds_alive, 0..1 */
+  rate: number;
 };
 
 export type FeedTrendPoint = {
@@ -35,17 +45,6 @@ export type SalesTrendPoint = {
   date: string;
   revenue: string;
   avg_price_per_kg: string;
-};
-
-export type ExpenseBreakdownRow = {
-  category: string;
-  total: string;
-};
-
-export type RevenueVsExpensesPoint = {
-  month: string;
-  revenue: string;
-  expenses: string;
 };
 
 export type SalesByProductLineRow = {

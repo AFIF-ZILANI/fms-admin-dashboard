@@ -9,6 +9,8 @@ import { DayRangeToggle } from "@/pages/analytics/day-range-toggle";
 import { CHART_HEIGHT, chartAxisProps, chartGridProps, chartTooltipContentStyle, SINGLE_SERIES_STROKE } from "@/pages/analytics/chart-theme";
 import type { MortalityTrendPoint } from "@/pages/analytics/types";
 
+/** Daily deaths as a % of birds alive that morning -- a raw count can't tell a
+ * bad day in a small batch from a normal day across 15,000 birds. */
 export function MortalityTrendChart() {
   const [days, setDays] = useState(30);
   const { data, isLoading } = useGetData<MortalityTrendPoint[]>(`/analytics/trends/mortality?days=${days}`, [
@@ -17,33 +19,34 @@ export function MortalityTrendChart() {
     "mortality",
     days,
   ]);
+  const rows = (data ?? []).map((p) => ({ ...p, rate_pct: p.rate * 100 }));
+  const hasDeaths = rows.some((r) => r.died > 0);
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Mortality trend</CardTitle>
+        <CardTitle className="text-base">Daily mortality rate</CardTitle>
         <DayRangeToggle value={days} onValueChange={setDays} />
       </CardHeader>
       <CardContent>
         {isLoading && <Skeleton style={{ height: CHART_HEIGHT }} className="w-full" />}
-        {!isLoading && (data?.length ?? 0) === 0 && (
+        {!isLoading && !hasDeaths && (
           <EmptyState icon={TrendingDown} title="No deaths logged" description={`Nothing recorded in the last ${days} days.`} />
         )}
-        {!isLoading && (data?.length ?? 0) > 0 && (
+        {!isLoading && hasDeaths && (
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-            <LineChart data={data}>
+            <LineChart data={rows}>
               <CartesianGrid {...chartGridProps} />
               <XAxis dataKey="date" {...chartAxisProps} />
-              <YAxis {...chartAxisProps} allowDecimals={false} />
-              <Tooltip contentStyle={chartTooltipContentStyle} />
-              <Line
-                type="monotone"
-                dataKey="died"
-                name="Died"
-                stroke={SINGLE_SERIES_STROKE}
-                strokeWidth={2}
-                dot={false}
+              <YAxis {...chartAxisProps} unit="%" tickFormatter={(v: number) => v.toFixed(2)} width={56} />
+              <Tooltip
+                contentStyle={chartTooltipContentStyle}
+                formatter={(_value, _name, item) => {
+                  const p = item.payload as (typeof rows)[number];
+                  return [`${p.rate_pct.toFixed(2)}% (${p.died} of ${p.birds_alive.toLocaleString()})`, "Died"];
+                }}
               />
+              <Line type="monotone" dataKey="rate_pct" name="Mortality" stroke={SINGLE_SERIES_STROKE} strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         )}
