@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router";
 import { CheckCircle2, Clock, Plus, Printer, QrCode as QrCodeIcon, Search, Trash2, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -26,6 +26,9 @@ import { CodePrintSheet } from "@/pages/inventory/code-print-sheet";
 import { BindCodeDialog } from "@/pages/inventory/bind-code-dialog";
 import { StockUnitDetailSheet } from "@/pages/inventory/stock-unit-detail-sheet";
 
+/** The API caps `limit` at 100. */
+const PAGE_SIZES = [10, 20, 50, 100] as const;
+
 export function CodedUnitsTab() {
   const [statusFilter, setStatusFilter] = useState<StockUnitStatus | "ALL">("ALL");
   const [search, setSearch] = useState("");
@@ -43,11 +46,15 @@ export function CodedUnitsTab() {
   // per-keystroke fetch feels chatty.
   const q = search.trim();
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 20;
-  // Filter/search narrows the whole set server-side, so a stale page could land out of range.
-  useEffect(() => setPage(1), [statusFilter, q]);
+  const [pageSize, setPageSize] = useState(20);
+  // Filter/search/size change the whole page set server-side, so a stale page could land out of
+  // range -- every setter that narrows or resizes it goes back to page 1.
+  const resetting = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    setPage(1);
+  };
 
-  const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+  const query = new URLSearchParams({ page: String(page), limit: String(pageSize) });
   if (statusFilter !== "ALL") query.set("status", statusFilter);
   if (q) query.set("q", q);
   const { data, isLoading } = useGetData<Paginated<StockUnit>>(`/stock-units?${query}`, [
@@ -55,6 +62,7 @@ export function CodedUnitsTab() {
     statusFilter,
     q,
     page,
+    pageSize,
   ]);
 
   // KPI counts always reflect the unfiltered full set -- one server-side aggregate query so they
@@ -182,7 +190,7 @@ export function CodedUnitsTab() {
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => resetting(setSearch)(e.target.value)}
               placeholder="Search by code / scanned id…"
               className="pl-8"
               aria-label="Search coded units"
@@ -190,7 +198,7 @@ export function CodedUnitsTab() {
             {search && (
               <button
                 type="button"
-                onClick={() => setSearch("")}
+                onClick={() => resetting(setSearch)("")}
                 aria-label="Clear search"
                 className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
@@ -199,7 +207,7 @@ export function CodedUnitsTab() {
             )}
           </div>
 
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter((v ?? "ALL") as StockUnitStatus | "ALL")}>
+          <Select value={statusFilter} onValueChange={(v) => resetting(setStatusFilter)((v ?? "ALL") as StockUnitStatus | "ALL")}>
             <SelectTrigger className="w-40">
               <SelectValue>{(v: string) => (v && v !== "ALL" ? humanizeEnum(v) : "All statuses")}</SelectValue>
             </SelectTrigger>
@@ -264,12 +272,26 @@ export function CodedUnitsTab() {
         }
       />
 
-      {data && data.totalPages > 1 && (
+      {/* Shown past the smallest size, not only when there are 2+ pages -- otherwise picking 100
+          hides the control you'd use to go back. */}
+      {data && data.total > PAGE_SIZES[0] && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
             Page {data.page} of {data.totalPages} · {data.total} total
           </span>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <Select value={String(pageSize)} onValueChange={(v) => resetting(setPageSize)(Number(v))}>
+              <SelectTrigger size="sm" className="w-28" aria-label="Rows per page">
+                <SelectValue>{(v: string) => `${v} / page`}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZES.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n} / page
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
               Previous
             </Button>
