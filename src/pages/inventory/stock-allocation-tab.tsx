@@ -117,6 +117,7 @@ export function StockAllocationTab() {
       <DataTable
         columns={columns}
         rows={data?.results ?? []}
+        totalCount={data?.total}
         rowKey={(e) => e.id}
         isLoading={isLoading}
         empty={{

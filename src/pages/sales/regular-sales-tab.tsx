@@ -186,6 +186,7 @@ export function RegularSalesTab() {
       <DataTable
         columns={columns}
         rows={sales}
+        totalCount={data?.total}
         rowKey={(s) => s.id}
         isLoading={isLoading}
         onRowClick={(s) => navigate(`/sales/${s.id}`)}

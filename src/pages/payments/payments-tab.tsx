@@ -87,6 +87,7 @@ export function PaymentsTab() {
       <DataTable
         columns={columns}
         rows={payments}
+        totalCount={data?.total}
         rowKey={(p) => p.id}
         isLoading={isLoading}
         empty={{

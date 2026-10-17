@@ -187,6 +187,7 @@ export function HousesListPage() {
       <DataTable
         columns={columns}
         rows={data?.results ?? []}
+        totalCount={data?.total}
         rowKey={(h) => h.id}
         isLoading={isLoading}
         onRowClick={(h) => navigate(`/houses/${h.id}`)}

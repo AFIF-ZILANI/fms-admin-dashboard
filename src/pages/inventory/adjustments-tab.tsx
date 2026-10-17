@@ -81,6 +81,7 @@ export function AdjustmentsTab() {
       <DataTable
         columns={columns}
         rows={adjustments}
+        totalCount={data?.total}
         rowKey={(a) => a.id}
         isLoading={isLoading}
         empty={{

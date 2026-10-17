@@ -245,6 +245,7 @@ export function BatchesListPage() {
       <DataTable
         columns={columns}
         rows={sortedBatches}
+        totalCount={data?.total}
         rowKey={(b) => b.id}
         isLoading={isLoading}
         onRowClick={(b) => navigate(`/batches/${b.id}`)}

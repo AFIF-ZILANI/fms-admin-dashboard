@@ -61,6 +61,7 @@ export function AssetsTab() {
       <DataTable
         columns={columns}
         rows={assets}
+        totalCount={data?.total}
         rowKey={(a) => a.id}
         isLoading={isLoading}
         onRowClick={(a) => setSelectedAssetId(a.id)}

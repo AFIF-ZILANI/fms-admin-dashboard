@@ -154,6 +154,7 @@ export function ExpensesTab() {
       <DataTable
         columns={columns}
         rows={expenses}
+        totalCount={data?.total}
         rowKey={(e) => e.id}
         isLoading={isLoading}
         empty={{

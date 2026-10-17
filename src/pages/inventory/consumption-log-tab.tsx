@@ -150,6 +150,7 @@ export function ConsumptionLogTab() {
       <DataTable
         columns={columns}
         rows={data?.results ?? []}
+        totalCount={data?.total}
         rowKey={(c) => c.id}
         isLoading={isLoading}
         empty={{

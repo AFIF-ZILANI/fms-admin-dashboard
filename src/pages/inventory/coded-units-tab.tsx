@@ -256,6 +256,7 @@ export function CodedUnitsTab() {
       )}
 
       <DataTable
+        paginate={false}
         columns={columns}
         rows={units}
         rowKey={(u) => u.id}

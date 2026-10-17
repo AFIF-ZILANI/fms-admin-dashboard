@@ -80,6 +80,7 @@ export function AuditLogPage() {
       <DataTable
         columns={columns}
         rows={entries}
+        totalCount={data?.total}
         rowKey={(e) => e.id}
         isLoading={isLoading}
         onRowClick={(e) => setSelected(e)}

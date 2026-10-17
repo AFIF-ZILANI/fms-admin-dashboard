@@ -155,6 +155,7 @@ export function AlertsPage() {
       <DataTable
         columns={columns}
         rows={alerts}
+        totalCount={data?.total}
         rowKey={(a) => a.id}
         isLoading={isLoading}
         empty={{

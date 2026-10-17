@@ -40,6 +40,7 @@ export function SharedCostsTab() {
       <DataTable
         columns={columns}
         rows={expenses}
+        totalCount={data?.total}
         rowKey={(e) => e.id}
         isLoading={isLoading}
         empty={{

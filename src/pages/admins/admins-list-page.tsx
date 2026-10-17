@@ -127,6 +127,7 @@ export function AdminsListPage() {
       <DataTable
         columns={columns}
         rows={admins}
+        totalCount={data?.total}
         rowKey={(a) => a.id}
         isLoading={isLoading}
         empty={{

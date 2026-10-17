@@ -98,6 +98,7 @@ export function DepreciationTab() {
       <DataTable
         columns={columns}
         rows={depreciations}
+        totalCount={data?.total}
         rowKey={(d) => d.id}
         isLoading={isLoading}
         empty={{

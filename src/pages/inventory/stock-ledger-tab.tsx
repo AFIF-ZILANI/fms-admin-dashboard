@@ -167,6 +167,7 @@ export function StockLedgerTab() {
       </div>
 
       <DataTable
+        paginate={false}
         columns={columns}
         rows={data?.results ?? []}
         rowKey={(e) => e.id}

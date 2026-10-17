@@ -203,6 +203,7 @@ export function BirdSalesTab() {
       <DataTable
         columns={columns}
         rows={birdSales}
+        totalCount={data?.total}
         rowKey={(s) => s.id}
         isLoading={isLoading}
         onRowClick={(s) => navigate(`/sales/birds/${s.id}`)}

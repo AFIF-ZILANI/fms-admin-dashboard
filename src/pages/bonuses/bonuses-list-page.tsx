@@ -39,6 +39,7 @@ export function BonusesListPage() {
       <DataTable
         columns={columns}
         rows={data?.results ?? []}
+        totalCount={data?.total}
         rowKey={(e) => e.id}
         isLoading={isLoading}
         onRowClick={(e) => navigate(`/bonuses/${e.id}`)}

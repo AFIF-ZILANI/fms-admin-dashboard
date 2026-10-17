@@ -97,6 +97,7 @@ export function SuppliersListPage() {
       <DataTable
         columns={columns}
         rows={suppliers}
+        totalCount={data?.total}
         rowKey={(s) => s.id}
         isLoading={isLoading}
         onRowClick={(s) => navigate(`/suppliers/${s.id}`)}

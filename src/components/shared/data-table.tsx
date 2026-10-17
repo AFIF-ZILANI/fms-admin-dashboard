@@ -11,7 +11,9 @@ import {
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/empty-state";
 import { cn } from "@/lib/utils";
 
@@ -38,12 +40,20 @@ type DataTableProps<T> = {
   empty: { icon: LucideIcon; title: string; description?: string; action?: { label: string; onClick: () => void } };
   /** Rendered under the table, inside the border -- e.g. "Showing 100 of 340". */
   footer?: ReactNode;
+  /** Server-side total when `rows` is only the first page of a capped fetch (limit=100). Adds a
+   * "showing N of M" note so a truncated list never passes for the whole set. */
+  totalCount?: number;
+  /** Set false when the caller pages server-side and renders its own controls. */
+  paginate?: boolean;
 };
+
+const PAGE_SIZES = [10, 20, 50, 100] as const;
 
 // ponytail: TanStack Table only computes row order here (getSortedRowModel) --
 // every cell still renders through the column's own `render`, so this stays a
-// thin sorting layer instead of a full column-def rewrite. No pagination UI
-// yet; add when a page's row count outgrows the API's default page size.
+// thin sorting layer instead of a full column-def rewrite. Pagination is
+// client-side over the rows the caller holds (sorted first, then sliced);
+// server-paged tables pass paginate={false} and bring their own controls.
 export function DataTable<T>({
   columns,
   rows,
@@ -54,8 +64,12 @@ export function DataTable<T>({
   onSelectedIdsChange,
   empty,
   footer,
+  totalCount,
+  paginate = true,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState<number>(PAGE_SIZES[1]);
   const selectable = !!selectedIds && !!onSelectedIdsChange;
 
   const tanstackColumns = useMemo<ColumnDef<T>[]>(
@@ -82,7 +96,12 @@ export function DataTable<T>({
     return <EmptyState {...empty} />;
   }
 
-  const sortedRows = table.getRowModel().rows.map((r) => r.original);
+  const allSortedRows = table.getRowModel().rows.map((r) => r.original);
+  const paged = paginate && allSortedRows.length > PAGE_SIZES[0];
+  const lastPage = Math.max(0, Math.ceil(allSortedRows.length / pageSize) - 1);
+  // Clamp rather than reset: a refetch or filter can shrink the set under the current page.
+  const safePage = Math.min(page, lastPage);
+  const sortedRows = paged ? allSortedRows.slice(safePage * pageSize, (safePage + 1) * pageSize) : allSortedRows;
 
   const renderedIds = sortedRows.map(rowKey);
   const allSelected = selectable && renderedIds.length > 0 && renderedIds.every((id) => selectedIds!.has(id));
@@ -193,8 +212,40 @@ export function DataTable<T>({
               ))}
         </TableBody>
       </Table>
+      {totalCount !== undefined && totalCount > rows.length && (
+        <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+          Showing the latest {rows.length.toLocaleString()} of {totalCount.toLocaleString()} -- narrow with filters to see the rest.
+        </div>
+      )}
       {footer && (
         <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">{footer}</div>
+      )}
+      {paged && (
+        <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-2 text-sm text-muted-foreground">
+          <span>
+            {safePage * pageSize + 1}-{Math.min((safePage + 1) * pageSize, allSortedRows.length)} of {allSortedRows.length.toLocaleString()}
+          </span>
+          <div className="flex items-center gap-2">
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(0); }}>
+              <SelectTrigger size="sm" className="w-28" aria-label="Rows per page">
+                <SelectValue>{(v: string) => `${v} / page`}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZES.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n} / page
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" disabled={safePage <= 0} onClick={() => setPage(safePage - 1)}>
+              Previous
+            </Button>
+            <Button variant="outline" size="sm" disabled={safePage >= lastPage} onClick={() => setPage(safePage + 1)}>
+              Next
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

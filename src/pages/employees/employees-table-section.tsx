@@ -200,6 +200,7 @@ export function EmployeesTableSection() {
       )}
 
       <DataTable
+        paginate={false}
         columns={columns}
         rows={employees}
         rowKey={(e) => e.id}

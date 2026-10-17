@@ -164,6 +164,7 @@ export function PurchasesListPage() {
       <DataTable
         columns={columns}
         rows={purchases}
+        totalCount={data?.total}
         rowKey={(p) => p.id}
         isLoading={isLoading}
         onRowClick={(p) => navigate(`/purchases/${p.id}`)}

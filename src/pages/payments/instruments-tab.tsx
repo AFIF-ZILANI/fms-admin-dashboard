@@ -124,6 +124,7 @@ export function InstrumentsTab() {
       <DataTable
         columns={columns}
         rows={instruments}
+        totalCount={data?.total}
         rowKey={(i) => i.id}
         isLoading={isLoading}
         empty={{

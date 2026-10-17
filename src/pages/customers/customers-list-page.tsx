@@ -71,6 +71,7 @@ export function CustomersListPage() {
       <DataTable
         columns={columns}
         rows={customers}
+        totalCount={data?.total}
         rowKey={(c) => c.id}
         isLoading={isLoading}
         onRowClick={(c) => navigate(`/customers/${c.id}`)}
