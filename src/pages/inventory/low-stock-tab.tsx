@@ -1,4 +1,4 @@
-import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, ClipboardList, Hourglass, TrendingDown } from "lucide-react";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData } from "@/lib/api";
@@ -9,6 +9,16 @@ export function LowStockTab() {
   const { data, isLoading } = useGetData<LowStockItem[]>("/items/low-stock", ["items", "low-stock"]);
   const items = data ?? [];
   const criticalItems = items.filter((i) => parseFloat(i.current_balance) <= 0);
+  // "Nearly out" = still in stock but at half the reorder level or less -- the next ones to go critical.
+  const nearlyOut = items.filter((i) => {
+    const balance = parseFloat(i.current_balance);
+    return balance > 0 && i.reorder_level !== null && balance <= parseFloat(i.reorder_level) / 2;
+  });
+  const slowest = items.reduce<LowStockItem | null>(
+    (w, i) => (i.lead_time_days != null && (!w || i.lead_time_days > (w.lead_time_days ?? 0)) ? i : w),
+    null
+  );
+  const noReorderQty = items.filter((i) => i.preferred_reorder_qty === null).length;
 
   const columns: Column<LowStockItem>[] = [
     { key: "name", header: "Item", render: (i) => <span className="font-medium">{i.name}</span> },
@@ -38,7 +48,10 @@ export function LowStockTab() {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Below reorder level" value={items.length} icon={AlertTriangle} isLoading={isLoading} />
-        <KPICard label="Critical" value={criticalItems.length} icon={AlertCircle} isLoading={isLoading} />
+        <KPICard label="Out of stock" value={criticalItems.length} tone={criticalItems.length > 0 ? "critical" : undefined} icon={AlertCircle} isLoading={isLoading} />
+        <KPICard label="Nearly out" value={nearlyOut.length} hint="at half the reorder level or less" tone={nearlyOut.length > 0 ? "warning" : undefined} icon={TrendingDown} isLoading={isLoading} />
+        <KPICard label="Longest lead time" value={slowest ? `${slowest.lead_time_days}d` : "—"} hint={slowest?.name} icon={Hourglass} isLoading={isLoading} />
+        <KPICard label="No reorder qty set" value={noReorderQty} hint="can't build a purchase order" tone={noReorderQty > 0 ? "warning" : undefined} icon={ClipboardList} isLoading={isLoading} />
       </div>
 
       <div className="flex flex-col gap-2">

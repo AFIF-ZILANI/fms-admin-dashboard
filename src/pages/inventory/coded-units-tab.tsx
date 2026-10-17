@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { CheckCircle2, Clock, Plus, Printer, QrCode as QrCodeIcon, Search, Trash2, X, XCircle } from "lucide-react";
+import { Boxes, CheckCircle2, Clock, PackageCheck, Plus, Printer, QrCode as QrCodeIcon, Search, Trash2, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,7 @@ export function CodedUnitsTab() {
   );
 
   const units = data?.results ?? [];
+  const totalCodes = Object.values(counts ?? {}).reduce((sum, n) => sum + (n ?? 0), 0);
 
   const remove = useDelete<null, string>((id) => `/stock-units/${id}`, ["stock-units"]);
   const handleDelete = async (u: StockUnit) => {
@@ -177,11 +178,13 @@ export function CodedUnitsTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KPICard label="Unassigned" value={counts?.UNASSIGNED ?? 0} icon={QrCodeIcon} />
-        <KPICard label="In stock" value={counts?.IN_STOCK ?? 0} icon={CheckCircle2} />
-        <KPICard label="In use" value={counts?.IN_USE ?? 0} icon={Clock} />
-        <KPICard label="Disposed" value={counts?.DISPOSED ?? 0} icon={XCircle} />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <KPICard label="Total codes" value={totalCodes} hint="ever provisioned" icon={Boxes} isLoading={!counts} />
+        <KPICard label="Blank codes" value={counts?.UNASSIGNED ?? 0} hint="printed, ready to bind" tone={counts && counts.UNASSIGNED === 0 ? "warning" : undefined} icon={QrCodeIcon} isLoading={!counts} />
+        <KPICard label="In stock" value={counts?.IN_STOCK ?? 0} hint="bound, in the warehouse" icon={CheckCircle2} isLoading={!counts} />
+        <KPICard label="In use" value={counts?.IN_USE ?? 0} hint="out in a house" icon={Clock} isLoading={!counts} />
+        <KPICard label="Consumed" value={counts?.CONSUMED ?? 0} hint="used up" icon={PackageCheck} isLoading={!counts} />
+        <KPICard label="Disposed" value={counts?.DISPOSED ?? 0} hint="discarded unused" icon={XCircle} isLoading={!counts} />
       </div>
 
       <div className="flex items-center justify-between gap-3">

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { AlertTriangle, CheckCircle2, Package, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { AlertCircle, AlertTriangle, Layers, Package, Pencil, Plus, QrCode, Search, Settings2, Trash2, Wheat, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,11 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
     ["items", "low-stock"]
   );
   const lowStockCount = lowStockItems?.length ?? 0;
+  const outOfStockCount = (lowStockItems ?? []).filter((i) => parseFloat(i.current_balance) <= 0).length;
+  const activeItems = allItems.filter((i) => i.is_active);
+  const codedCount = activeItems.filter((i) => i.is_unit_tracked).length;
+  const noReorderLevel = activeItems.filter((i) => i.reorder_level === null).length;
+  const categoryCount = new Set(activeItems.map((i) => i.category)).size;
 
   const { data: categories } = useGetData<Paginated<LookupRow>>(
     "/item-categories?active=true&limit=100",
@@ -188,12 +193,18 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Total items" value={totalItems} icon={Package} isLoading={isLoading} />
-        <KPICard label="Active" value={activeCount} icon={CheckCircle2} isLoading={isLoading} />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KPICard label="Active items" value={activeCount} hint={`${totalItems} in catalog`} icon={Package} isLoading={isLoading} />
         <button type="button" onClick={onViewLowStock} className="text-left">
           <KPICard label="Below reorder level" value={lowStockCount} icon={AlertTriangle} isLoading={lowStockLoading} />
         </button>
+        <button type="button" onClick={onViewLowStock} className="text-left">
+          <KPICard label="Out of stock" value={outOfStockCount} icon={AlertCircle} tone={outOfStockCount > 0 ? "critical" : undefined} isLoading={lowStockLoading} />
+        </button>
+        <KPICard label="Categories" value={categoryCount} hint="with active items" icon={Layers} isLoading={isLoading} />
+        <KPICard label="QR-coded items" value={codedCount} hint="medicine, vaccine, equipment" icon={QrCode} isLoading={isLoading} />
+        <KPICard label="Quantity-tracked" value={activeItems.length - codedCount} hint="feed, husk, etc." icon={Wheat} isLoading={isLoading} />
+        <KPICard label="No reorder level" value={noReorderLevel} hint="never flagged as low" icon={Settings2} tone={noReorderLevel > 0 ? "warning" : undefined} isLoading={isLoading} />
       </div>
 
       <div className="flex items-center justify-between gap-3">

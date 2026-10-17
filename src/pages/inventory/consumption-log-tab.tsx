@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { ListTree, QrCode as QrCodeIcon, Wheat } from "lucide-react";
+import { CalendarDays, Coins, ListTree, Tags, Wheat } from "lucide-react";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
+import { daysAgoMs, formatMoney, humanizeEnum } from "@/lib/utils";
+import type { ConsumptionByCategoryRow } from "@/pages/analytics/types";
 import type { Consumption, Item } from "@/pages/inventory/types";
 import type { Batch } from "@/pages/batches/types";
 import type { House } from "@/pages/houses/types";
@@ -35,16 +37,23 @@ export function ConsumptionLogTab() {
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
 
-  // KPI counts always reflect the unfiltered full set, not the currently-filtered view --
-  // fetched separately so applying a filter doesn't make the tiles change (same pattern as Coded Units).
-  const { data: allConsumptions, isLoading: allConsumptionsLoading } = useGetData<Paginated<Consumption>>(
-    "/consumptions?limit=100",
-    ["consumptions", "ALL", "ALL", "ALL", "", ""]
+  // KPIs ignore the table filters: lifetime total plus a fixed 30-day window. Draw counts come
+  // from the API total (exact), the money from the costed category rollup.
+  const monthStart = new Date(daysAgoMs(30)).toISOString().slice(0, 10);
+  const { data: allConsumptions, isLoading: allLoading } = useGetData<Paginated<Consumption>>(
+    "/consumptions?limit=1",
+    ["consumptions", "kpi", "all"]
   );
-  const allConsumptionResults = allConsumptions?.results ?? [];
-  const totalConsumptions = allConsumptions?.total ?? allConsumptionResults.length;
-  const codedCount = allConsumptionResults.filter((c) => c.stock_unit_id !== null).length;
-  const aggregateCount = allConsumptionResults.filter((c) => c.stock_unit_id === null).length;
+  const { data: monthConsumptions, isLoading: monthLoading } = useGetData<Paginated<Consumption>>(
+    `/consumptions?limit=1&occurred_from=${monthStart}`,
+    ["consumptions", "kpi", monthStart]
+  );
+  const { data: byCategory, isLoading: categoryLoading, isError: categoryError } = useGetData<ConsumptionByCategoryRow[]>(
+    "/analytics/inventory/consumption-by-category?days=30",
+    ["analytics", "inventory-kpi", "consumed", 30]
+  );
+  const monthValue = (byCategory ?? []).reduce((sum, r) => sum + Number(r.total), 0);
+  const topCategory = byCategory?.[0];
 
   const columns: Column<Consumption>[] = [
     {
@@ -67,14 +76,11 @@ export function ConsumptionLogTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Total draws" value={totalConsumptions} icon={ListTree} isLoading={allConsumptionsLoading} />
-        <KPICard
-          label="From coded units"
-          value={codedCount}
-          icon={QrCodeIcon}
-          isLoading={allConsumptionsLoading}
-        />
-        <KPICard label="Aggregate draws" value={aggregateCount} icon={Wheat} isLoading={allConsumptionsLoading} />
+        <KPICard label="Total draws" value={allConsumptions?.total ?? 0} hint="all time" icon={ListTree} isLoading={allLoading} />
+        <KPICard label="Draws (30 days)" value={monthConsumptions?.total ?? 0} icon={CalendarDays} isLoading={monthLoading} />
+        <KPICard label="Value consumed" value={formatMoney(monthValue)} hint="last 30 days, at avg purchase cost" icon={Coins} isLoading={categoryLoading} isError={categoryError} />
+        <KPICard label="Avg per day" value={formatMoney(monthValue / 30)} hint="consumption value" icon={Wheat} isLoading={categoryLoading} isError={categoryError} />
+        <KPICard label="Top category" value={topCategory ? humanizeEnum(topCategory.category) : "—"} hint={topCategory ? formatMoney(topCategory.total) + ", last 30 days" : "no consumption yet"} icon={Tags} isLoading={categoryLoading} isError={categoryError} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

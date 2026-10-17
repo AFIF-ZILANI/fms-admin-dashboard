@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRightLeft, PackagePlus, Plus, Route, Undo2 } from "lucide-react";
+import { ArrowRightLeft, Boxes, Home, PackagePlus, Plus, Route, Undo2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -7,7 +7,7 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ALLOCATION_TYPE_TONE } from "@/components/shared/status-tone";
 import { useGetData, type Paginated } from "@/lib/api";
-import { humanizeEnum } from "@/lib/utils";
+import { daysAgoMs, humanizeEnum } from "@/lib/utils";
 import { ALLOCATION_TYPES, type AllocationType, type StockHouseAllocationEntry } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
 import { StockAllocationFormDialog } from "@/pages/inventory/stock-allocation-form-dialog";
@@ -34,9 +34,11 @@ export function StockAllocationTab() {
   );
   const allResults = allEntries?.results ?? [];
   const totalEvents = allEntries?.total ?? allResults.length;
-  const allocationCount = allResults.filter((e) => e.type === "ALLOCATION").length;
-  const reallocationCount = allResults.filter((e) => e.type === "REALLOCATION").length;
-  const returnCount = allResults.filter((e) => e.type === "RETURN").length;
+  // ponytail: movement figures are from the latest 100 events; fine at farm scale.
+  const monthStart = daysAgoMs(30);
+  const recent = allResults.filter((e) => new Date(e.occurred_at).getTime() >= monthStart);
+  const inHouses = new Set(recent.filter((e) => e.house).map((e) => e.house!.id)).size;
+  const unitsMoved = new Set(recent.map((e) => e.stock_unit_id)).size;
 
   const columns: Column<StockHouseAllocationEntry>[] = [
     {
@@ -65,11 +67,13 @@ export function StockAllocationTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KPICard label="Total events" value={totalEvents} icon={Route} isLoading={allEntriesLoading} />
-        <KPICard label="Allocations" value={allocationCount} icon={PackagePlus} isLoading={allEntriesLoading} />
-        <KPICard label="Reallocations" value={reallocationCount} icon={ArrowRightLeft} isLoading={allEntriesLoading} />
-        <KPICard label="Returns" value={returnCount} icon={Undo2} isLoading={allEntriesLoading} />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <KPICard label="Moves (30 days)" value={recent.length} hint={`${totalEvents} all time`} icon={Route} isLoading={allEntriesLoading} />
+        <KPICard label="Units moved" value={unitsMoved} hint="distinct, last 30 days" icon={Boxes} isLoading={allEntriesLoading} />
+        <KPICard label="Houses supplied" value={inHouses} hint="received a unit, last 30 days" icon={Home} isLoading={allEntriesLoading} />
+        <KPICard label="Allocations" value={recent.filter((e) => e.type === "ALLOCATION").length} hint="warehouse to house, 30 days" icon={PackagePlus} isLoading={allEntriesLoading} />
+        <KPICard label="Reallocations" value={recent.filter((e) => e.type === "REALLOCATION").length} hint="house to house, 30 days" icon={ArrowRightLeft} isLoading={allEntriesLoading} />
+        <KPICard label="Returns" value={recent.filter((e) => e.type === "RETURN").length} hint="back to warehouse, 30 days" icon={Undo2} isLoading={allEntriesLoading} />
       </div>
 
       <div className="flex items-center justify-between gap-3">

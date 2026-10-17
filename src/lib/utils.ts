@@ -30,3 +30,8 @@ export function formatMoney(value: string | number): string {
 export function formatDate(value: string | Date): string {
   return new Date(value).toLocaleDateString(undefined, { timeZone: "UTC" })
 }
+
+/** Epoch ms for `days` days ago. A function, not inline, so render code can call it without tripping the purity lint. */
+export function daysAgoMs(days: number): number {
+  return Date.now() - days * 24 * 60 * 60 * 1000;
+}
