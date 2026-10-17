@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export const PAGE_SIZES = [10, 20, 50, 100] as const;
+const PAGE_SIZES = [10, 20, 50, 100] as const;
 
 type PaginationBarProps = {
   page: number;
