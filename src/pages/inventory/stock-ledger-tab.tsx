@@ -1,15 +1,23 @@
 import { useState } from "react";
-import { ArrowRightLeft, BookText, PackageMinus, PackagePlus, Plus } from "lucide-react";
+import { ArrowRightLeft, BookText, PackageMinus, PackagePlus, Plus, Trash2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, type Paginated } from "@/lib/api";
-import { humanizeEnum } from "@/lib/utils";
+import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { STOCK_DIRECTIONS, STOCK_REASONS, type Item, type StockDirection, type StockLedgerEntry, type StockReason } from "@/pages/inventory/types";
 import { AdjustmentFormDialog } from "@/pages/inventory/adjustment-form-dialog";
 import { TransferFormDialog } from "@/pages/inventory/transfer-form-dialog";
+
+type LedgerSummary = {
+  total: number;
+  in_30d: number;
+  out_30d: number;
+  loss_30d: number;
+  received_value_30d: number;
+};
 
 const PAGE_SIZES = [10, 20, 50, 100] as const;
 
@@ -42,16 +50,11 @@ export function StockLedgerTab() {
 
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
 
-  // KPI counts always reflect the unfiltered full set, not the currently-filtered view --
-  // fetched separately so applying a filter doesn't make the tiles change (same pattern as Coded Units).
-  const { data: allEntries, isLoading: allEntriesLoading } = useGetData<Paginated<StockLedgerEntry>>(
-    "/stock-ledger?limit=100",
-    ["stock-ledger", "ALL", "ALL", "ALL"]
+  // Server-side aggregate, unaffected by filters or page (a client reduce over one page undercounts).
+  const { data: summary, isLoading: summaryLoading, isError: summaryError } = useGetData<LedgerSummary>(
+    "/stock-ledger/summary",
+    ["stock-ledger", "summary"]
   );
-  const allEntryResults = allEntries?.results ?? [];
-  const totalEntries = allEntries?.total ?? allEntryResults.length;
-  const inCount = allEntryResults.filter((e) => e.direction === "IN").length;
-  const outCount = allEntryResults.filter((e) => e.direction === "OUT").length;
 
   const columns: Column<StockLedgerEntry>[] = [
     {
@@ -89,10 +92,20 @@ export function StockLedgerTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Total entries" value={totalEntries} icon={BookText} isLoading={allEntriesLoading} />
-        <KPICard label="In movements" value={inCount} icon={PackagePlus} isLoading={allEntriesLoading} />
-        <KPICard label="Out movements" value={outCount} icon={PackageMinus} isLoading={allEntriesLoading} />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <KPICard label="Total entries" value={summary?.total.toLocaleString()} hint="all time" icon={BookText} isLoading={summaryLoading} isError={summaryError} />
+        <KPICard label="In (30 days)" value={summary?.in_30d.toLocaleString()} hint="stock received" icon={PackagePlus} isLoading={summaryLoading} isError={summaryError} />
+        <KPICard label="Out (30 days)" value={summary?.out_30d.toLocaleString()} hint="stock used or moved out" icon={PackageMinus} isLoading={summaryLoading} isError={summaryError} />
+        <KPICard label="Received value" value={summary ? formatMoney(summary.received_value_30d) : undefined} hint="last 30 days, costed entries" icon={Wallet} isLoading={summaryLoading} isError={summaryError} />
+        <KPICard
+          label="Wastage / expired"
+          value={summary?.loss_30d.toLocaleString()}
+          hint="last 30 days"
+          icon={Trash2}
+          tone={summary && summary.loss_30d > 0 ? "warning" : undefined}
+          isLoading={summaryLoading}
+          isError={summaryError}
+        />
       </div>
 
       <div className="flex items-center justify-end gap-2">
