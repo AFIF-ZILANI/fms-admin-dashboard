@@ -30,6 +30,7 @@ import type { PaymentInstrument } from "@/pages/payments/types";
 import { DISCOUNT_TYPES, type DiscountType, type Purchase } from "@/pages/purchases/types";
 import { COST_TYPES, type CostType } from "@/pages/finance/types";
 import { BindCodesPrompt } from "@/pages/purchases/bind-codes-prompt";
+import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 
 const CODED_CATEGORIES = ["MEDICINE", "VACCINE", "EQUIPMENT"];
 
@@ -131,10 +132,13 @@ type PendingExpense = {
   cost_type: CostType | "";
   amount: string;
   remarks: string;
+  /** paid on the spot from this account; "" = not paid yet */
+  paid_from_instrument_id: string;
+  paid: boolean;
 };
 
 function blankExpense(): PendingExpense {
-  return { enabled: false, category: "", cost_type: "", amount: "", remarks: "" };
+  return { enabled: false, category: "", cost_type: "", amount: "", remarks: "", paid: true, paid_from_instrument_id: "" };
 }
 
 export function PurchaseCreatePage() {
@@ -186,7 +190,6 @@ export function PurchaseCreatePage() {
   );
 
   const createPurchase = usePostData<Purchase, Record<string, unknown>>("/purchases", ["purchases"]);
-  const createPayment = usePostData<unknown, Record<string, unknown>>("/payments", ["payments"]);
   const createExpense = usePostData<unknown, Record<string, unknown>>("/expenses", ["expenses"]);
 
   const itemOptions = items?.results ?? [];
@@ -267,13 +270,26 @@ export function PurchaseCreatePage() {
         setExpenseError("Enter a valid expense amount.");
         return;
       }
+      if (expense.paid && !expense.paid_from_instrument_id) {
+        setExpenseError("Select the account the expense was paid from.");
+        return;
+      }
     }
 
+    // The payment travels with the purchase and is written in the same transaction, so a purchase
+    // can't be saved with its payment silently missing.
+    const paying = payment.status !== "UNPAID";
     const payload = {
       ...values,
       supplier_id: values.supplier_id || undefined,
       invoice_no: values.invoice_no || undefined,
-      paid_amount: 0,
+      paid_amount: paying ? paymentAmount : 0,
+      ...(paying && {
+        paid_from_instrument_id: payment.from_instrument_id,
+        payment_date: payment.payment_date || undefined,
+        payment_transaction_ref: payment.transaction_ref.trim() || undefined,
+        payment_note: payment.note.trim() || undefined,
+      }),
       items: values.items.map((line) => ({
         ...line,
         mfg_date: line.mfg_date || undefined,
@@ -283,61 +299,35 @@ export function PurchaseCreatePage() {
 
     createPurchase.mutate(payload, {
       onSuccess: (purchase) => {
-        toast.success("Purchase recorded");
+        toast.success(paying ? `Purchase recorded and ${formatMoney(paymentAmount)} paid` : "Purchase recorded");
         const afterExpense = () => {
           const hasCodedItems = purchase.items.some((line) => CODED_CATEGORIES.includes(line.item.category));
           if (hasCodedItems) setBindPromptPurchase(purchase);
           else navigate(`/purchases/${purchase.id}`);
         };
-        const withExpense = () => {
-          if (!expense.enabled) {
-            afterExpense();
-            return;
-          }
-          createExpense.mutate(
-            {
-              category: expense.category,
-              cost_type: expense.cost_type,
-              amount: Number(expense.amount),
-              date: values.purchase_date,
-              remarks: expense.remarks || undefined,
-            },
-            {
-              onSuccess: () => {
-                toast.success("Expense recorded");
-                afterExpense();
-              },
-              onError: (error) => {
-                toast.warning(`Purchase saved, but the expense failed: ${error.message}`);
-                afterExpense();
-              },
-            }
-          );
-        };
-
-        if (payment.status === "UNPAID") {
-          withExpense();
+        if (!expense.enabled) {
+          afterExpense();
           return;
         }
-
-        createPayment.mutate(
+        const expenseAmount = Number(expense.amount);
+        createExpense.mutate(
           {
-            ref_type: "PURCHASE",
-            ref_id: purchase.id,
-            amount: paymentAmount,
-            payment_date: payment.payment_date,
-            from_instrument_id: payment.from_instrument_id,
-            transaction_ref: payment.transaction_ref || undefined,
-            note: payment.note || undefined,
+            category: expense.category,
+            cost_type: expense.cost_type,
+            amount: expenseAmount,
+            date: values.purchase_date,
+            remarks: expense.remarks || undefined,
+            paid_amount: expense.paid ? expenseAmount : 0,
+            paid_from_instrument_id: expense.paid ? expense.paid_from_instrument_id : undefined,
           },
           {
             onSuccess: () => {
-              toast.success("Payment recorded");
-              withExpense();
+              toast.success(expense.paid ? "Expense recorded and paid" : "Expense recorded as unpaid");
+              afterExpense();
             },
             onError: (error) => {
-              toast.warning(`Purchase saved, but the payment failed: ${error.message}`);
-              withExpense();
+              toast.warning(`Purchase saved, but the expense failed: ${error.message}`);
+              afterExpense();
             },
           }
         );
@@ -768,6 +758,23 @@ export function PurchaseCreatePage() {
                   onChange={(e) => setExpense((p) => ({ ...p, remarks: e.target.value }))}
                 />
               </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={expense.paid}
+                  onChange={(e) => setExpense((p) => ({ ...p, paid: e.target.checked }))}
+                />
+                Paid on the spot
+              </label>
+              {expense.paid && (
+                <div className="flex flex-col gap-1.5">
+                  <Label>Paid from</Label>
+                  <FarmAccountSelect
+                    value={expense.paid_from_instrument_id}
+                    onChange={(v) => setExpense((p) => ({ ...p, paid_from_instrument_id: v }))}
+                  />
+                </div>
+              )}
               {expenseError && <p className="col-span-2 text-xs text-destructive">{expenseError}</p>}
             </CardContent>
           )}

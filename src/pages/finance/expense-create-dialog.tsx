@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -16,19 +17,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { humanizeEnum } from "@/lib/utils";
+import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import type { Batch } from "@/pages/batches/types";
 import { COST_TYPES, type Expense } from "@/pages/finance/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 
-const expenseSchema = z.object({
-  batch_id: z.string().optional(),
-  category: z.string().min(1, "Select a category"),
-  cost_type: z.enum(COST_TYPES, "Select a cost type"),
-  amount: z.coerce.number().positive("Must be positive"),
-  date: z.string().min(1, "Date is required"),
-  remarks: z.string().trim().optional(),
-});
+/** Wage and fee expenses are paid by their payroll payout, never here (the server refuses it too). */
+const PAYROLL_CATEGORIES = ["SALARY", "FESTIVAL_BONUS", "SALARY_TRANSFER_FEE"];
+
+const PAYMENT_OPTIONS = { FULL: "Paid in full", PARTIAL: "Partly paid", UNPAID: "Not paid yet" } as const;
+type ExpensePayment = keyof typeof PAYMENT_OPTIONS;
+
+const expenseSchema = z
+  .object({
+    batch_id: z.string().optional(),
+    category: z.string().min(1, "Select a category"),
+    cost_type: z.enum(COST_TYPES, "Select a cost type"),
+    amount: z.coerce.number().positive("Must be positive"),
+    date: z.string().min(1, "Date is required"),
+    remarks: z.string().trim().optional(),
+    payment: z.enum(["FULL", "PARTIAL", "UNPAID"]),
+    partial_amount: z.string().optional(),
+    paid_from_instrument_id: z.string().optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (PAYROLL_CATEGORIES.includes(d.category) || d.payment === "UNPAID") return;
+    if (d.payment === "PARTIAL") {
+      const paid = Number(d.partial_amount);
+      if (!(paid > 0)) ctx.addIssue({ code: "custom", path: ["partial_amount"], message: "Enter how much was paid" });
+      else if (paid >= d.amount)
+        ctx.addIssue({ code: "custom", path: ["partial_amount"], message: "That covers it all -- choose Paid in full" });
+    }
+    if (!d.paid_from_instrument_id)
+      ctx.addIssue({ code: "custom", path: ["paid_from_instrument_id"], message: "Choose the account it was paid from" });
+  });
 
 type ExpenseFormInput = z.input<typeof expenseSchema>;
 type ExpenseFormValues = z.output<typeof expenseSchema>;
@@ -41,6 +64,10 @@ function blankExpense(): ExpenseFormInput {
     amount: undefined,
     date: new Date().toISOString().slice(0, 10),
     remarks: "",
+    // Most farm expenses are settled on the spot -- recorded and paid in one go.
+    payment: "FULL",
+    partial_amount: "",
+    paid_from_instrument_id: "",
   };
 }
 
@@ -67,21 +94,37 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
     "/expense-categories?active=true&limit=100",
     ["expense-categories", "active"]
   );
-  const createExpense = usePostData<Expense, ExpenseFormValues>("/expenses", ["expenses"]);
+  const createExpense = usePostData<Expense, Record<string, unknown>>("/expenses", ["expenses"]);
+  const queryClient = useQueryClient();
+  const category = useWatch({ control, name: "category" });
+  const payment = useWatch({ control, name: "payment" });
+  const amount = Number(useWatch({ control, name: "amount" })) || 0;
+  const partial = Number(useWatch({ control, name: "partial_amount" })) || 0;
+  const paidByPayroll = PAYROLL_CATEGORIES.includes(category);
 
   const onSubmit = (values: ExpenseFormValues) => {
+    const paid = paidByPayroll || values.payment === "UNPAID" ? 0 : values.payment === "FULL" ? values.amount : Number(values.partial_amount);
     const payload = {
-      ...values,
       batch_id: values.batch_id || undefined,
+      category: values.category,
+      cost_type: values.cost_type,
+      amount: values.amount,
+      date: values.date,
       remarks: values.remarks || undefined,
+      paid_amount: paid,
+      paid_from_instrument_id: paid > 0 ? values.paid_from_instrument_id : undefined,
     };
     createExpense.mutate(payload, {
       onSuccess: () => {
-        toast.success("Expense recorded");
+        // A paid expense moves an account balance and the dashboard's cash and payables.
+        for (const key of ["payments", "payment-instruments", "analytics"]) {
+          void queryClient.invalidateQueries({ queryKey: [key] });
+        }
+        toast.success(paid > 0 ? `Expense recorded and ${formatMoney(paid)} paid` : "Expense recorded as unpaid");
         onOpenChange(false);
       },
       onError: (error) => {
-        toast.error(error.fieldError("amount") ?? error.message);
+        toast.error(error.fieldError("amount") ?? error.fieldError("paid_from_instrument_id") ?? error.message);
       },
     });
   };
@@ -189,6 +232,89 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="remarks">Remarks (optional)</Label>
             <Input id="remarks" {...register("remarks")} />
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-lg border p-3">
+            {paidByPayroll ? (
+              <p className="text-sm text-muted-foreground">
+                Salary and bonus costs are paid through their payroll payout, not here.
+              </p>
+            ) : (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="payment">Payment</Label>
+                  <Controller
+                    control={control}
+                    name="payment"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={(v) => field.onChange(v ?? "FULL")}>
+                        <SelectTrigger id="payment" className="w-full">
+                          <SelectValue>{(v: ExpensePayment) => PAYMENT_OPTIONS[v]}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(PAYMENT_OPTIONS) as ExpensePayment[]).map((p) => (
+                            <SelectItem key={p} value={p}>
+                              {PAYMENT_OPTIONS[p]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                {payment !== "UNPAID" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {payment === "PARTIAL" ? (
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="partial_amount">Amount paid</Label>
+                        <Input
+                          id="partial_amount"
+                          type="number"
+                          step="0.01"
+                          {...register("partial_amount")}
+                          aria-invalid={!!errors.partial_amount}
+                        />
+                        {errors.partial_amount ? (
+                          <p className="text-xs text-destructive">{errors.partial_amount.message}</p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground tabular-nums">
+                            Still to pay: {formatMoney(Math.max(0, amount - partial))}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-1.5">
+                        <Label>Amount paid</Label>
+                        <p className="flex h-8 items-center text-sm font-medium tabular-nums">{formatMoney(amount)}</p>
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="paid_from_instrument_id">Paid from</Label>
+                      <Controller
+                        control={control}
+                        name="paid_from_instrument_id"
+                        render={({ field }) => (
+                          <FarmAccountSelect
+                            id="paid_from_instrument_id"
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            invalid={!!errors.paid_from_instrument_id}
+                          />
+                        )}
+                      />
+                      {errors.paid_from_instrument_id && (
+                        <p className="text-xs text-destructive">{errors.paid_from_instrument_id.message}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {payment === "UNPAID" && (
+                  <p className="text-xs text-muted-foreground">
+                    It will show as owed until you record its payment on the Payments page.
+                  </p>
+                )}
+              </>
+            )}
           </div>
 
           <DialogFooter>
