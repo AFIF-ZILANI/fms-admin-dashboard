@@ -20,7 +20,7 @@ export function FarmAccountSelect({ id, value, onChange, invalid }: FarmAccountS
     "/payment-instruments?limit=100&is_active=true",
     ["payment-instruments"],
   );
-  const accounts = (data?.results ?? []).filter((i) => i.owner_type === "ADMIN");
+  const accounts = data?.results ?? [];
   const label = (i: PaymentInstrument) => `${i.label} (${humanizeEnum(i.type)})`;
 
   return (

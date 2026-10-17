@@ -89,7 +89,7 @@ export const OPERATIONAL_NAV: NavItem[] = [
     icon: Wallet,
     children: [
       tab("/payments", "payments", "Payments", Wallet),
-      tab("/payments", "instruments", "Instruments", CreditCard),
+      tab("/payments", "instruments", "Farm accounts", CreditCard),
     ],
   },
   {

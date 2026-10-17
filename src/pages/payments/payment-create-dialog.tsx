@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
+import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
@@ -26,7 +27,6 @@ import type { Sale, BirdSale } from "@/pages/sales/types";
 import {
   PAYMENT_REF_TYPES,
   type Payment,
-  type PaymentInstrument,
   type PaymentRefType,
 } from "@/pages/payments/types";
 
@@ -39,19 +39,11 @@ const paymentSchema = z
   ref_id: z.string().min(1, "Select a record to pay"),
   amount: z.coerce.number().positive("Must be positive"),
   payment_date: z.string().min(1, "Payment date is required"),
-  from_instrument_id: z.string().optional(),
-  to_instrument_id: z.string().optional(),
+  // One of the farm's accounts, on the side the money moved: where it landed (money in) or where it
+  // left from (money out). The other party is whoever the record names -- never an account here.
+  account_id: z.string().min(1, "Select the farm account"),
   transaction_ref: z.string().trim().optional(),
   note: z.string().trim().optional(),
-  })
-  .superRefine((d, ctx) => {
-    const incoming = INCOMING_REF_TYPES.includes(d.ref_type);
-    if (incoming && !d.to_instrument_id) {
-      ctx.addIssue({ code: "custom", path: ["to_instrument_id"], message: "Select the account it was received into" });
-    }
-    if (!incoming && !d.from_instrument_id) {
-      ctx.addIssue({ code: "custom", path: ["from_instrument_id"], message: "Select the account it was paid from" });
-    }
   });
 
 type PaymentFormInput = z.input<typeof paymentSchema>;
@@ -64,8 +56,7 @@ function blankPayment(defaults?: { ref_type?: PaymentRefType; ref_id?: string })
     ref_id: defaults?.ref_id ?? "",
     amount: undefined,
     payment_date: new Date().toISOString().slice(0, 10),
-    from_instrument_id: "",
-    to_instrument_id: "",
+    account_id: "",
     transaction_ref: "",
     note: "",
   };
@@ -179,24 +170,14 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
   );
   const remainingDue = selectedRef ? selectedRef.due - parseFloat(totalPaid?.total_paid ?? "0") : undefined;
 
-  const { data: instruments } = useGetData<Paginated<PaymentInstrument>>(
-    "/payment-instruments?limit=100&is_active=true",
-    ["payment-instruments"]
-  );
-
   const queryClient = useQueryClient();
-  const createPayment = usePostData<Payment, PaymentFormValues>("/payments", ["payments"]);
-
-  const instrumentLabel = (id: string) => {
-    const instrument = instruments?.results.find((i) => i.id === id);
-    return instrument ? `${instrument.label} (${humanizeEnum(instrument.type)})` : "";
-  };
+  const createPayment = usePostData<Payment, Record<string, unknown>>("/payments", ["payments"]);
 
   const onSubmit = (values: PaymentFormValues) => {
+    const { account_id, ...rest } = values;
     const payload = {
-      ...values,
-      from_instrument_id: values.from_instrument_id || undefined,
-      to_instrument_id: values.to_instrument_id || undefined,
+      ...rest,
+      ...(INCOMING_REF_TYPES.includes(values.ref_type) ? { to_instrument_id: account_id } : { from_instrument_id: account_id }),
       transaction_ref: values.transaction_ref || undefined,
       note: values.note || undefined,
     };
@@ -209,11 +190,13 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
         void queryClient.invalidateQueries({ queryKey: ["sales"] });
         void queryClient.invalidateQueries({ queryKey: ["bird-sales"] });
         void queryClient.invalidateQueries({ queryKey: ["analytics"] });
+        void queryClient.invalidateQueries({ queryKey: ["payment-instruments"] });
         toast.success("Payment recorded");
         onOpenChange(false);
       },
       onError: (error) => {
-        const message = error.fieldError("amount") ?? error.fieldError("from_instrument_id");
+        const message =
+          error.fieldError("amount") ?? error.fieldError("from_instrument_id") ?? error.fieldError("to_instrument_id");
         toast.error(message ?? error.message);
       },
     });
@@ -310,83 +293,21 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
             </div>
           </div>
 
-          {/* Which side of the money is the farm's: coming in names where it landed, going out names where
-              it came from. A customer paying us has no account of ours to leave, so there is no "from". */}
-          <div className="grid grid-cols-2 gap-4">
-            {incoming ? (
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="to_instrument_id">Received into</Label>
-                <Controller
-                  control={control}
-                  name="to_instrument_id"
-                  render={({ field }) => (
-                    <Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v ?? "")}>
-                      <SelectTrigger id="to_instrument_id" className="w-full" aria-invalid={!!errors.to_instrument_id}>
-                        <SelectValue>{(v: string) => instrumentLabel(v) || "Select account"}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(instruments?.results ?? []).map((i) => (
-                          <SelectItem key={i.id} value={i.id}>
-                            {i.label} ({humanizeEnum(i.type)})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="account_id">{incoming ? "Received into" : "Paid from"}</Label>
+            <Controller
+              control={control}
+              name="account_id"
+              render={({ field }) => (
+                <FarmAccountSelect
+                  id="account_id"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  invalid={!!errors.account_id}
                 />
-                {errors.to_instrument_id && (
-                  <p className="text-xs text-destructive">{errors.to_instrument_id.message}</p>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="from_instrument_id">Paid from</Label>
-                  <Controller
-                    control={control}
-                    name="from_instrument_id"
-                    render={({ field }) => (
-                      <Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v ?? "")}>
-                        <SelectTrigger id="from_instrument_id" className="w-full" aria-invalid={!!errors.from_instrument_id}>
-                          <SelectValue>{(v: string) => instrumentLabel(v) || "Select account"}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(instruments?.results ?? []).map((i) => (
-                            <SelectItem key={i.id} value={i.id}>
-                              {i.label} ({humanizeEnum(i.type)})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.from_instrument_id && (
-                    <p className="text-xs text-destructive">{errors.from_instrument_id.message}</p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="to_instrument_id">To account (optional)</Label>
-                  <Controller
-                    control={control}
-                    name="to_instrument_id"
-                    render={({ field }) => (
-                      <Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v ?? "")}>
-                        <SelectTrigger id="to_instrument_id" className="w-full">
-                          <SelectValue>{(v: string) => instrumentLabel(v) || "None"}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(instruments?.results ?? []).map((i) => (
-                            <SelectItem key={i.id} value={i.id}>
-                              {i.label} ({humanizeEnum(i.type)})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-              </>
-            )}
+              )}
+            />
+            {errors.account_id && <p className="text-xs text-destructive">{errors.account_id.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

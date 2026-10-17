@@ -83,7 +83,7 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record = null, bo
     ["payment-instruments"],
     { enabled: open }
   );
-  const farmInstruments = (instruments?.results ?? []).filter((i) => i.owner_type === "ADMIN");
+  const farmInstruments = instruments?.results ?? [];
 
   const { data: feeRates } = useGetData<PayoutFeeRates>(
     "/payroll-payouts/fee-rates",

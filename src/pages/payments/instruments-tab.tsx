@@ -33,7 +33,7 @@ export function InstrumentsTab() {
   const toggleActive = (instrument: PaymentInstrument) => {
     const mutation = instrument.is_active ? deactivate : reactivate;
     mutation.mutate(instrument.id, {
-      onSuccess: () => toast.success(instrument.is_active ? "Instrument deactivated" : "Instrument reactivated"),
+      onSuccess: () => toast.success(instrument.is_active ? "Account deactivated" : "Account reactivated"),
       onError: (error) => toast.error(error.message),
     });
   };
@@ -56,7 +56,7 @@ export function InstrumentsTab() {
     const ok = await confirm({
       title: `Delete ${instrument.label}?`,
       description:
-        "This permanently removes the instrument. It only works if no payment has ever used it -- otherwise deactivate it instead.",
+        "This permanently removes the account. It only works if no payment has ever used it -- otherwise deactivate it instead.",
       confirmLabel: "Delete",
       destructive: true,
     });
@@ -70,7 +70,6 @@ export function InstrumentsTab() {
   const columns: Column<PaymentInstrument>[] = [
     { key: "label", header: "Label", render: (i) => <span className="font-medium">{i.label}</span> },
     { key: "type", header: "Type", render: (i) => humanizeEnum(i.type) },
-    { key: "owner", header: "Owner", render: (i) => humanizeEnum(i.owner_type) },
     { key: "detail", header: "Detail", render: (i) => i.bank_name ?? i.mobile_no ?? "—" },
     { key: "balance", header: "Balance", render: (i) => <InstrumentBalanceCell instrumentId={i.id} />, numeric: true },
     {
@@ -86,7 +85,7 @@ export function InstrumentsTab() {
       header: "",
       render: (i) => (
         <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="icon-sm" aria-label="Edit instrument" onClick={() => openEdit(i)}>
+          <Button variant="ghost" size="icon-sm" aria-label="Edit account" onClick={() => openEdit(i)}>
             <Pencil />
           </Button>
           <Button
@@ -100,7 +99,7 @@ export function InstrumentsTab() {
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Delete instrument"
+            aria-label="Delete account"
             onClick={() => void deleteInstrument(i)}
             disabled={remove.isPending && remove.variables === i.id}
           >
@@ -117,7 +116,7 @@ export function InstrumentsTab() {
       <div className="flex justify-end">
         <Button onClick={openCreate}>
           <Plus />
-          Add instrument
+          Add account
         </Button>
       </div>
 
@@ -129,9 +128,9 @@ export function InstrumentsTab() {
         isLoading={isLoading}
         empty={{
           icon: CreditCard,
-          title: "No payment instruments yet",
+          title: "No farm accounts yet",
           description: "Add a cash box, bank account, or mobile wallet.",
-          action: { label: "Add instrument", onClick: openCreate },
+          action: { label: "Add account", onClick: openCreate },
         }}
       />
 

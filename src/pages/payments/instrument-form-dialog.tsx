@@ -19,14 +19,11 @@ import { usePatchData, usePostData } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import {
   MFS_TYPES,
-  OWNER_TYPES,
   PAYMENT_METHODS,
   type PaymentInstrument,
 } from "@/pages/payments/types";
 
 const instrumentSchema = z.object({
-  owner_type: z.enum(OWNER_TYPES, "Select an owner type"),
-  owner_id: z.string().uuid("A valid owner id is required"),
   type: z.enum(PAYMENT_METHODS, "Select a payment method"),
   label: z.string().min(1, "Label is required"),
   bank_name: z.string().trim().optional(),
@@ -39,8 +36,6 @@ type InstrumentFormValues = z.infer<typeof instrumentSchema>;
 
 function blankInstrument(): InstrumentFormValues {
   return {
-    owner_type: "ADMIN",
-    owner_id: "",
     type: undefined as unknown as InstrumentFormValues["type"],
     label: "",
     bank_name: "",
@@ -52,8 +47,6 @@ function blankInstrument(): InstrumentFormValues {
 
 function toFormValues(instrument: PaymentInstrument): InstrumentFormValues {
   return {
-    owner_type: instrument.owner_type,
-    owner_id: instrument.owner_id,
     type: instrument.type,
     label: instrument.label,
     bank_name: instrument.bank_name ?? "",
@@ -107,11 +100,11 @@ export function InstrumentFormDialog({ open, onOpenChange, instrument }: Instrum
     const mutation = isEdit ? updateInstrument : createInstrument;
     mutation.mutate(payload, {
       onSuccess: () => {
-        toast.success(isEdit ? "Instrument updated" : "Instrument created");
+        toast.success(isEdit ? "Account updated" : "Account added");
         onOpenChange(false);
       },
       onError: (error) => {
-        toast.error(error.fieldError("label") ?? error.fieldError("owner_id") ?? error.message);
+        toast.error(error.fieldError("label") ?? error.message);
       },
     });
   };
@@ -120,9 +113,9 @@ export function InstrumentFormDialog({ open, onOpenChange, instrument }: Instrum
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit instrument" : "Add payment instrument"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit farm account" : "Add farm account"}</DialogTitle>
           <DialogDescription>
-            An instrument is a cash box, bank account, or mobile wallet that payments flow through.
+            One of the farm's own accounts -- a cash box, bank account or mobile wallet -- that money is received into or paid from.
           </DialogDescription>
         </DialogHeader>
 
@@ -131,41 +124,6 @@ export function InstrumentFormDialog({ open, onOpenChange, instrument }: Instrum
             <Label htmlFor="label">Label</Label>
             <Input id="label" {...register("label")} aria-invalid={!!errors.label} />
             {errors.label && <p className="text-xs text-destructive">{errors.label.message}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="owner_type">Owner type</Label>
-              <Controller
-                control={control}
-                name="owner_type"
-                render={({ field }) => (
-                  <Select value={field.value ?? ""} onValueChange={field.onChange} disabled={isEdit}>
-                    <SelectTrigger id="owner_type" className="w-full">
-                      <SelectValue>{(v: string) => (v ? humanizeEnum(v) : "Select")}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {OWNER_TYPES.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {humanizeEnum(t)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="owner_id">Owner id</Label>
-              <Input
-                id="owner_id"
-                placeholder="UUID of the owning record"
-                disabled={isEdit}
-                {...register("owner_id")}
-                aria-invalid={!!errors.owner_id}
-              />
-              {errors.owner_id && <p className="text-xs text-destructive">{errors.owner_id.message}</p>}
-            </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -239,7 +197,7 @@ export function InstrumentFormDialog({ open, onOpenChange, instrument }: Instrum
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isEdit ? "Save changes" : "Add instrument"}
+              {isEdit ? "Save changes" : "Add account"}
             </Button>
           </DialogFooter>
         </form>

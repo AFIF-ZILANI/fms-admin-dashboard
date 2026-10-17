@@ -12,7 +12,7 @@ export function PaymentsPage() {
       title="Payments"
       sections={[
         { id: "payments", label: "Payments", content: <PaymentsTab /> },
-        { id: "instruments", label: "Instruments", content: <InstrumentsTab /> },
+        { id: "instruments", label: "Farm accounts", content: <InstrumentsTab /> },
       ]}
     />
   );

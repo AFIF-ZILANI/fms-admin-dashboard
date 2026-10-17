@@ -12,9 +12,6 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const MFS_TYPES = ["BKASH", "NAGAD", "ROCKET"] as const;
 export type MfsType = (typeof MFS_TYPES)[number];
 
-export const OWNER_TYPES = ["ADMIN", "EMPLOYEE", "CUSTOMER", "SUPPLIER", "DOCTOR"] as const;
-export type OwnerType = (typeof OWNER_TYPES)[number];
-
 export type Payment = {
   id: string;
   amount: string;
@@ -22,7 +19,7 @@ export type Payment = {
   direction: PaymentDirection;
   ref_type: PaymentRefType;
   ref_id: string;
-  /** Null for money received from a customer: it names only where it landed (`to_instrument_id`). */
+  /** Exactly one is set: the farm account the money left (money out) or landed in (money in). */
   from_instrument_id: string | null;
   to_instrument_id: string | null;
   transaction_ref: string | null;
@@ -31,10 +28,9 @@ export type Payment = {
   created_at: string;
 };
 
+/** One of the farm's own accounts (Cash, a bank account, a mobile wallet). */
 export type PaymentInstrument = {
   id: string;
-  owner_type: OwnerType;
-  owner_id: string;
   type: PaymentMethod;
   label: string;
   bank_name: string | null;
