@@ -11,14 +11,23 @@ import { STOCK_DIRECTIONS, STOCK_REASONS, type Item, type StockDirection, type S
 import { AdjustmentFormDialog } from "@/pages/inventory/adjustment-form-dialog";
 import { TransferFormDialog } from "@/pages/inventory/transfer-form-dialog";
 
+const PAGE_SIZES = [10, 20, 50, 100] as const;
+
 export function StockLedgerTab() {
   const [openingBalanceOpen, setOpeningBalanceOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [itemFilter, setItemFilter] = useState<string>("ALL");
   const [directionFilter, setDirectionFilter] = useState<StockDirection | "ALL">("ALL");
   const [reasonFilter, setReasonFilter] = useState<StockReason | "ALL">("ALL");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  // Filter/size changes reshape the page set server-side, so they go back to page 1.
+  const resetting = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    setPage(1);
+  };
 
-  const query = new URLSearchParams({ limit: "100" });
+  const query = new URLSearchParams({ page: String(page), limit: String(pageSize) });
   if (itemFilter !== "ALL") query.set("item_id", itemFilter);
   if (directionFilter !== "ALL") query.set("direction", directionFilter);
   if (reasonFilter !== "ALL") query.set("reason", reasonFilter);
@@ -27,6 +36,8 @@ export function StockLedgerTab() {
     itemFilter,
     directionFilter,
     reasonFilter,
+    page,
+    pageSize,
   ]);
 
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
@@ -96,7 +107,7 @@ export function StockLedgerTab() {
       </div>
 
       <div className="flex items-center gap-2">
-        <Select value={itemFilter} onValueChange={(v) => setItemFilter(v ?? "ALL")}>
+        <Select value={itemFilter} onValueChange={(v) => resetting(setItemFilter)(v ?? "ALL")}>
           <SelectTrigger className="w-40">
             <SelectValue>
               {(v: string) => (v && v !== "ALL" ? items?.results.find((i) => i.id === v)?.name ?? "Item" : "All items")}
@@ -113,7 +124,7 @@ export function StockLedgerTab() {
         </Select>
         <Select
           value={directionFilter}
-          onValueChange={(v) => setDirectionFilter((v ?? "ALL") as StockDirection | "ALL")}
+          onValueChange={(v) => resetting(setDirectionFilter)((v ?? "ALL") as StockDirection | "ALL")}
         >
           <SelectTrigger className="w-40">
             <SelectValue>{(v: string) => (v && v !== "ALL" ? humanizeEnum(v) : "All directions")}</SelectValue>
@@ -127,7 +138,7 @@ export function StockLedgerTab() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={reasonFilter} onValueChange={(v) => setReasonFilter((v ?? "ALL") as StockReason | "ALL")}>
+        <Select value={reasonFilter} onValueChange={(v) => resetting(setReasonFilter)((v ?? "ALL") as StockReason | "ALL")}>
           <SelectTrigger className="w-40">
             <SelectValue>{(v: string) => (v && v !== "ALL" ? humanizeEnum(v) : "All reasons")}</SelectValue>
           </SelectTrigger>
@@ -153,6 +164,34 @@ export function StockLedgerTab() {
           description: "Every IN/OUT movement for tracked items will show up here.",
         }}
       />
+
+      {data && data.total > PAGE_SIZES[0] && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Page {data.page} of {data.totalPages} · {data.total} total
+          </span>
+          <div className="flex items-center gap-2">
+            <Select value={String(pageSize)} onValueChange={(v) => resetting(setPageSize)(Number(v))}>
+              <SelectTrigger size="sm" className="w-28" aria-label="Rows per page">
+                <SelectValue>{(v: string) => `${v} / page`}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZES.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n} / page
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= data.totalPages} onClick={() => setPage((p) => p + 1)}>
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       <TransferFormDialog open={transferOpen} onOpenChange={setTransferOpen} />
       <AdjustmentFormDialog open={openingBalanceOpen} onOpenChange={setOpeningBalanceOpen} openingBalance />
