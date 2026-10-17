@@ -3,6 +3,7 @@ import { ArrowRightLeft, BookText, PackageMinus, PackagePlus, Plus, Trash2, Wall
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { PaginationBar } from "@/components/shared/pagination-bar";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, type Paginated } from "@/lib/api";
@@ -18,8 +19,6 @@ type LedgerSummary = {
   loss_30d: number;
   received_value_30d: number;
 };
-
-const PAGE_SIZES = [10, 20, 50, 100] as const;
 
 export function StockLedgerTab() {
   const [openingBalanceOpen, setOpeningBalanceOpen] = useState(false);
@@ -179,32 +178,15 @@ export function StockLedgerTab() {
         }}
       />
 
-      {data && data.total > PAGE_SIZES[0] && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Page {data.page} of {data.totalPages} · {data.total} total
-          </span>
-          <div className="flex items-center gap-2">
-            <Select value={String(pageSize)} onValueChange={(v) => resetting(setPageSize)(Number(v))}>
-              <SelectTrigger size="sm" className="w-28" aria-label="Rows per page">
-                <SelectValue>{(v: string) => `${v} / page`}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZES.map((n) => (
-                  <SelectItem key={n} value={String(n)}>
-                    {n} / page
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              Previous
-            </Button>
-            <Button variant="outline" size="sm" disabled={page >= data.totalPages} onClick={() => setPage((p) => p + 1)}>
-              Next
-            </Button>
-          </div>
-        </div>
+      {data && (
+        <PaginationBar
+          page={data.page}
+          pageSize={pageSize}
+          total={data.total}
+          totalPages={data.totalPages}
+          onPageChange={setPage}
+          onPageSizeChange={resetting(setPageSize)}
+        />
       )}
 
       <TransferFormDialog open={transferOpen} onOpenChange={setTransferOpen} />

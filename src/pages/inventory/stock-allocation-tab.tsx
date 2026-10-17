@@ -3,6 +3,7 @@ import { ArrowRightLeft, Boxes, Home, PackagePlus, Plus, Route, Undo2 } from "lu
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
+import { PaginationBar } from "@/components/shared/pagination-bar";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ALLOCATION_TYPE_TONE } from "@/components/shared/status-tone";
@@ -17,12 +18,20 @@ export function StockAllocationTab() {
   const [houseFilter, setHouseFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState<AllocationType | "ALL">("ALL");
 
-  const query = new URLSearchParams({ limit: "100" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  // Filter changes reshape the page set server-side, so they go back to page 1.
+  const resetting = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    setPage(1);
+  };
+
+  const query = new URLSearchParams({ page: String(page), limit: String(pageSize) });
   if (houseFilter !== "ALL") query.set("house_id", houseFilter);
   if (typeFilter !== "ALL") query.set("type", typeFilter);
   const { data, isLoading } = useGetData<Paginated<StockHouseAllocationEntry>>(
     `/stock-house-allocations?${query}`,
-    ["stock-house-allocations", houseFilter, typeFilter]
+    ["stock-house-allocations", houseFilter, typeFilter, page, pageSize]
   );
 
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
@@ -78,7 +87,7 @@ export function StockAllocationTab() {
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Select value={houseFilter} onValueChange={(v) => setHouseFilter(v ?? "ALL")}>
+          <Select value={houseFilter} onValueChange={(v) => resetting(setHouseFilter)(v ?? "ALL")}>
             <SelectTrigger className="w-40">
               <SelectValue>
                 {(v: string) => (v && v !== "ALL" ? houses?.results.find((h) => h.id === v)?.name ?? "House" : "All houses")}
@@ -93,7 +102,7 @@ export function StockAllocationTab() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={typeFilter} onValueChange={(v) => setTypeFilter((v ?? "ALL") as AllocationType | "ALL")}>
+          <Select value={typeFilter} onValueChange={(v) => resetting(setTypeFilter)((v ?? "ALL") as AllocationType | "ALL")}>
             <SelectTrigger className="w-40">
               <SelectValue>{(v: string) => (v && v !== "ALL" ? humanizeEnum(v) : "All types")}</SelectValue>
             </SelectTrigger>
@@ -115,9 +124,9 @@ export function StockAllocationTab() {
       </div>
 
       <DataTable
+        paginate={false}
         columns={columns}
         rows={data?.results ?? []}
-        totalCount={data?.total}
         rowKey={(e) => e.id}
         isLoading={isLoading}
         empty={{
@@ -126,6 +135,17 @@ export function StockAllocationTab() {
           description: "Every allocate/reallocate/return move for a coded unit will show up here.",
         }}
       />
+
+      {data && (
+        <PaginationBar
+          page={data.page}
+          pageSize={pageSize}
+          total={data.total}
+          totalPages={data.totalPages}
+          onPageChange={setPage}
+          onPageSizeChange={resetting(setPageSize)}
+        />
+      )}
 
       <StockAllocationFormDialog open={allocateOpen} onOpenChange={setAllocateOpen} />
     </div>
