@@ -9,7 +9,7 @@ export type SaleInputs = {
   totalWeightKg: number;
   /** kg one crate holds; 0 = not given, so `cratesManual` is used instead */
   crateSizeKg: number;
-  /** count a part-filled last crate as a whole crate */
+  /** count a part-filled last crate as a whole crate; off = leave it out (whole crates only either way) */
   roundCrates: boolean;
   cratesManual: number;
   deductionPerCrateG: number;
@@ -27,7 +27,7 @@ export function computeSale(i: SaleInputs) {
   const cratesDerived = i.crateSizeKg > 0 && i.totalWeightKg > 0;
   // r3 first so 96 / 12 can't become 8.0000001 and round up to 9 crates
   const exactCrates = cratesDerived ? r3(i.totalWeightKg / i.crateSizeKg) : 0;
-  const crates = cratesDerived ? (i.roundCrates ? Math.ceil(exactCrates) : r2(exactCrates)) : i.cratesManual;
+  const crates = cratesDerived ? (i.roundCrates ? Math.ceil(exactCrates) : Math.floor(exactCrates)) : i.cratesManual;
   const deductionKg = r3((crates * i.deductionPerCrateG) / 1000);
   const netKg = r2(Math.max(0, i.totalWeightKg - deductionKg));
   const avgWeightG = i.birds > 0 && netKg > 0 ? r2((netKg * 1000) / i.birds) : null;

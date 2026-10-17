@@ -63,6 +63,10 @@ type Form = {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+/** The farm's usual crate and its usual deduction -- prefilled, still editable per load. */
+const DEFAULT_CRATE_SIZE_KG = "20";
+const DEFAULT_DEDUCTION_G = "300";
+
 function blankForm(keep?: Partial<Form>): Form {
   return {
     batch_id: "",
@@ -75,10 +79,10 @@ function blankForm(keep?: Partial<Form>): Form {
     female: "",
     femaleTouched: false,
     total_weight: "",
-    crate_size: "",
+    crate_size: DEFAULT_CRATE_SIZE_KG,
     round_crates: true,
     crates: "",
-    deduction_g: "",
+    deduction_g: DEFAULT_DEDUCTION_G,
     price: "",
     discount: "",
     payment: "DUE",
@@ -431,8 +435,6 @@ export function BirdSaleCreatePage() {
               >
                 <NumericInput
                   id="crates"
-                  allowDecimal
-                  decimalPlaces={2}
                   allowZero
                   value={s.cratesDerived ? String(s.crates) : f.crates}
                   readOnly={s.cratesDerived}
@@ -632,7 +634,7 @@ function SaleSlip({
           <dl className="flex flex-col gap-1.5 text-sm tabular-nums">
             <SlipRow label="Total weight" value={kg(num(f.total_weight))} />
             <SlipRow
-              label={`Deduction (${s.crates} crates${s.cratesDerived && f.round_crates && s.exactCrates !== s.crates ? ", rounded up" : ""})`}
+              label={`Deduction (${s.crates} crates${s.cratesDerived && s.exactCrates !== s.crates ? (f.round_crates ? ", rounded up" : ", part crate left out") : ""})`}
               value={`− ${kg(s.deductionKg)}`}
               muted
             />
