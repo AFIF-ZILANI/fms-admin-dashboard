@@ -38,13 +38,15 @@ export type BirdSale = {
   female_count: number | null;
   birds_count: number;
   dholta_in_g: string;
-  total_katha: number;
+  /** crates; a decimal string, fractional when the last crate wasn't rounded */
+  total_katha: string;
   avg_wt_per_katha_kg: string | null;
   total_weight: string;
   net_weight: string;
   avg_weight_g: string | null;
   price_per_kg: string;
   total_amount: string;
+  discount_amount: string;
   paid_amount: string;
   due_amount: string;
   recorded_by_id: string;

@@ -13,7 +13,6 @@ import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Customer } from "@/pages/customers/types";
 import type { House } from "@/pages/houses/types";
-import { BirdSaleCreateDialog } from "@/pages/sales/bird-sale-create-dialog";
 import {
   BIRD_GRADES,
   paymentStatus,
@@ -30,7 +29,6 @@ const GRADE_TONE = { HIGH: "success", LOW: "warning", CULL: "neutral" } as const
 
 export function BirdSalesTab() {
   const navigate = useNavigate();
-  const [createOpen, setCreateOpen] = useState(false);
   const [paymentSaleId, setPaymentSaleId] = useState<string | null>(null);
   const [gradeFilter, setGradeFilter] = useState<BirdGrade | "ALL">("ALL");
   const [dateFrom, setDateFrom] = useState("");
@@ -194,7 +192,7 @@ export function BirdSalesTab() {
           </div>
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => navigate("/sales/birds/new")}>
           <Plus />
           Record bird sale
         </Button>
@@ -216,11 +214,10 @@ export function BirdSalesTab() {
           icon: Bird,
           title: "No bird sales recorded yet",
           description: "Record your first bird sale from a batch.",
-          action: { label: "Record bird sale", onClick: () => setCreateOpen(true) },
+          action: { label: "Record bird sale", onClick: () => navigate("/sales/birds/new") },
         }}
       />
 
-      <BirdSaleCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
       <PaymentCreateDialog
         open={paymentSaleId !== null}
         onOpenChange={(open) => !open && setPaymentSaleId(null)}

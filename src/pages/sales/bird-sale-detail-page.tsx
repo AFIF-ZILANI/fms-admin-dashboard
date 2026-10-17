@@ -97,7 +97,7 @@ export function BirdSaleDetailPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Total" value={formatMoney(sale.total_amount)} icon={Bird} />
+        <KPICard label="Final amount" value={formatMoney(Number(sale.total_amount) - Number(sale.discount_amount ?? 0))} icon={Bird} />
         <KPICard label="Paid" value={formatMoney(amounts.paid)} icon={Bird} />
         <KPICard label="Due" value={formatMoney(amounts.due)} icon={Bird} />
       </div>
@@ -123,16 +123,22 @@ export function BirdSaleDetailPage() {
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Dholta (g)</dt>
-              <dd className="font-medium tabular-nums">{sale.dholta_in_g}</dd>
+              <dt className="text-muted-foreground">Crates</dt>
+              <dd className="font-medium tabular-nums">{Number(sale.total_katha)}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Total katha</dt>
-              <dd className="font-medium tabular-nums">{sale.total_katha}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Avg wt / katha (kg)</dt>
+              <dt className="text-muted-foreground">Crate size (kg)</dt>
               <dd className="font-medium tabular-nums">{sale.avg_wt_per_katha_kg ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Deduction per crate (g)</dt>
+              <dd className="font-medium tabular-nums">{Number(sale.dholta_in_g)}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Total deduction (kg)</dt>
+              <dd className="font-medium tabular-nums">
+                {((Number(sale.total_katha) * Number(sale.dholta_in_g)) / 1000).toLocaleString(undefined, { maximumFractionDigits: 3 })}
+              </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Total weight (kg)</dt>
@@ -149,6 +155,14 @@ export function BirdSaleDetailPage() {
             <div>
               <dt className="text-muted-foreground">Price / kg</dt>
               <dd className="font-medium tabular-nums">{formatMoney(sale.price_per_kg)}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Total amount</dt>
+              <dd className="font-medium tabular-nums">{formatMoney(sale.total_amount)}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Discount</dt>
+              <dd className="font-medium tabular-nums">{formatMoney(sale.discount_amount ?? 0)}</dd>
             </div>
           </dl>
         </CardContent>
