@@ -120,7 +120,7 @@ function validate(f: Form, s: SaleFigures, liveInHouse: number | undefined): Err
   if (num(f.discount) > s.total) e.discount = "Discount can't be more than the total";
   if (f.payment === "PARTIAL") {
     const r = num(f.received);
-    if (r <= 0) e.received = "Enter how much was received";
+    if (r <= 0) e.received = "Enter how much was paid, or how much is still due";
     else if (r >= s.final) e.received = "That covers the whole amount -- choose Paid in full";
   }
   if (s.received > 0 && !f.account) e.account = "Choose the account the money went into";
@@ -137,6 +137,7 @@ export function BirdSaleCreatePage() {
   const queryClient = useQueryClient();
   const [f, setF] = useState<Form>(() => blankForm());
   const [finalDraft, setFinalDraft] = useState<string | null>(null);
+  const [dueDraft, setDueDraft] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setF((p) => ({ ...p, [key]: value }));
 
@@ -522,16 +523,38 @@ export function BirdSaleCreatePage() {
                 />
               </div>
               {f.payment === "PARTIAL" && (
-                <Field label="Amount received" htmlFor="received" error={err("received")} hint={`Still due: ${formatMoney(s.due)}`}>
-                  <NumericInput
-                    id="received"
-                    allowDecimal
-                    decimalPlaces={2}
-                    value={f.received}
-                    onChange={(e) => set("received", e.target.value)}
-                    aria-invalid={!!err("received")}
-                  />
-                </Field>
+                <>
+                  <Field label="Amount paid" htmlFor="received" error={err("received")} hint="Received now">
+                    <NumericInput
+                      id="received"
+                      allowDecimal
+                      decimalPlaces={2}
+                      value={f.received}
+                      onChange={(e) => {
+                        setDueDraft(null);
+                        set("received", e.target.value);
+                      }}
+                      aria-invalid={!!err("received")}
+                    />
+                  </Field>
+                  <Field label="Amount due" htmlFor="due" hint="Still owed by the buyer">
+                    <NumericInput
+                      id="due"
+                      allowDecimal
+                      decimalPlaces={2}
+                      allowZero
+                      value={dueDraft ?? (f.received !== "" ? String(s.due) : "")}
+                      onChange={(e) => {
+                        // the other direction of the same split: paid = final − due
+                        setDueDraft(e.target.value);
+                        const paid = Math.round((s.final - num(e.target.value)) * 100) / 100;
+                        set("received", e.target.value === "" || paid <= 0 ? "" : String(paid));
+                      }}
+                      onBlur={() => setDueDraft(null)}
+                      disabled={s.final <= 0}
+                    />
+                  </Field>
+                </>
               )}
               {f.payment !== "DUE" && (
                 <Field label="Received into" htmlFor="account" error={err("account")}>
@@ -653,7 +676,7 @@ function SaleSlip({
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-2 text-sm tabular-nums">
               <div>
-                <dt className="text-xs text-muted-foreground">Received</dt>
+                <dt className="text-xs text-muted-foreground">Paid</dt>
                 <dd className="font-medium">{formatMoney(s.received)}</dd>
               </div>
               <div>
