@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Bird, CheckCircle2, Plus, XCircle } from "lucide-react";
+import { Bird, CalendarClock, Coins, Plus, Scale, Skull, TrendingUp, Wheat, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -9,7 +9,7 @@ import { StatusBadge, type Tone } from "@/components/shared/status-badge";
 import { TruncatedText } from "@/components/shared/truncated-text";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
-import { humanizeEnum } from "@/lib/utils";
+import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { BATCH_STATUSES, BIRD_BREEDS, PHASES, liveBirdCount, type Batch, type BatchStatus, type BirdBreed, type Phase } from "@/pages/batches/types";
 import { BatchCreateDialog } from "@/pages/batches/batch-create-dialog";
 import type { BatchPerformance } from "@/pages/analytics/types";
@@ -22,6 +22,32 @@ function ageInDays(startingDate: string): number {
 
 function daysUntil(dateStr: string): number {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+}
+
+const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+
+function runningKpis(rows: BatchPerformance[]) {
+  const initial = rows.reduce((s, r) => s + r.initial_chick_count, 0);
+  const died = rows.reduce((s, r) => s + r.cumulative_died, 0);
+  const worst = rows.reduce<BatchPerformance | null>(
+    (w, r) => (!w || r.cumulative_mortality_rate > w.cumulative_mortality_rate ? r : w),
+    null,
+  );
+  const weights = rows.flatMap((r) => (r.latest_average_weight_grams ? [Number(r.latest_average_weight_grams)] : []));
+  const fcrs = rows.flatMap((r) => (r.fcr === null ? [] : [r.fcr]));
+  const costs = rows.flatMap((r) => (r.cost_per_kg === null ? [] : [Number(r.cost_per_kg)]));
+  const due = rows.filter((r) => r.expected_selling_date && daysUntil(r.expected_selling_date) <= 7).length;
+  return {
+    count: rows.length,
+    live: rows.reduce((s, r) => s + r.live_count, 0),
+    mortality: initial ? died / initial : null,
+    worst,
+    weight: avg(weights),
+    fcr: avg(fcrs),
+    costPerKg: avg(costs),
+    cost: rows.reduce((s, r) => s + Number(r.cost_to_date), 0),
+    due,
+  };
 }
 
 export function BatchesListPage() {
@@ -51,10 +77,14 @@ export function BatchesListPage() {
     ["analytics", "batches-performance", statusFilter],
   );
 
+  // KPIs describe the live flock, so they ignore the table filters.
+  const { data: running, isLoading: runningLoading, isError: runningError } = useGetData<BatchPerformance[]>(
+    "/analytics/batches/performance?status=RUNNING",
+    ["analytics", "batches-performance", "RUNNING"],
+  );
+
   const batches = data?.results ?? [];
-  const totalBatches = data?.total ?? batches.length;
-  const runningBatches = batches.filter((b) => b.status === "RUNNING").length;
-  const closedOrSold = batches.length - runningBatches;
+  const kpis = runningKpis(running ?? []);
 
   const performanceByBatch = new Map((performances ?? []).map((p) => [p.batch_id, p]));
   const sortedBatches = [...batches].sort((a, b) => {
@@ -112,10 +142,39 @@ export function BatchesListPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Total batches" value={totalBatches} icon={Bird} isLoading={isLoading} />
-        <KPICard label="Running" value={runningBatches} icon={CheckCircle2} isLoading={isLoading} />
-        <KPICard label="Closed / sold" value={closedOrSold} icon={XCircle} isLoading={isLoading} />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KPICard label="Live birds" value={kpis.live.toLocaleString()} hint={`across ${kpis.count} running batches`} icon={Bird} isLoading={runningLoading} isError={runningError} />
+        <KPICard
+          label="Flock mortality"
+          value={kpis.mortality === null ? "—" : `${(kpis.mortality * 100).toFixed(1)}%`}
+          hint="deaths / chicks placed"
+          icon={Skull}
+          tone={kpis.mortality !== null && kpis.mortality > 0.05 ? "critical" : kpis.mortality !== null && kpis.mortality > 0.02 ? "warning" : undefined}
+          isLoading={runningLoading}
+          isError={runningError}
+        />
+        <KPICard
+          label="Worst batch"
+          value={kpis.worst ? `${(kpis.worst.cumulative_mortality_rate * 100).toFixed(1)}%` : "—"}
+          hint={kpis.worst ? batches.find((b) => b.id === kpis.worst?.batch_id)?.batch_code ?? "highest mortality" : undefined}
+          icon={TrendingUp}
+          tone={kpis.worst && kpis.worst.cumulative_mortality_rate > 0.05 ? "critical" : undefined}
+          isLoading={runningLoading}
+          isError={runningError}
+        />
+        <KPICard
+          label="Selling within 7 days"
+          value={kpis.due}
+          hint="includes past due"
+          icon={CalendarClock}
+          tone={kpis.due > 0 ? "warning" : undefined}
+          isLoading={runningLoading}
+          isError={runningError}
+        />
+        <KPICard label="Avg weight" value={kpis.weight === null ? "—" : `${Math.round(kpis.weight)} g`} hint="latest weighing per batch" icon={Scale} isLoading={runningLoading} isError={runningError} />
+        <KPICard label="Avg FCR" value={kpis.fcr === null ? "—" : kpis.fcr.toFixed(2)} hint="feed kg per kg gained" icon={Wheat} isLoading={runningLoading} isError={runningError} />
+        <KPICard label="Avg cost / kg" value={kpis.costPerKg === null ? "—" : formatMoney(kpis.costPerKg)} hint="per kg of live weight" icon={Coins} isLoading={runningLoading} isError={runningError} />
+        <KPICard label="Spend to date" value={formatMoney(kpis.cost)} hint="running batches" icon={Wallet} isLoading={runningLoading} isError={runningError} />
       </div>
 
       <div className="flex items-center justify-between">
