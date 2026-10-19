@@ -54,3 +54,45 @@ export type BatchPnl = {
   shared_period_expenses_unallocated: string;
   profit: string;
 };
+
+/** GET /analytics/finance/summary -- one period's figures. Costs count what was used (batch P&L rules). */
+export type CostLine = {
+  kind: "CHICKS" | "STOCK" | "EXPENSE" | "DEPRECIATION" | "STOCK_LOSS";
+  code: string;
+  label: string;
+  amount: number;
+};
+export type FinancePeriod = {
+  from: string;
+  to: string;
+  revenue: number;
+  costs: number;
+  net_profit: number;
+  margin: number | null;
+  /** balances at the end of the period */
+  cash: number;
+  receivables: number;
+  payables: number;
+  cost_breakdown: CostLine[];
+};
+export type FinanceSummary = { current: FinancePeriod; previous: FinancePeriod };
+
+/** GET /analytics/finance/monthly */
+export type FinanceMonth = {
+  month: string;
+  revenue: number;
+  costs: number;
+  profit: number;
+  cash_in: number;
+  cash_out: number;
+  cash_end: number;
+};
+
+/** GET /analytics/finance/owed */
+export type OwedSide = {
+  total: number;
+  buckets: { d0_30: number; d31_60: number; d60_plus: number };
+  count: number;
+  top: { id: string; name: string; due: number; oldest: string; records: number }[];
+};
+export type FinanceOwed = { receivables: OwedSide; payables: OwedSide };
