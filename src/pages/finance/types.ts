@@ -96,3 +96,58 @@ export type OwedSide = {
   top: { id: string; name: string; due: number; oldest: string; records: number }[];
 };
 export type FinanceOwed = { receivables: OwedSide; payables: OwedSide };
+
+/** GET /analytics/batches/:id/pnl -> .statement, and each row of GET /analytics/batches-pnl. */
+export type StatementSection = "CHICKS" | "FEED" | "HEALTH" | "SUPPLIES" | "DIRECT" | "DEPRECIATION";
+export type BatchStatement = {
+  batch: {
+    id: string;
+    batch_code: string;
+    breed: string;
+    status: "RUNNING" | "CLOSED" | "SOLD";
+    starting_date: string;
+    actual_end_date: string | null;
+    age_days: number;
+  };
+  revenue: { gross: number; discounts: number; net: number };
+  cost_lines: { section: StatementSection; label: string; amount: number }[];
+  costs: number;
+  /** what the batch earned before its share of farm-wide costs */
+  contribution: number;
+  shared_costs: { total: number; by_category: { label: string; amount: number }[] };
+  net_profit: number;
+  margin: number | null;
+  birds: { placed: number; died: number; sold: number; live: number; mortality_rate: number };
+  kg: { sold: number; produced: number; feed: number | null };
+  per_unit: {
+    cost_per_bird: number | null;
+    cost_per_kg: number | null;
+    profit_per_bird: number | null;
+    avg_price_per_kg: number | null;
+    fcr: number | null;
+  };
+  money: { received: number; due: number };
+};
+
+/** GET /analytics/shared-costs -- farm-wide costs per month and their split by bird-days. */
+export type SharedMonth = {
+  month: string;
+  total: number;
+  allocated: number;
+  overhead: number;
+  bird_days: number;
+  batches: { batch_id: string; batch_code: string; bird_days: number; share: number }[];
+  expenses: { id: string; date: string; category: string; label: string; amount: number; remarks: string | null }[];
+};
+
+/** GET /expenses/summary -- the whole filtered set, not one page. */
+export type ExpenseSummary = {
+  count: number;
+  total: number;
+  direct: number;
+  shared: number;
+  capital: number;
+  paid: number;
+  unpaid: number;
+  by_category: { code: string; label: string; amount: number }[];
+};
