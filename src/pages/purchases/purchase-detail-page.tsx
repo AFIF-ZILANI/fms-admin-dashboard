@@ -71,9 +71,15 @@ export function PurchaseDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge tone={status.tone} label={status.label} />
-            <Button variant="outline" size="sm" onClick={() => setPaymentOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={parseFloat(amounts.due) <= 0}
+              title={parseFloat(amounts.due) <= 0 ? "Fully paid" : undefined}
+              onClick={() => setPaymentOpen(true)}
+            >
               <CreditCard />
-              Record payment
+              {parseFloat(amounts.due) <= 0 ? "Fully paid" : "Record payment"}
             </Button>
           </div>
         </CardHeader>

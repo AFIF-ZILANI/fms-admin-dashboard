@@ -130,7 +130,16 @@ export function BirdSalesTab() {
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Record payment"
+            // Nothing left to pay: the action is there but switched off, so the column still lines up.
+            disabled={parseFloat(trueAmounts(s.id, s.paid_amount, s.due_amount).due) <= 0}
+            aria-label={
+              parseFloat(trueAmounts(s.id, s.paid_amount, s.due_amount).due) <= 0
+                ? "Fully paid, nothing to record"
+                : "Record payment"
+            }
+            title={
+              parseFloat(trueAmounts(s.id, s.paid_amount, s.due_amount).due) <= 0 ? "Fully paid" : "Record payment"
+            }
             onClick={(e) => {
               e.stopPropagation();
               setPaymentSaleId(s.id);

@@ -20,7 +20,7 @@ type PaidByRefRow = { ref_id: string; total_paid: string };
  * Totals come from GET /payments/outstanding, which is unpaginated -- a
  * limit=100 list fetch silently dropped older payments, so any sale whose
  * payments fell off that page reverted to looking unpaid. */
-export function useOutstanding(refType: Extract<PaymentRefType, "SALE" | "BIRD_SALE" | "PURCHASE">) {
+export function useOutstanding(refType: PaymentRefType) {
   const { data, isLoading, isError } = useGetData<PaidByRefRow[]>(
     `/payments/outstanding?ref_type=${refType}`,
     ["payments", "outstanding", refType]
