@@ -192,6 +192,8 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
   const fullyPaid = !!selected && selected.due <= 0;
   const dueAfter = selected ? Math.max(0, selected.due - amount) : 0;
   const overpay = !!selected && amount > selected.due + 0.005;
+  // The part of this payment the bar can show -- capped at what is due, so an over-entry never overfills it.
+  const thisPayment = selected ? Math.min(Math.max(0, amount), selected.due) : 0;
 
   const { data: history } = useGetData<Paginated<Payment>>(
     `/payments?ref_type=${refType}&ref_id=${refId}&limit=100`,
@@ -348,19 +350,41 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
                 </div>
               </dl>
               {selected.total > 0 && (
-                <div
-                  className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"
-                  role="progressbar"
-                  aria-label="Share paid"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round((selected.paid / selected.total) * 100)}
-                >
+                <>
+                  {/* Paid so far, then this payment as it's typed: the bar fills while the amount is entered. */}
                   <div
-                    className="h-full rounded-full bg-primary"
-                    style={{ width: `${Math.min(100, (selected.paid / selected.total) * 100)}%` }}
-                  />
-                </div>
+                    className="mt-3 flex h-2 overflow-hidden rounded-full bg-muted"
+                    role="progressbar"
+                    aria-label="Share paid, including this payment"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(((selected.paid + thisPayment) / selected.total) * 100)}
+                  >
+                    <div
+                      className="h-full bg-primary transition-[width] duration-300 ease-out motion-reduce:transition-none"
+                      style={{ width: `${(selected.paid / selected.total) * 100}%` }}
+                    />
+                    <div
+                      className="h-full bg-success transition-[width] duration-300 ease-out motion-reduce:transition-none"
+                      style={{ width: `${(thisPayment / selected.total) * 100}%` }}
+                    />
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
+                    <span className="flex items-center gap-3">
+                      <span className="flex items-center gap-1">
+                        <span className="size-2 rounded-full bg-primary" aria-hidden />
+                        Paid {formatMoney(selected.paid)}
+                      </span>
+                      {thisPayment > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="size-2 rounded-full bg-success" aria-hidden />
+                          This payment {formatMoney(thisPayment)}
+                        </span>
+                      )}
+                    </span>
+                    <span>{Math.round(((selected.paid + thisPayment) / selected.total) * 100)}% paid</span>
+                  </div>
+                </>
               )}
             </div>
           )}
