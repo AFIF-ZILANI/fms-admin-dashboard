@@ -12,7 +12,7 @@ type DoctorSelectProps = {
  * ActorSelect's structure, sourced from Doctors instead of Admins. Value is
  * Doctors.id (not the underlying Profile's id), matching doctor_id's FK. */
 export function DoctorSelect({ id, value, onChange }: DoctorSelectProps) {
-  const { data } = useGetData<Paginated<Doctor>>("/doctors?limit=100", ["doctors"]);
+  const { data } = useGetData<Paginated<Doctor>>("/doctors?limit=100&is_active=true", ["doctors", "active"]);
   const doctors = data?.results ?? [];
 
   return (

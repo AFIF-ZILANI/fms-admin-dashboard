@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, Download } from "lucide-react";
 import {
   type ColumnDef,
   type SortingState,
@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/empty-state";
+import { useCurrentPageTitle } from "@/components/layout/use-page-title";
+import { csvFileName, downloadCsv, nodeText, toCsv } from "@/lib/csv";
 import { cn } from "@/lib/utils";
 
 export type Column<T> = {
@@ -25,6 +27,8 @@ export type Column<T> = {
   className?: string;
   /** Provide to make this column's header clickable and sortable (asc -> desc -> none). Omit for columns that shouldn't sort. */
   sortValue?: (row: T) => string | number;
+  /** What this column puts in a CSV export. Defaults to the text the cell shows. */
+  exportValue?: (row: T) => string | number | null | undefined;
 };
 
 type DataTableProps<T> = {
@@ -45,7 +49,14 @@ type DataTableProps<T> = {
   totalCount?: number;
   /** Set false when the caller pages server-side and renders its own controls. */
   paginate?: boolean;
+  /** Adds an "Export CSV" button for the rows held here (all pages, current sort). On by default. */
+  exportable?: boolean;
+  /** CSV file name stem; defaults to the page title. */
+  exportName?: string;
 };
+
+/** Action-button columns carry no data worth exporting. */
+const isDataColumn = <T,>(col: Column<T>) => col.header !== "" && col.key !== "actions" && col.key !== "action";
 
 const PAGE_SIZES = [10, 20, 50, 100] as const;
 
@@ -66,7 +77,10 @@ export function DataTable<T>({
   footer,
   totalCount,
   paginate = true,
+  exportable = true,
+  exportName,
 }: DataTableProps<T>) {
+  const pageTitle = useCurrentPageTitle();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZES[1]);
@@ -102,6 +116,14 @@ export function DataTable<T>({
   // Clamp rather than reset: a refetch or filter can shrink the set under the current page.
   const safePage = Math.min(page, lastPage);
   const sortedRows = paged ? allSortedRows.slice(safePage * pageSize, (safePage + 1) * pageSize) : allSortedRows;
+
+  const exportCsv = () => {
+    const cols = columns.filter(isDataColumn);
+    const body = allSortedRows.map((row) =>
+      cols.map((col) => (col.exportValue ? col.exportValue(row) : nodeText(col.render(row))) ?? "")
+    );
+    downloadCsv(csvFileName(exportName ?? pageTitle), toCsv(cols.map((c) => c.header), body));
+  };
 
   const renderedIds = sortedRows.map(rowKey);
   const allSelected = selectable && renderedIds.length > 0 && renderedIds.every((id) => selectedIds!.has(id));
@@ -220,30 +242,43 @@ export function DataTable<T>({
       {footer && (
         <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">{footer}</div>
       )}
-      {paged && (
-        <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-2 text-sm text-muted-foreground">
+      {(paged || exportable) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-sm text-muted-foreground">
           <span>
-            {safePage * pageSize + 1}-{Math.min((safePage + 1) * pageSize, allSortedRows.length)} of {allSortedRows.length.toLocaleString()}
+            {paged
+              ? `${safePage * pageSize + 1}-${Math.min((safePage + 1) * pageSize, allSortedRows.length)} of ${allSortedRows.length.toLocaleString()}`
+              : `${allSortedRows.length.toLocaleString()} ${allSortedRows.length === 1 ? "row" : "rows"}`}
           </span>
           <div className="flex items-center gap-2">
-            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(0); }}>
-              <SelectTrigger size="sm" className="w-28" aria-label="Rows per page">
-                <SelectValue>{(v: string) => `${v} / page`}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZES.map((n) => (
-                  <SelectItem key={n} value={String(n)}>
-                    {n} / page
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" disabled={safePage <= 0} onClick={() => setPage(safePage - 1)}>
-              Previous
-            </Button>
-            <Button variant="outline" size="sm" disabled={safePage >= lastPage} onClick={() => setPage(safePage + 1)}>
-              Next
-            </Button>
+            {paged && (
+              <>
+                <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(0); }}>
+                  <SelectTrigger size="sm" className="w-28" aria-label="Rows per page">
+                    <SelectValue>{(v: string) => `${v} / page`}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZES.map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n} / page
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" disabled={safePage <= 0} onClick={() => setPage(safePage - 1)}>
+                  Previous
+                </Button>
+                <Button variant="outline" size="sm" disabled={safePage >= lastPage} onClick={() => setPage(safePage + 1)}>
+                  Next
+                </Button>
+              </>
+            )}
+            {exportable && (
+              <Button variant="ghost" size="sm" disabled={isLoading} onClick={exportCsv}>
+                <Download />
+                {/* A server-paged table only holds the page on screen. */}
+                {paginate ? "Export CSV" : "Export page"}
+              </Button>
+            )}
           </div>
         </div>
       )}

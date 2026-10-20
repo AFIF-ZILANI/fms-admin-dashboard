@@ -9,6 +9,8 @@ import { SuppliersListPage } from "@/pages/suppliers/suppliers-list-page";
 import { SupplierDetailPage } from "@/pages/suppliers/supplier-detail-page";
 import { CustomersListPage } from "@/pages/customers/customers-list-page";
 import { CustomerDetailPage } from "@/pages/customers/customer-detail-page";
+import { DoctorsListPage } from "@/pages/doctors/doctors-list-page";
+import { TasksPage } from "@/pages/tasks/tasks-page";
 import { InventoryPage } from "@/pages/inventory/inventory-page";
 import { ItemFormPage } from "@/pages/inventory/item-form-page";
 import { AdminsListPage } from "@/pages/admins/admins-list-page";
@@ -55,6 +57,7 @@ function App() {
             <Route path="suppliers/:id" element={<SupplierDetailPage />} />
             <Route path="customers" element={<CustomersListPage />} />
             <Route path="customers/:id" element={<CustomerDetailPage />} />
+            <Route path="doctors" element={<DoctorsListPage />} />
             <Route path="sales" element={<SalesPage />} />
             <Route path="sales/:id" element={<SaleDetailPage />} />
             <Route path="sales/birds/new" element={<BirdSaleCreatePage />} />
@@ -64,14 +67,15 @@ function App() {
             <Route path="purchases/:id" element={<PurchaseDetailPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="finance" element={<FinancePage />} />
+            <Route path="tasks" element={<TasksPage />} />
             <Route path="employees" element={<EmployeesListPage />} />
             <Route path="employees/new" element={<EmployeeFormPage />} />
             <Route path="employees/:id" element={<EmployeeDetailPage />} />
             <Route path="employees/:id/edit" element={<EmployeeFormPage />} />
             <Route path="employees/:id/payslip/:payrollId" element={<PayslipPage />} />
             <Route path="bonuses" element={<BonusesListPage />} />
-          <Route path="bonuses/:id" element={<BonusEventDetailPage />} />
-          <Route path="admins" element={<AdminsListPage />} />
+            <Route path="bonuses/:id" element={<BonusEventDetailPage />} />
+            <Route path="admins" element={<AdminsListPage />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="audit-log" element={<AuditLogPage />} />
             <Route path="settings" element={<Navigate to="/settings/categories-units" replace />} />

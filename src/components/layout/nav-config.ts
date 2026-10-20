@@ -33,6 +33,9 @@ import {
   Receipt,
   TrendingDown,
   ChartLine,
+  Stethoscope,
+  ClipboardList,
+  ListChecks,
   type LucideIcon,
 } from "lucide-react";
 
@@ -71,6 +74,7 @@ export const OPERATIONAL_NAV: NavItem[] = [
   },
   { to: "/suppliers", label: "Suppliers", icon: Truck },
   { to: "/customers", label: "Customers", icon: Users },
+  { to: "/doctors", label: "Doctors", icon: Stethoscope },
   {
     to: "/sales",
     label: "Sales",
@@ -105,6 +109,15 @@ export const OPERATIONAL_NAV: NavItem[] = [
     ],
   },
   { to: "/employees", label: "Employees", icon: UserCog },
+  {
+    to: "/tasks",
+    label: "Tasks",
+    icon: ClipboardList,
+    children: [
+      tab("/tasks", "assignments", "Assignments", ClipboardList),
+      tab("/tasks", "catalog", "Task catalog", ListChecks),
+    ],
+  },
   { to: "/bonuses", label: "Bonuses", icon: Gift },
   { to: "/admins", label: "Admins", icon: ShieldCheck },
 ];

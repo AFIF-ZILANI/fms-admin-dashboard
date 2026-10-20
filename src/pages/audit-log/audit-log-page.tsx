@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { History, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { History } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge, type Tone } from "@/components/shared/status-badge";
@@ -15,12 +14,12 @@ const ACTION_TONE: Record<AuditAction, Tone> = { CREATE: "success", UPDATE: "inf
 export function AuditLogPage() {
   usePageTitle("Audit Log");
 
-  const [tableName, setTableName] = useState("");
+  const [tableName, setTableName] = useState("ALL");
   const [action, setAction] = useState<AuditAction | "ALL">("ALL");
   const [selected, setSelected] = useState<AuditLogEntry | undefined>(undefined);
 
   const query = new URLSearchParams({ limit: "100" });
-  if (tableName.trim()) query.set("table_name", tableName.trim());
+  if (tableName !== "ALL") query.set("table_name", tableName);
   if (action !== "ALL") query.set("action", action);
 
   const { data, isLoading } = useGetData<Paginated<AuditLogEntry>>(`/audit-logs?${query}`, [
@@ -29,9 +28,11 @@ export function AuditLogPage() {
     action,
   ]);
   const entries = data?.results ?? [];
+  const { data: tables } = useGetData<string[]>("/audit-logs/tables", ["audit-logs", "tables"]);
 
   const columns: Column<AuditLogEntry>[] = [
     { key: "occurred_at", header: "When", render: (e) => new Date(e.occurred_at).toLocaleString() },
+    { key: "changed_by", header: "By", render: (e) => e.changed_by.name },
     { key: "table_name", header: "Table", render: (e) => e.table_name },
     { key: "record_id", header: "Record", render: (e) => e.record_id },
     {
@@ -45,23 +46,19 @@ export function AuditLogPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-xs">
-          <Input
-            value={tableName}
-            onChange={(e) => setTableName(e.target.value)}
-            placeholder="Filter by table name…"
-          />
-          {tableName && (
-            <button
-              type="button"
-              onClick={() => setTableName("")}
-              aria-label="Clear table filter"
-              className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
-          )}
-        </div>
+        <Select value={tableName} onValueChange={(v) => setTableName(v ?? "ALL")}>
+          <SelectTrigger className="w-56" aria-label="Table">
+            <SelectValue>{(v: string) => (v && v !== "ALL" ? v : "All tables")}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All tables</SelectItem>
+            {(tables ?? []).map((t) => (
+              <SelectItem key={t} value={t}>
+                {t}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={action} onValueChange={(v) => setAction((v as AuditAction | "ALL") ?? "ALL")}>
           <SelectTrigger className="w-40">
             <SelectValue>{(v: string) => (v && v !== "ALL" ? humanizeEnum(v) : "All actions")}</SelectValue>
@@ -87,7 +84,7 @@ export function AuditLogPage() {
         empty={{
           icon: History,
           title: "No audit history yet",
-          description: "This table populates once write-side tracking ships — nothing to see here in the meantime.",
+          description: "Purchases, sales, stock adjustments, batch changes, people and payouts are recorded here as they happen.",
         }}
       />
 
