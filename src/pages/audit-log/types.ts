@@ -7,6 +7,7 @@ export type AuditLogEntry = {
   record_id: string;
   action: AuditAction;
   changed_by_id: string;
+  changed_by: { id: string; name: string };
   before_data: unknown;
   after_data: unknown;
   note: string | null;

@@ -665,10 +665,11 @@ Build in dependency order, not spec order:
 
 ## 8. Open Items (deferred, tracked, not blocking this build)
 
-- Auth/role enforcement layer — schema and permission matrix ready, no middleware yet.
-- Bird-days shared-cost allocation formula (v2) — needs real overlapping-batch data to
-  validate against.
-- Employee Mobile App — built; see `mobile/docs/PRD.md`.
-- FCR calculation — needs a feed-to-weight unit conversion table that doesn't exist yet.
-- Audit Log write-side (Prisma middleware) — the page above is read-only and ready; the
-  populate mechanism is separate backend work.
+Built since this PRD was written: auth and role enforcement, FCR, bird-days shared-cost
+allocation, audit-log writes (with who made each entry), a Tasks page (assignments and the
+task catalog), a Doctors page, CSV export on every table, and a selling-date alert.
+
+- Recurring tasks — managers and admins create each assignment.
+- Intern role — not in the schema or the permission matrix.
+- Employer accruals (bonus, gratuity, provident fund) — not modelled.
+- Environment and sensor alerts — deferred until they are designed.

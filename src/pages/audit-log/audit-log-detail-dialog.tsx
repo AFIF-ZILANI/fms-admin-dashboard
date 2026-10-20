@@ -19,8 +19,7 @@ function JsonBlock({ label, value }: { label: string; value: unknown }) {
 type AuditLogDetailDialogProps = { open: boolean; onOpenChange: (open: boolean) => void; entry: AuditLogEntry | undefined };
 
 // ponytail: shows before/after JSON side by side, not a field-level diff —
-// this table is unpopulated until Phase 15 (Auth) ships write-side
-// middleware, so a real diff algorithm has nothing to validate against yet.
+// entries log only the few fields that changed, so the two blocks read fine as they are.
 export function AuditLogDetailDialog({ open, onOpenChange, entry }: AuditLogDetailDialogProps) {
   if (!entry) return null;
 
@@ -32,7 +31,9 @@ export function AuditLogDetailDialog({ open, onOpenChange, entry }: AuditLogDeta
             <StatusBadge tone={ACTION_TONE[entry.action]} label={humanizeEnum(entry.action)} />
             {entry.table_name} · {entry.record_id}
           </DialogTitle>
-          <DialogDescription>{new Date(entry.occurred_at).toLocaleString()}</DialogDescription>
+          <DialogDescription>
+            {new Date(entry.occurred_at).toLocaleString()} · by {entry.changed_by.name}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-4">
