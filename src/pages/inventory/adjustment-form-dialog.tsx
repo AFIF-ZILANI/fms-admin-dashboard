@@ -77,7 +77,12 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
     },
   });
 
-  const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
+  // Opening balance only applies to items with no stock history yet -- once anything has been
+  // purchased or recorded, the ledger already tracks it (the server refuses the rest too).
+  const { data: items } = useGetData<Paginated<Item>>(
+    openingBalance ? "/items?has_stock_history=false&limit=100" : "/items?limit=100",
+    openingBalance ? ["items", "no-stock-history"] : ["items"]
+  );
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
@@ -97,16 +102,20 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
   const after = toNum(watch("quantity_after"));
   const delta = !Number.isNaN(before) && !Number.isNaN(after) ? after - before : null;
 
-  // Opening balance is entered in whichever purchasable unit the item actually comes in (never
-  // the base unit -- same rule as the purchase form) and converted to base quantity on submit.
+  // Opening balance is entered in the item's base unit or any purchasable unit -- same choices as
+  // the purchase form (purchase-create-page.tsx) -- and converted to base quantity on submit.
   const [openingUnit, setOpeningUnit] = useState("");
   const selectedItemId = watch("item_id");
-  const purchasableUnits = (items?.results.find((i) => i.id === selectedItemId)?.itemUnits ?? []).filter(
-    (u) => u.is_purchasable
-  );
-  const openingUnitValue = purchasableUnits.some((u) => u.unit === openingUnit)
+  const selectedItem = items?.results.find((i) => i.id === selectedItemId);
+  const openingUnits = selectedItem
+    ? [
+        { unit: selectedItem.unit, factor_to_base: "1" },
+        ...(selectedItem.itemUnits ?? []).filter((u) => u.is_purchasable),
+      ]
+    : [];
+  const openingUnitValue = openingUnits.some((u) => u.unit === openingUnit)
     ? openingUnit
-    : (purchasableUnits[0]?.unit ?? "");
+    : (openingUnits[0]?.unit ?? "");
 
   // Current on-hand balance at whichever location is selected, so the user can see what's
   // already there before setting an opening balance or typing quantity_before -- house wins if
@@ -131,12 +140,8 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
   const onSubmit = (values: AdjustmentFormValues) => {
     let quantity_after = values.quantity_after;
     if (openingBalance) {
-      const unitRow = purchasableUnits.find((u) => u.unit === openingUnitValue);
-      if (!unitRow) {
-        toast.error("This item has no purchasable units yet — add one from Edit item first.");
-        return;
-      }
-      quantity_after = values.quantity_after * Number(unitRow.factor_to_base);
+      const unitRow = openingUnits.find((u) => u.unit === openingUnitValue);
+      quantity_after = values.quantity_after * Number(unitRow?.factor_to_base ?? 1);
     }
 
     const { warehouse_id, house_id, ...rest } = values;
@@ -288,7 +293,7 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
                     <SelectValue>{(v: string) => (v ? unitLabel(v) : "Unit")}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {purchasableUnits.map((u) => (
+                    {openingUnits.map((u) => (
                       <SelectItem key={u.unit} value={u.unit}>
                         {unitLabel(u.unit)}
                       </SelectItem>
@@ -297,11 +302,6 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
                 </Select>
               </div>
               {errors.quantity_after && <p className="text-xs text-destructive">{errors.quantity_after.message}</p>}
-              {selectedItemId && purchasableUnits.length === 0 && (
-                <p className="text-xs text-destructive">
-                  This item has no purchasable units yet — add one from Edit item first.
-                </p>
-              )}
             </div>
           ) : (
             <>
