@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -114,7 +115,7 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
       paid_amount: paid,
       paid_from_instrument_id: paid > 0 ? values.paid_from_instrument_id : undefined,
     };
-    createExpense.mutate(payload, {
+    return createExpense.mutate(payload, {
       onSuccess: () => {
         // A paid expense moves an account balance and the dashboard's cash and payables.
         for (const key of ["payments", "payment-instruments", "analytics"]) {
@@ -322,6 +323,7 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Record expense
             </Button>
           </DialogFooter>

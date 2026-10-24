@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -115,7 +115,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
       customer_id: values.customer_id || undefined,
       paid_to_instrument_id: values.paid_to_instrument_id || undefined,
     };
-    createSale.mutate(payload, {
+    return createSale.mutate(payload, {
       onSuccess: (sale) => {
         // A new sale changes the Overview's charts too -- they're cached under
         // ["analytics", ...], which usePostData's ["sales"] key never touches.
@@ -358,6 +358,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Record sale
             </Button>
           </DialogFooter>

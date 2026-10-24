@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
@@ -139,7 +140,7 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
     }
 
     const { warehouse_id, house_id, ...rest } = values;
-    createAdjustment.mutate(
+    return createAdjustment.mutate(
       {
         ...rest,
         quantity_after,
@@ -380,6 +381,7 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               {openingBalance ? "Record" : "Save adjustment"}
             </Button>
           </DialogFooter>

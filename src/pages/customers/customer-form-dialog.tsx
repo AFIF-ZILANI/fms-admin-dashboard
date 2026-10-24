@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -85,7 +86,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
       // create doesn't accept rating at all (docs/api.md §4.2) — only send it on edit.
       ...(isEdit && values.rating ? { rating: Number(values.rating) } : {}),
     };
-    mutation.mutate(payload, {
+    return mutation.mutate(payload, {
       onSuccess: () => {
         toast.success(isEdit ? "Customer updated" : "Customer created");
         onOpenChange(false);
@@ -166,6 +167,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               {isEdit ? "Save changes" : "Create customer"}
             </Button>
           </DialogFooter>

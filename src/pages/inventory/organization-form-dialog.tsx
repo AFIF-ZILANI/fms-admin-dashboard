@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -52,7 +53,7 @@ export function OrganizationFormDialog({ open, onOpenChange, organization }: Org
   const mutation = isEdit ? updateOrganization : createOrganization;
 
   const onSubmit = (values: OrganizationFormValues) => {
-    mutation.mutate(values, {
+    return mutation.mutate(values, {
       onSuccess: () => {
         toast.success(isEdit ? "Organization updated" : "Organization created");
         onOpenChange(false);
@@ -94,6 +95,7 @@ export function OrganizationFormDialog({ open, onOpenChange, organization }: Org
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               {isEdit ? "Save changes" : "Create organization"}
             </Button>
           </DialogFooter>

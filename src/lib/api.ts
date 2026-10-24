@@ -133,7 +133,7 @@ function useApiMutation<TData, TVars>(
   const queryClient = useQueryClient();
   const { onSuccess, ...rest } = options ?? {};
 
-  return useMutation<TData, ApiError, TVars>({
+  const mutation = useMutation<TData, ApiError, TVars>({
     mutationFn: (vars) =>
       apiFetch<TData>(typeof endpoint === "function" ? endpoint(vars) : endpoint, {
         method,
@@ -145,6 +145,15 @@ function useApiMutation<TData, TVars>(
     },
     ...rest,
   });
+  // Same as TanStack's own mutate (mutateAsync + swallow the rejection; onError still fires), but the
+  // promise is returned -- so `return x.mutate(...)` from a form's onSubmit keeps RHF's isSubmitting
+  // true until the request settles, which is what every submit button's loading state reads.
+  const mutate = (...args: Parameters<typeof mutation.mutateAsync>) =>
+    mutation.mutateAsync(...args).then(
+      () => undefined,
+      () => undefined
+    );
+  return { ...mutation, mutate };
 }
 
 /** POST. Pass a function endpoint when the id lives in the path, e.g. `(id) => `/houses/${id}/deactivate`` */

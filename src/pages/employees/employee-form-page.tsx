@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -366,7 +366,7 @@ export function EmployeeFormPage() {
     };
 
     const mutation = isEdit ? updateEmployee : createEmployee;
-    mutation.mutate(payload, {
+    return mutation.mutate(payload, {
       onSuccess: (saved: Employee & { temp_password?: string }) => {
         toast.success(isEdit ? "Employee updated" : `${values.name} hired`);
         if (!isEdit && saved.temp_password) {
@@ -910,6 +910,7 @@ export function EmployeeFormPage() {
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="animate-spin" />}
             {isEdit ? "Save changes" : "Hire employee"}
           </Button>
         </div>

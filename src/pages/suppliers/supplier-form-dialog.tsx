@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -87,7 +88,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier }: SupplierFor
       address: values.address || undefined,
       company: values.company || undefined,
     };
-    mutation.mutate(payload, {
+    return mutation.mutate(payload, {
       onSuccess: () => {
         toast.success(isEdit ? "Supplier updated" : "Supplier created");
         onOpenChange(false);
@@ -205,6 +206,7 @@ export function SupplierFormDialog({ open, onOpenChange, supplier }: SupplierFor
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               {isEdit ? "Save changes" : "Create supplier"}
             </Button>
           </DialogFooter>

@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -46,7 +47,7 @@ export function ProvisionCodesDialog({ open, onOpenChange, onProvisioned }: Prov
   const provision = usePostData<StockUnit[], ProvisionFormValues>("/stock-units", ["stock-units"]);
 
   const onSubmit = (values: ProvisionFormValues) => {
-    provision.mutate(values, {
+    return provision.mutate(values, {
       onSuccess: (units) => {
         toast.success(`${units.length} codes provisioned`);
         reset();
@@ -87,6 +88,7 @@ export function ProvisionCodesDialog({ open, onOpenChange, onProvisioned }: Prov
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Provision
             </Button>
           </DialogFooter>

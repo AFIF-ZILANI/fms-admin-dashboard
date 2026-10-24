@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -110,7 +111,7 @@ export function DoctorFormDialog({ open, onOpenChange, doctor }: DoctorFormDialo
             .filter(Boolean)
         : undefined,
     };
-    mutation.mutate(payload, {
+    return mutation.mutate(payload, {
       onSuccess: () => {
         toast.success(isEdit ? "Doctor updated" : "Doctor added");
         onOpenChange(false);
@@ -188,6 +189,7 @@ export function DoctorFormDialog({ open, onOpenChange, doctor }: DoctorFormDialo
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting || mutation.isPending}>
+                {isSubmitting && <Loader2 className="animate-spin" />}
                 {isEdit ? "Save changes" : "Add doctor"}
               </Button>
             </div>

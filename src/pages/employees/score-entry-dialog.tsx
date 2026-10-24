@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -109,7 +110,7 @@ export function ScoreEntryDialog({ open, onOpenChange, employeeId }: ScoreEntryD
       employee_id: employeeId,
       idempotency_key: crypto.randomUUID(),
     };
-    createScoreEntry.mutate(payload, {
+    return createScoreEntry.mutate(payload, {
       onSuccess: () => {
         toast.success("Score entry recorded");
         onOpenChange(false);
@@ -247,6 +248,7 @@ export function ScoreEntryDialog({ open, onOpenChange, employeeId }: ScoreEntryD
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Add entry
             </Button>
           </DialogFooter>
