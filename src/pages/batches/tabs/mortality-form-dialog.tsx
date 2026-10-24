@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -73,7 +74,7 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
 
   const onSubmit = (values: MortalityFormValues) => {
     const payload = { ...values, batch_id: batch.id, cause_note: values.cause_note || undefined };
-    createMortalityLog.mutate(payload, {
+    return createMortalityLog.mutate(payload, {
       onSuccess: () => {
         // Mortality decrements the batch's house balances — the detail page's own
         // ["batches", id] query (and the list's ["batches", ...]) need to refetch too.
@@ -152,6 +153,7 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Log mortality
             </Button>
           </DialogFooter>

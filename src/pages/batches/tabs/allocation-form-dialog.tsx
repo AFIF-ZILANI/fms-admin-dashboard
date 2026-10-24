@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -74,7 +75,7 @@ export function AllocationFormDialog({ open, onOpenChange, batchId }: Allocation
       from_house_id: values.from_house_id || undefined,
       to_house_id: values.to_house_id || undefined,
     };
-    createAllocation.mutate(payload, {
+    return createAllocation.mutate(payload, {
       onSuccess: () => {
         // Allocations move birds between house balances — refetch the batch (detail + list).
         void queryClient.invalidateQueries({ queryKey: ["batches"] });
@@ -193,6 +194,7 @@ export function AllocationFormDialog({ open, onOpenChange, batchId }: Allocation
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Record allocation
             </Button>
           </DialogFooter>

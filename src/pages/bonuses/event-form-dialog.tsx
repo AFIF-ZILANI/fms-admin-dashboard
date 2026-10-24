@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -66,7 +67,7 @@ export function EventFormDialog({
   const create = usePostData<BonusEvent, object>("/bonus-events", ["bonus-events"]);
 
   const onSubmit = (v: FormValues) => {
-    create.mutate(
+    return create.mutate(
       {
         name: v.name,
         event_date: v.event_date,
@@ -172,6 +173,7 @@ export function EventFormDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting || create.isPending}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Create event
             </Button>
           </DialogFooter>

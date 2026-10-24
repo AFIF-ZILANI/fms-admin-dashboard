@@ -1,4 +1,5 @@
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -126,7 +127,7 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
     const fromParsed = parseLocation(values.from_location);
     const toParsed = parseLocation(values.to_location);
 
-    createTransfer.mutate(
+    return createTransfer.mutate(
       {
         item_id: values.item_id,
         from_location_type: fromParsed.type,
@@ -304,6 +305,7 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Move stock
             </Button>
           </DialogFooter>

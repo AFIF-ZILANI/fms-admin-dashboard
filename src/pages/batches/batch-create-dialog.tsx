@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -128,7 +129,7 @@ export function BatchCreateDialog({
       ...values,
       starting_date: values.starting_date || undefined,
     };
-    createBatch.mutate(payload, {
+    return createBatch.mutate(payload, {
       onSuccess: (batch) => {
         toast.success("Batch created");
         onOpenChange(false);
@@ -341,6 +342,7 @@ export function BatchCreateDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Create batch
             </Button>
           </DialogFooter>

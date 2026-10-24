@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -81,7 +82,7 @@ export function AdminFormDialog({ open, onOpenChange, admin }: AdminFormDialogPr
   const onSubmit = (values: AdminFormValues) => {
     const payload = { ...values, address: values.address || undefined };
     if (isEdit) {
-      updateAdmin.mutate(payload, {
+      return updateAdmin.mutate(payload, {
         onSuccess: () => {
           toast.success("Admin updated");
           onOpenChange(false);
@@ -89,7 +90,7 @@ export function AdminFormDialog({ open, onOpenChange, admin }: AdminFormDialogPr
         onError,
       });
     } else {
-      createAdmin.mutate(payload, {
+      return createAdmin.mutate(payload, {
         onSuccess: (saved) => {
           toast.success("Admin created");
           setCreated({ name: saved.profile.name, email: saved.profile.email, password: saved.temp_password });
@@ -137,6 +138,7 @@ export function AdminFormDialog({ open, onOpenChange, admin }: AdminFormDialogPr
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               {isEdit ? "Save changes" : "Create admin"}
             </Button>
           </DialogFooter>

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -78,7 +79,7 @@ export function MedicationFormDialog({ open, onOpenChange, batch }: MedicationFo
       doctor_id: values.doctor_id || undefined,
       remarks: values.remarks || undefined,
     };
-    createMedication.mutate(payload, {
+    return createMedication.mutate(payload, {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: ["medications", batch.id] });
         toast.success("Medication logged");
@@ -158,6 +159,7 @@ export function MedicationFormDialog({ open, onOpenChange, batch }: MedicationFo
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Log medication
             </Button>
           </DialogFooter>

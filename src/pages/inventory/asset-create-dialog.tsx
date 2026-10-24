@@ -1,4 +1,5 @@
 import { Controller, useForm } from "react-hook-form";
+import { Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -67,7 +68,7 @@ export function AssetCreateDialog({ open, onOpenChange }: AssetCreateDialogProps
   const createAsset = usePostData<Asset, AssetFormValues>("/assets", ["assets"]);
 
   const onSubmit = (values: AssetFormValues) => {
-    createAsset.mutate(values, {
+    return createAsset.mutate(values, {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: ["stock-units"] });
         toast.success("Asset created");
@@ -179,6 +180,7 @@ export function AssetCreateDialog({ open, onOpenChange }: AssetCreateDialogProps
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Create asset
             </Button>
           </DialogFooter>

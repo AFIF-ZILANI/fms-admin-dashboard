@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -98,7 +99,7 @@ export function InstrumentFormDialog({ open, onOpenChange, instrument }: Instrum
       mfs_type: values.mfs_type || undefined,
     };
     const mutation = isEdit ? updateInstrument : createInstrument;
-    mutation.mutate(payload, {
+    return mutation.mutate(payload, {
       onSuccess: () => {
         toast.success(isEdit ? "Account updated" : "Account added");
         onOpenChange(false);
@@ -197,6 +198,7 @@ export function InstrumentFormDialog({ open, onOpenChange, instrument }: Instrum
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               {isEdit ? "Save changes" : "Add account"}
             </Button>
           </DialogFooter>

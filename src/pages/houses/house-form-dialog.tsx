@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -67,7 +68,7 @@ export function HouseFormDialog({ open, onOpenChange, house }: HouseFormDialogPr
   const mutation = isEdit ? updateHouse : createHouse;
 
   const onSubmit = (values: HouseFormValues) => {
-    mutation.mutate(values, {
+    return mutation.mutate(values, {
       onSuccess: () => {
         toast.success(isEdit ? "House updated" : "House created");
         onOpenChange(false);
@@ -159,6 +160,7 @@ export function HouseFormDialog({ open, onOpenChange, house }: HouseFormDialogPr
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               {isEdit ? "Save changes" : "Create house"}
             </Button>
           </DialogFooter>

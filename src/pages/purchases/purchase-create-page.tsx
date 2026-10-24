@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
-import { ArrowLeft, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, MoreHorizontal, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -297,7 +297,7 @@ export function PurchaseCreatePage() {
       })),
     };
 
-    createPurchase.mutate(payload, {
+    return createPurchase.mutate(payload, {
       onSuccess: (purchase) => {
         toast.success(paying ? `Purchase recorded and ${formatMoney(paymentAmount)} paid` : "Purchase recorded");
         const afterExpense = () => {
@@ -785,6 +785,7 @@ export function PurchaseCreatePage() {
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting || admin.length === 0}>
+            {isSubmitting && <Loader2 className="animate-spin" />}
             Record purchase
           </Button>
         </div>

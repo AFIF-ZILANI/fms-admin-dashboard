@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -224,7 +225,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
       transaction_ref: values.transaction_ref || undefined,
       note: values.note || undefined,
     };
-    createPayment.mutate(payload, {
+    return createPayment.mutate(payload, {
       onSuccess: () => {
         // A payment changes what the record still owes, the summaries and KPI tiles that read it, and the
         // account balance it moved.
@@ -496,6 +497,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
             </Button>
             {!fullyPaid && (
               <Button type="submit" disabled={isSubmitting || overpay || (!!refId && !selected)}>
+                {isSubmitting && <Loader2 className="animate-spin" />}
                 {selected && amount > 0 ? `Record ${formatMoney(amount)}` : "Record payment"}
               </Button>
             )}

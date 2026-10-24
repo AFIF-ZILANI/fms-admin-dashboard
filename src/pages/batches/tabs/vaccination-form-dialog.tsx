@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -79,7 +80,7 @@ export function VaccinationFormDialog({ open, onOpenChange, batch }: Vaccination
       doctor_id: values.doctor_id || undefined,
       remarks: values.remarks || undefined,
     };
-    createVaccination.mutate(payload, {
+    return createVaccination.mutate(payload, {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: ["vaccinations", batch.id] });
         toast.success("Vaccination logged");
@@ -159,6 +160,7 @@ export function VaccinationFormDialog({ open, onOpenChange, batch }: Vaccination
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Log vaccination
             </Button>
           </DialogFooter>

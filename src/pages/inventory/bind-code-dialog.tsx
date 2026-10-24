@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -89,7 +90,7 @@ export function BindCodeDialog({ open, onOpenChange, scopedLots, unit }: BindCod
 
   const onSubmit = (values: BindFormValues) => {
     if (!effectiveUnit) return;
-    bind.mutate(values, {
+    return bind.mutate(values, {
       onSuccess: () => {
         toast.success("Code bound");
         handleClose(false);
@@ -210,6 +211,7 @@ export function BindCodeDialog({ open, onOpenChange, scopedLots, unit }: BindCod
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="animate-spin" />}
                   Bind code
                 </Button>
               </DialogFooter>

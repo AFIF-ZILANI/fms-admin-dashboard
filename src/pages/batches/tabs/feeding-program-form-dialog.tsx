@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -65,7 +66,7 @@ export function FeedingProgramFormDialog({ open, onOpenChange, batchId }: Feedin
 
   const onSubmit = (values: FeedingProgramFormValues) => {
     const payload = { ...values, batch_id: batchId };
-    createProgram.mutate(payload, {
+    return createProgram.mutate(payload, {
       onSuccess: () => {
         toast.success("Feeding program row added");
         onOpenChange(false);
@@ -164,6 +165,7 @@ export function FeedingProgramFormDialog({ open, onOpenChange, batchId }: Feedin
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Add row
             </Button>
           </DialogFooter>

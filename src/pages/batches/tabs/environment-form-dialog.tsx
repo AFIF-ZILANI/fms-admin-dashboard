@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -79,7 +80,7 @@ export function EnvironmentFormDialog({ open, onOpenChange, batch }: Environment
   );
 
   const onSubmit = (values: EnvironmentFormValues) => {
-    createRecord.mutate(
+    return createRecord.mutate(
       { ...values, batch_id: batch.id },
       {
         onSuccess: () => {
@@ -219,6 +220,7 @@ export function EnvironmentFormDialog({ open, onOpenChange, batch }: Environment
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Log reading
             </Button>
           </DialogFooter>

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -70,7 +71,7 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
   );
 
   const onSubmit = (values: WeightFormValues) => {
-    createWeightRecord.mutate(
+    return createWeightRecord.mutate(
       { ...values, batch_id: batch.id },
       {
         onSuccess: () => {
@@ -167,6 +168,7 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               Log weight
             </Button>
           </DialogFooter>

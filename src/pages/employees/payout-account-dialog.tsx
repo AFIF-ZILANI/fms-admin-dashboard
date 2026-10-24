@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -95,7 +96,7 @@ export function PayoutAccountDialog({
 
   const onSubmit = (values: AccountFormValues) => {
     const blank = (v: string | undefined) => (v && v.trim() ? v.trim() : undefined);
-    createAccount.mutate(
+    return createAccount.mutate(
       {
         ...values,
         employee_id: employeeId,
@@ -260,6 +261,7 @@ export function PayoutAccountDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin" />}
               {replacing ? "Replace account" : "Add account"}
             </Button>
           </DialogFooter>
