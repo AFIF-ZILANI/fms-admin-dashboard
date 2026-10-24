@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NumericInput } from "@/components/utils/NumaricInput";
 import { usePageTitle } from "@/components/layout/use-page-title";
-import { useDelete, useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
+import { useDelete, useGetData, usePatchData, usePostData, type ApiError, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
 import { GENERIC_ITEM_UNITS, type Item, type ItemUnit, type Organization, type UnitRow } from "@/pages/inventory/types";
@@ -42,7 +42,15 @@ export function ItemFormPage() {
   const navigate = useNavigate();
   usePageTitle(isEdit ? "Edit item" : "Add item");
 
-  const { data: item } = useGetData<Item>(`/items/${id}`, ["items", id ?? ""], { enabled: isEdit });
+  const { data: cachedItem, isFetchedAfterMount } = useGetData<Item>(`/items/${id}`, ["items", id ?? ""], {
+    enabled: isEdit,
+  });
+  // Wait for this visit's fetch -- prefilling from a stale cached copy would show old units, and the
+  // one-shot reset below would never pick up the fresh data.
+  const item = isFetchedAfterMount ? cachedItem : undefined;
+  const manufacturerLink = item?.itemOrganizations?.find((o) => o.role === "MANUFACTURER");
+  // hoisted out of the closures below -- React Compiler crashes on `x?.field` inside them
+  const currentManufacturerId = manufacturerLink?.organization_id ?? "";
 
   const {
     control,
@@ -86,8 +94,7 @@ export function ItemFormPage() {
         category: item.category,
         unit: item.unit,
         lead_time_days: item.lead_time_days ?? "",
-        // can't prefill — GET /items/:id doesn't return existing organization links (docs/api.md §6.1)
-        organization_id: "",
+        organization_id: currentManufacturerId,
         is_unit_tracked: item.is_unit_tracked,
       });
       setPendingUnits(
@@ -138,6 +145,7 @@ export function ItemFormPage() {
     { item_id: string; unit: string; factor_to_base: number; is_purchasable: boolean; is_usable: boolean }
   >("/item-units", ["items"]);
   const deleteItemUnit = useDelete<null, string>((unitId) => `/item-units/${unitId}`, ["items"]);
+  const unlinkOrganization = useDelete<null, string>((linkId) => `/item-organizations/${linkId}`, ["organizations"]);
 
   const baseUnit = useWatch({ control, name: "unit" });
   const usedUnitCodes = new Set([baseUnit, ...pendingUnits.map((u) => u.unit)]);
@@ -167,15 +175,15 @@ export function ItemFormPage() {
   /** No PATCH on ItemUnit -- a changed factor or purpose flag is a delete-then-recreate of that
    * unit's row, same as an untouched removal. Deletes run first so a re-added unit doesn't collide
    * with the row it's replacing (item_id+unit is unique). */
-  async function syncItemUnits(itemId: string) {
+  async function syncItemUnits(itemId: string, units: PendingUnit[]) {
     const original = item?.itemUnits ?? [];
     const changed = (o: ItemUnit, p: PendingUnit) =>
       p.factor_to_base !== o.factor_to_base || p.is_purchasable !== o.is_purchasable || p.is_usable !== o.is_usable;
     const toRemove = original.filter((o) => {
-      const kept = pendingUnits.find((p) => p.unit === o.unit);
+      const kept = units.find((p) => p.unit === o.unit);
       return !kept || changed(o, kept);
     });
-    const toAdd = pendingUnits.filter((p) => {
+    const toAdd = units.filter((p) => {
       const orig = original.find((o) => o.unit === p.unit);
       return !orig || changed(orig, p);
     });
@@ -209,7 +217,7 @@ export function ItemFormPage() {
     return entries.length > 0 ? Object.fromEntries(entries) : undefined;
   };
 
-  const onSubmit = (values: ItemFormValues) => {
+  const onSubmit = async (values: ItemFormValues) => {
     setReorderError(null);
     const reorderFactor =
       reorderUnitValue === baseUnit
@@ -233,48 +241,59 @@ export function ItemFormPage() {
       meta_data: buildMetaData(),
     };
 
-    mutation.mutate(payload, {
-      onSuccess: (savedItem) => {
-        toast.success(isEdit ? "Item updated" : "Item created");
-        void syncItemUnits(savedItem.id).catch(() => {
-          toast.warning("Item saved, but updating its units failed. Try again from Edit.");
-        });
-        if (!organization_id) {
-          navigate("/inventory?tab=items");
-          return;
-        }
-        linkOrganization.mutate(
-          { item_id: savedItem.id, organization_id, role: "MANUFACTURER" },
-          {
-            onSuccess: () => navigate("/inventory?tab=items"),
-            onError: (error) => {
-              toast.warning(
-                error.status === 409
-                  ? "Item saved, but it's already linked to that organization."
-                  : `Item saved, but linking the organization failed: ${error.message}`
-              );
-              navigate("/inventory?tab=items");
-            },
-          }
-        );
-      },
-      onError: (error) => {
-        let hadFieldError = false;
-        for (const key of ["name", "category", "unit", "lead_time_days"] as const) {
-          const message = error.fieldError(key);
-          if (message) {
-            setError(key, { message });
-            hadFieldError = true;
-          }
-        }
-        const reorderMessage = error.fieldError("reorder_level");
-        if (reorderMessage) {
-          setReorderError(reorderMessage);
+    // A unit picked in the "Add a unit" row but never clicked Add still counts -- otherwise it's
+    // silently dropped on save.
+    const stagedFactor = Number(newUnitFactor);
+    const units =
+      newUnitCode && Number.isFinite(stagedFactor) && stagedFactor > 0 && (newUnitPurchasable || newUnitUsable)
+        ? [
+            ...pendingUnits,
+            { unit: newUnitCode, factor_to_base: newUnitFactor, is_purchasable: newUnitPurchasable, is_usable: newUnitUsable },
+          ]
+        : pendingUnits;
+
+    let savedItem: Item;
+    try {
+      savedItem = await mutation.mutateAsync(payload);
+    } catch (e) {
+      const error = e as ApiError;
+      let hadFieldError = false;
+      for (const key of ["name", "category", "unit", "lead_time_days"] as const) {
+        const message = error.fieldError(key);
+        if (message) {
+          setError(key, { message });
           hadFieldError = true;
         }
-        if (!hadFieldError) toast.error(error.message);
-      },
-    });
+      }
+      const reorderMessage = error.fieldError("reorder_level");
+      if (reorderMessage) {
+        setReorderError(reorderMessage);
+        hadFieldError = true;
+      }
+      if (!hadFieldError) toast.error(error.message);
+      return;
+    }
+
+    // Awaited (not fire-and-forget) so the button's loading state covers the whole save.
+    try {
+      await syncItemUnits(savedItem.id, units);
+    } catch {
+      toast.warning("Item saved, but updating its units failed. Try again from Edit.");
+    }
+
+    if (organization_id !== currentManufacturerId) {
+      try {
+        if (manufacturerLink) await unlinkOrganization.mutateAsync(manufacturerLink.id);
+        if (organization_id) {
+          await linkOrganization.mutateAsync({ item_id: savedItem.id, organization_id, role: "MANUFACTURER" });
+        }
+      } catch (e) {
+        toast.warning(`Item saved, but updating the manufacturer failed: ${(e as ApiError).message}`);
+      }
+    }
+
+    toast.success(isEdit ? "Item updated" : "Item created");
+    navigate("/inventory?tab=items");
   };
 
   if (isEdit && !item) {
@@ -642,7 +661,8 @@ export function ItemFormPage() {
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isEdit ? "Save changes" : "Create item"}
+            {isSubmitting && <Loader2 className="animate-spin" />}
+            {isSubmitting ? "Saving…" : isEdit ? "Save changes" : "Create item"}
           </Button>
         </div>
       </form>

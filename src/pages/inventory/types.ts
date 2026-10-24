@@ -50,6 +50,8 @@ export type Item = {
   created_at: string;
   updated_at: string;
   itemUnits?: ItemUnit[];
+  // only on GET /items/:id
+  itemOrganizations?: { id: string; organization_id: string; role: string }[];
 };
 
 export type Warehouse = {
