@@ -16,6 +16,7 @@ import { ItemFormPage } from "@/pages/inventory/item-form-page";
 import { AdminsListPage } from "@/pages/admins/admins-list-page";
 import { BatchesListPage } from "@/pages/batches/batches-list-page";
 import { BatchDetailPage } from "@/pages/batches/batch-detail-page";
+import { BatchCreatePage } from "@/pages/batches/batch-create-page";
 import { PurchasesListPage } from "@/pages/purchases/purchases-list-page";
 import { PurchaseCreatePage } from "@/pages/purchases/purchase-create-page";
 import { PurchaseDetailPage } from "@/pages/purchases/purchase-detail-page";
@@ -47,6 +48,7 @@ function App() {
             <Route index element={<Navigate to="/analytics" replace />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="batches" element={<BatchesListPage />} />
+            <Route path="batches/new" element={<BatchCreatePage />} />
             <Route path="batches/:id" element={<BatchDetailPage />} />
             <Route path="houses" element={<HousesListPage />} />
             <Route path="houses/:id" element={<HouseDetailPage />} />

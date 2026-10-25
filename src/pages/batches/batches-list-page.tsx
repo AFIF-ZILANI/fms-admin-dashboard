@@ -11,7 +11,6 @@ import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { BATCH_STATUSES, BIRD_BREEDS, PHASES, liveBirdCount, type Batch, type BatchStatus, type BirdBreed, type Phase } from "@/pages/batches/types";
-import { BatchCreateDialog } from "@/pages/batches/batch-create-dialog";
 import type { BatchPerformance } from "@/pages/analytics/types";
 
 const STATUS_TONE: Record<BatchStatus, Tone> = { RUNNING: "success", CLOSED: "neutral", SOLD: "neutral" };
@@ -57,7 +56,6 @@ export function BatchesListPage() {
   const [breedFilter, setBreedFilter] = useState<BirdBreed | "ALL">("ALL");
   const [phaseFilter, setPhaseFilter] = useState<Phase | "ALL">("ALL");
   const [sortBy, setSortBy] = useState<"starting_date" | "days_running" | "mortality_rate">("starting_date");
-  const [createOpen, setCreateOpen] = useState(false);
 
   const query = new URLSearchParams({ limit: "100" });
   if (statusFilter !== "ALL") query.set("status", statusFilter);
@@ -236,7 +234,7 @@ export function BatchesListPage() {
           </Select>
         </div>
 
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => navigate("/batches/new")}>
           <Plus />
           Create batch
         </Button>
@@ -253,11 +251,10 @@ export function BatchesListPage() {
           icon: Bird,
           title: "No batches yet",
           description: "Create your first batch to place chicks into a house.",
-          action: { label: "Create batch", onClick: () => setCreateOpen(true) },
+          action: { label: "Create batch", onClick: () => navigate("/batches/new") },
         }}
       />
 
-      <BatchCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }
