@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { CalendarDays, Coins, ListTree, Tags, Wheat } from "lucide-react";
+import { CalendarDays, Coins, ListTree, Plus, Tags, Wheat } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +11,7 @@ import type { ConsumptionByCategoryRow } from "@/pages/analytics/types";
 import type { Consumption, Item } from "@/pages/inventory/types";
 import type { Batch } from "@/pages/batches/types";
 import type { House } from "@/pages/houses/types";
+import { ConsumptionFormDialog } from "@/pages/inventory/consumption-form-dialog";
 
 export function ConsumptionLogTab() {
   const [batchFilter, setBatchFilter] = useState<string>("ALL");
@@ -17,6 +19,7 @@ export function ConsumptionLogTab() {
   const [itemFilter, setItemFilter] = useState<string>("ALL");
   const [occurredFrom, setOccurredFrom] = useState("");
   const [occurredTo, setOccurredTo] = useState("");
+  const [recordOpen, setRecordOpen] = useState(false);
 
   const query = new URLSearchParams({ limit: "100" });
   if (batchFilter !== "ALL") query.set("batch_id", batchFilter);
@@ -145,6 +148,10 @@ export function ConsumptionLogTab() {
           onChange={(e) => setOccurredTo(e.target.value)}
           aria-label="To date"
         />
+        <Button className="ml-auto" onClick={() => setRecordOpen(true)}>
+          <Plus />
+          Record consumption
+        </Button>
       </div>
 
       <DataTable
@@ -157,8 +164,11 @@ export function ConsumptionLogTab() {
           icon: ListTree,
           title: "No consumption recorded yet",
           description: "Feed, medicine, and equipment draws will show up here regardless of where they were recorded.",
+          action: { label: "Record consumption", onClick: () => setRecordOpen(true) },
         }}
       />
+
+      <ConsumptionFormDialog open={recordOpen} onOpenChange={setRecordOpen} />
     </div>
   );
 }
