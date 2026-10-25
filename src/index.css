@@ -7,7 +7,7 @@
    handlePrint() hoists #printable-codes to <body> before printing, so here we just hide
    its siblings (display:none, not visibility:hidden -- hidden content still occupies pages
    and emits trailing blanks) and let the grid flow naturally from the page top across pages.
-   Codes print at a fixed 2.5cm in a uniform grid that packs A4. */
+   Codes print at a fixed 19mm in a uniform grid that packs A4. */
 @media print {
   @page {
     size: A4;
@@ -22,15 +22,18 @@
     display: none !important;
   }
   #printable-codes {
-    /* Uniform grid of fixed 25mm tracks -- packs left-to-right, top-to-bottom with
-       even 3mm gaps. auto-fill maxes columns that fit A4's 194mm usable width:
-       7 cols (7*25 + 6*3 = 193mm). Square cells (no label) → 10 rows fit the 281mm
-       usable height (10*25 + 9*3 = 277mm), so 70 codes per page. */
+    /* Uniform grid of fixed 19mm tracks -- packs left-to-right, top-to-bottom with
+       even 2.5mm gaps. auto-fill maxes columns that fit A4's 194mm usable width:
+       9 cols (9*19 + 8*2.5 = 191mm). Square cells (no label) → 13 rows fit the 281mm
+       usable height (13*19 + 12*2.5 = 277mm), so 117 codes per page.
+       A UUID payload at level M is a 29-module QR, so a module is ~0.66mm -- well above
+       what phone cameras resolve; the 2.5mm gap (~4 modules) doubles as the quiet zone.
+       Going smaller doesn't fit another row/column until ~17mm, so 19mm is the sweet spot. */
     display: grid !important;
-    grid-template-columns: repeat(auto-fill, 25mm);
+    grid-template-columns: repeat(auto-fill, 19mm);
     justify-content: start;
     align-content: start;
-    gap: 3mm;
+    gap: 2.5mm;
     width: 100%;
     padding: 0;
     border: 0;
@@ -39,13 +42,13 @@
     max-height: none;
   }
   .print-cell {
-    width: 25mm;
+    width: 19mm;
     break-inside: avoid;
   }
   .print-cell svg {
     display: block;
-    width: 25mm !important;
-    height: 25mm !important;
+    width: 19mm !important;
+    height: 19mm !important;
   }
 }
 

@@ -18,7 +18,7 @@ type CodePrintSheetProps = {
 };
 
 // Shared QR print sheet -- used both after provisioning and to re-print any selection from the
-// table. Codes print at a fixed 2.5cm (index.css @media print) in a uniform grid that packs A4.
+// table. Codes print at a fixed 19mm (index.css @media print) in a uniform grid that packs A4.
 // The QR carries the full id; no human-readable label -- the workflow is scan-only.
 export function CodePrintSheet({ ids, open, onOpenChange }: CodePrintSheetProps) {
   // The sheet sits inside base-ui's fixed, screen-centered dialog, which becomes the containing
@@ -45,18 +45,18 @@ export function CodePrintSheet({ ids, open, onOpenChange }: CodePrintSheetProps)
         <DialogHeader className="print:hidden">
           <DialogTitle>Print codes</DialogTitle>
           <DialogDescription>
-            {ids.length} code{ids.length === 1 ? "" : "s"} · 2.5 cm on A4. In the browser print dialog
+            {ids.length} code{ids.length === 1 ? "" : "s"} · 1.9 cm, 117 per A4 page. In the browser print dialog
             set scale to "Actual size" / 100% so codes print at true size.
           </DialogDescription>
         </DialogHeader>
 
         <div
           id="printable-codes"
-          className="grid max-h-[60vh] grid-cols-[repeat(auto-fill,94px)] justify-center gap-3 overflow-auto rounded-md border border-border bg-white p-4"
+          className="grid max-h-[60vh] grid-cols-[repeat(auto-fill,72px)] justify-center gap-3 overflow-auto rounded-md border border-border bg-white p-4"
         >
           {ids.map((id) => (
-            <div key={id} className="print-cell w-[94px]">
-              <QRCodeSVG value={id} size={94} level="M" />
+            <div key={id} className="print-cell w-[72px]">
+              <QRCodeSVG value={id} size={72} level="M" />
             </div>
           ))}
         </div>
