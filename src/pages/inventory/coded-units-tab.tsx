@@ -117,7 +117,6 @@ export function CodedUnitsTab() {
   };
 
   const selectedCount = selectedIds.size;
-  const printSelected = () => setPrintIds([...selectedIds]);
 
   const columns: Column<StockUnit>[] = [
     {
@@ -246,10 +245,6 @@ export function CodedUnitsTab() {
         <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 px-3 py-2">
           <span className="text-sm font-medium">{selectedCount} selected</span>
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={printSelected}>
-              <Printer />
-              Print selected
-            </Button>
             <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDeleting}>
               <Trash2 />
               Delete selected
