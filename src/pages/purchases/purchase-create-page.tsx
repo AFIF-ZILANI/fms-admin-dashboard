@@ -135,6 +135,8 @@ type PendingExpense = {
   enabled: boolean;
   category: string;
   cost_type: CostType | "";
+  /** DIRECT costs only -- the server rejects a DIRECT expense with no batch. */
+  batch_id: string;
   amount: string;
   remarks: string;
   /** paid on the spot from this account; "" = not paid yet */
@@ -143,7 +145,7 @@ type PendingExpense = {
 };
 
 function blankExpense(): PendingExpense {
-  return { enabled: false, category: "", cost_type: "", amount: "", remarks: "", paid: true, paid_from_instrument_id: "" };
+  return { enabled: false, category: "", cost_type: "", batch_id: "", amount: "", remarks: "", paid: true, paid_from_instrument_id: "" };
 }
 
 export function PurchaseCreatePage() {
@@ -282,6 +284,10 @@ export function PurchaseCreatePage() {
         setExpenseError("Select a cost type.");
         return;
       }
+      if (expense.cost_type === "DIRECT" && !expense.batch_id) {
+        setExpenseError("A direct cost belongs to a batch — select the batch.");
+        return;
+      }
       if (!Number.isFinite(amount) || amount <= 0) {
         setExpenseError("Enter a valid expense amount.");
         return;
@@ -331,6 +337,7 @@ export function PurchaseCreatePage() {
           {
             category: expense.category,
             cost_type: expense.cost_type,
+            batch_id: (expense.cost_type === "DIRECT" && expense.batch_id) || undefined,
             amount: expenseAmount,
             date: values.purchase_date,
             remarks: expense.remarks || undefined,
@@ -343,7 +350,9 @@ export function PurchaseCreatePage() {
               afterExpense();
             },
             onError: (error) => {
-              toast.warning(`Purchase saved, but the expense failed: ${error.message}`);
+              // Surface the field reason (e.g. "A DIRECT cost needs a batch"), not just "Validation failed".
+              const reason = Object.values(error.fields ?? {})[0] ?? error.message;
+              toast.warning(`Purchase saved, but the expense failed: ${reason}`);
               afterExpense();
             },
           }
@@ -759,6 +768,28 @@ export function PurchaseCreatePage() {
                   </SelectContent>
                 </Select>
               </div>
+              {expense.cost_type === "DIRECT" && (
+                <div className="flex flex-col gap-1.5">
+                  <Label>Batch</Label>
+                  <Select
+                    value={expense.batch_id}
+                    onValueChange={(v) => setExpense((p) => ({ ...p, batch_id: v ?? "" }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {(v: string) => runningBatches?.results.find((b) => b.id === v)?.batch_code ?? "Select batch"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(runningBatches?.results ?? []).map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.batch_code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="flex flex-col gap-1.5">
                 <Label>Amount</Label>
                 <NumericInput

@@ -43,6 +43,9 @@ const expenseSchema = z
     paid_from_instrument_id: z.string().optional(),
   })
   .superRefine((d, ctx) => {
+    // Mirrors the server (and the Expense_direct_has_batch CHECK): a DIRECT cost is charged to a batch.
+    if (d.cost_type === "DIRECT" && !d.batch_id)
+      ctx.addIssue({ code: "custom", path: ["batch_id"], message: "A direct cost needs a batch" });
     if (PAYROLL_CATEGORIES.includes(d.category) || d.payment === "UNPAID") return;
     if (d.payment === "PARTIAL") {
       const paid = Number(d.partial_amount);
@@ -99,6 +102,7 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
   const queryClient = useQueryClient();
   const category = useWatch({ control, name: "category" });
   const payment = useWatch({ control, name: "payment" });
+  const costType = useWatch({ control, name: "cost_type" });
   const amount = Number(useWatch({ control, name: "amount" })) || 0;
   const partial = Number(useWatch({ control, name: "partial_amount" })) || 0;
   const paidByPayroll = PAYROLL_CATEGORIES.includes(category);
@@ -207,7 +211,7 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="batch_id">Batch (optional)</Label>
+            <Label htmlFor="batch_id">{costType === "DIRECT" ? "Batch" : "Batch (optional)"}</Label>
             <Controller
               control={control}
               name="batch_id"
@@ -228,6 +232,7 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
                 </Select>
               )}
             />
+            {errors.batch_id && <p className="text-xs text-destructive">{errors.batch_id.message}</p>}
           </div>
 
           <div className="flex flex-col gap-1.5">
