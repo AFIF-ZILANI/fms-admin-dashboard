@@ -13,8 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/utils/NumaricInput";
 import { usePostData } from "@/lib/api";
 import { CODES_PER_PAGE, PRINT_LAYOUT, type StockUnit } from "@/pages/inventory/types";
 
@@ -130,12 +130,8 @@ export function ProvisionCodesDialog({ open, onOpenChange, onProvisioned }: Prov
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="amount">{mode === "pages" ? "How many A4 pages?" : "How many codes?"}</Label>
-            <Input
+            <NumericInput
               id="amount"
-              type="number"
-              step="1"
-              min="1"
-              max={mode === "pages" ? MAX_PAGES : MAX_CODES}
               {...register("amount")}
               aria-invalid={!!errors.amount}
             />
