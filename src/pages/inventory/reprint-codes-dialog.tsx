@@ -19,21 +19,25 @@ import { CODES_PER_PAGE, type StockUnit } from "@/pages/inventory/types";
 const API_PAGE = 100;
 
 type Mode = "pages" | "codes";
+type Source = "UNASSIGNED" | "PRINTED";
 
 type ReprintCodesDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Blank (UNASSIGNED) codes on the server -- the most that can be reprinted. */
-  available: number;
+  /** Server counts per printable status -- caps how many each source can print. */
+  counts: Record<Source, number>;
   /** Fired with the fetched ids so the caller can open the print sheet. */
   onReady: (ids: string[]) => void;
 };
 
-// Reprint blank codes by count/pages, not just the table's visible page -- fetches the newest N
-// UNASSIGNED ids straight from the API (newest first, matching the list order).
+// Print blank codes by count/pages, not just the table's visible page -- fetches the newest N ids
+// of the chosen source straight from the API (newest first, matching the list order): never-printed
+// UNASSIGNED codes, or PRINTED ones again for a lost/damaged sheet.
 // ponytail: fans out ceil(N/100) list calls (12 for 10 pages); add an ids-only endpoint if N grows.
-export function ReprintCodesDialog({ open, onOpenChange, available, onReady }: ReprintCodesDialogProps) {
+export function ReprintCodesDialog({ open, onOpenChange, counts, onReady }: ReprintCodesDialogProps) {
+  const [source, setSource] = useState<Source>("UNASSIGNED");
   const [mode, setMode] = useState<Mode>("pages");
+  const available = counts[source];
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,8 +62,8 @@ export function ReprintCodesDialog({ open, onOpenChange, available, onReady }: R
     if (mode === "pages" ? n > availablePages : count > available) {
       return setError(
         mode === "pages"
-          ? `Only ${availablePages} page${availablePages === 1 ? "" : "s"} of blank codes available`
-          : `Only ${available} blank code${available === 1 ? "" : "s"} available`
+          ? `Only ${availablePages} page${availablePages === 1 ? "" : "s"} of codes available`
+          : `Only ${available} code${available === 1 ? "" : "s"} available`
       );
     }
     // The last of the requested pages may run short -- print what exists for it.
@@ -67,7 +71,7 @@ export function ReprintCodesDialog({ open, onOpenChange, available, onReady }: R
     setLoading(true);
     try {
       const calls = Array.from({ length: Math.ceil(wanted / API_PAGE) }, (_, i) =>
-        apiFetch<Paginated<StockUnit>>(`/stock-units?status=UNASSIGNED&limit=${API_PAGE}&page=${i + 1}`)
+        apiFetch<Paginated<StockUnit>>(`/stock-units?status=${source}&limit=${API_PAGE}&page=${i + 1}`)
       );
       const ids = (await Promise.all(calls)).flatMap((p) => p.results.map((u) => u.id)).slice(0, wanted);
       handleClose(false);
@@ -90,12 +94,30 @@ export function ReprintCodesDialog({ open, onOpenChange, available, onReady }: R
         <DialogHeader>
           <DialogTitle>Print blank codes</DialogTitle>
           <DialogDescription>
-            {available} blank code{available === 1 ? "" : "s"} available ({availablePages} page
-            {availablePages === 1 ? "" : "s"}). Prints the newest first.
+            {counts.UNASSIGNED} not printed yet · {counts.PRINTED} printed, not bound. Prints the newest first.
           </DialogDescription>
         </DialogHeader>
 
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1" role="radiogroup" aria-label="Which codes">
+            {(["UNASSIGNED", "PRINTED"] as const).map((s) => (
+              <Button
+                key={s}
+                type="button"
+                role="radio"
+                aria-checked={source === s}
+                variant={source === s ? "outline" : "ghost"}
+                size="sm"
+                onClick={() => {
+                  setSource(s);
+                  setError(null);
+                }}
+              >
+                {s === "UNASSIGNED" ? `New (${counts.UNASSIGNED})` : `Reprint printed (${counts.PRINTED})`}
+              </Button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1" role="radiogroup" aria-label="Print by">
             {(["pages", "codes"] as const).map((m) => (
               <Button

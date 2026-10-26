@@ -90,8 +90,10 @@ export type Organization = {
 
 export type LowStockItem = Item & { current_balance: string };
 
-export const STOCK_UNIT_STATUSES = ["UNASSIGNED", "IN_STOCK", "IN_USE", "CONSUMED", "DISPOSED"] as const;
+export const STOCK_UNIT_STATUSES = ["UNASSIGNED", "PRINTED", "BOUND", "IN_USE", "CONSUMED", "DISPOSED"] as const;
 export type StockUnitStatus = (typeof STOCK_UNIT_STATUSES)[number];
+/** What "Change status" may pick -- UNASSIGNED/PRINTED only come from provisioning and the print sheet. */
+export const MANUAL_STOCK_UNIT_STATUSES = ["BOUND", "IN_USE", "CONSUMED", "DISPOSED"] as const;
 
 export const ASSET_STATUSES = ["ACTIVE", "RETIRED", "DISPOSED"] as const;
 export type AssetStatus = (typeof ASSET_STATUSES)[number];

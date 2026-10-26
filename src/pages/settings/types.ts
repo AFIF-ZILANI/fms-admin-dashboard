@@ -1,4 +1,4 @@
-export const STOCK_UNIT_STATUSES = ["UNASSIGNED", "IN_STOCK", "IN_USE", "CONSUMED", "DISPOSED"] as const;
+export const STOCK_UNIT_STATUSES = ["UNASSIGNED", "PRINTED", "BOUND", "IN_USE", "CONSUMED", "DISPOSED"] as const;
 export type StockUnitStatus = (typeof STOCK_UNIT_STATUSES)[number];
 
 export type StockUnit = {

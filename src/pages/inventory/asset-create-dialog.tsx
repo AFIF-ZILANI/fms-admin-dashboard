@@ -56,7 +56,7 @@ export function AssetCreateDialog({ open, onOpenChange }: AssetCreateDialogProps
   // stable-key mechanism (e.g. an is_system flag) if renaming this
   // specific category becomes a real risk.
   const { data: eligibleUnits } = useGetData<Paginated<StockUnit>>(
-    "/stock-units?status=IN_STOCK&category=EQUIPMENT&limit=100",
+    "/stock-units?status=BOUND&category=EQUIPMENT&limit=100",
     ["stock-units", "eligible-for-asset"]
   );
   const units = (eligibleUnits?.results ?? []).filter((u) => !u.asset);

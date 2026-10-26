@@ -20,7 +20,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { STOCK_UNIT_STATUS_TONE } from "@/components/shared/status-tone";
 import { useGetData, usePatchData, useDelete, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
-import { STOCK_UNIT_STATUSES, type StockUnit, type StockUnitStatus } from "@/pages/inventory/types";
+import { MANUAL_STOCK_UNIT_STATUSES, STOCK_UNIT_STATUSES, type StockUnit, type StockUnitStatus } from "@/pages/inventory/types";
 import { ProvisionCodesDialog } from "@/pages/inventory/provision-codes-dialog";
 import { ReprintCodesDialog } from "@/pages/inventory/reprint-codes-dialog";
 import { CodePrintSheet } from "@/pages/inventory/code-print-sheet";
@@ -159,7 +159,7 @@ export function CodedUnitsTab() {
           <Button variant="ghost" size="sm" onClick={() => setStatusUnit(u)}>
             Change status
           </Button>
-          {u.status === "UNASSIGNED" && (
+          {u.status === "PRINTED" && (
             <Button variant="outline" size="sm" onClick={() => setBindUnit(u)}>
               Bind
             </Button>
@@ -179,10 +179,11 @@ export function CodedUnitsTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPICard label="Total codes" value={totalCodes} hint="ever provisioned" icon={Boxes} isLoading={!counts} />
-        <KPICard label="Blank codes" value={counts?.UNASSIGNED ?? 0} hint="printed, ready to bind" tone={counts && counts.UNASSIGNED === 0 ? "warning" : undefined} icon={QrCodeIcon} isLoading={!counts} />
-        <KPICard label="In stock" value={counts?.IN_STOCK ?? 0} hint="bound, in the warehouse" icon={CheckCircle2} isLoading={!counts} />
+        <KPICard label="Not printed" value={counts?.UNASSIGNED ?? 0} hint="provisioned, waiting to print" icon={QrCodeIcon} isLoading={!counts} />
+        <KPICard label="Printed" value={counts?.PRINTED ?? 0} hint="labels ready to bind" tone={counts && !counts.PRINTED ? "warning" : undefined} icon={Printer} isLoading={!counts} />
+        <KPICard label="Bound" value={counts?.BOUND ?? 0} hint="bound to a lot, in the warehouse" icon={CheckCircle2} isLoading={!counts} />
         <KPICard label="In use" value={counts?.IN_USE ?? 0} hint="out in a house" icon={Clock} isLoading={!counts} />
         <KPICard label="Consumed" value={counts?.CONSUMED ?? 0} hint="used up" icon={PackageCheck} isLoading={!counts} />
         <KPICard label="Disposed" value={counts?.DISPOSED ?? 0} hint="discarded unused" icon={XCircle} isLoading={!counts} />
@@ -320,7 +321,7 @@ export function CodedUnitsTab() {
       <ReprintCodesDialog
         open={reprintOpen}
         onOpenChange={setReprintOpen}
-        available={counts?.UNASSIGNED ?? 0}
+        counts={{ UNASSIGNED: counts?.UNASSIGNED ?? 0, PRINTED: counts?.PRINTED ?? 0 }}
         onReady={setPrintIds}
       />
       <CodePrintSheet ids={printIds ?? []} open={!!printIds} onOpenChange={(open) => !open && setPrintIds(null)} />
@@ -387,7 +388,7 @@ function ChangeStatusDialog({ unit, onOpenChange }: { unit: StockUnit | null; on
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {STOCK_UNIT_STATUSES.map((s) => (
+            {MANUAL_STOCK_UNIT_STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
                 {humanizeEnum(s)}
               </SelectItem>

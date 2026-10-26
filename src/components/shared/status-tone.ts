@@ -9,8 +9,9 @@ export function activeStatus(isActive: boolean): { tone: Tone; label: string } {
 
 /** Shared across coded-units-tab.tsx and stock-unit-detail-sheet.tsx -- keeping it here (rather than exported from a tab component) avoids a module cycle between the two. */
 export const STOCK_UNIT_STATUS_TONE: Record<StockUnitStatus, Tone> = {
-  UNASSIGNED: "info",
-  IN_STOCK: "success",
+  UNASSIGNED: "warning",
+  PRINTED: "info",
+  BOUND: "success",
   IN_USE: "info",
   CONSUMED: "neutral",
   DISPOSED: "neutral",

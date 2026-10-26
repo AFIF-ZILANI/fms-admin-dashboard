@@ -77,7 +77,7 @@ export function BindCodeDialog({ open, onOpenChange, scopedLots, unit }: BindCod
 
   const bind = usePostData<StockUnit, BindFormValues>(() => `/stock-units/${effectiveUnit?.id}/bind`, ["stock-units"]);
 
-  const canBind = effectiveUnit?.status === "UNASSIGNED";
+  const canBind = effectiveUnit?.status === "PRINTED";
 
   // In scoped mode the lots are already known (the just-created purchase's
   // own line items) -- no item→lot search needed, just pick from these.
@@ -143,14 +143,16 @@ export function BindCodeDialog({ open, onOpenChange, scopedLots, unit }: BindCod
             <div className="flex items-center gap-2 text-sm">
               <span className="font-mono text-xs">{effectiveUnit.id}</span>
               <StatusBadge
-                tone={effectiveUnit.status === "UNASSIGNED" ? "info" : "warning"}
+                tone={canBind ? "info" : "warning"}
                 label={humanizeEnum(effectiveUnit.status)}
               />
             </div>
           )}
           {effectiveUnit && !canBind && (
             <p className="text-xs text-destructive">
-              This code is already {effectiveUnit.status.toLowerCase()} — only unassigned codes can be bound.
+              {effectiveUnit.status === "UNASSIGNED"
+                ? "This code hasn't been printed yet — print it (and confirm it printed) before binding."
+                : `This code is already ${effectiveUnit.status.toLowerCase()} — only printed codes can be bound.`}
             </p>
           )}
 
