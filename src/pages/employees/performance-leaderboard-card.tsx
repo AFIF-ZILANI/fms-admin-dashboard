@@ -11,6 +11,8 @@ const TOP_N = 5;
 
 export function PerformanceLeaderboardCard() {
   const [days, setDays] = useState(30);
+  // Captured once per mount: Date.now() during render is impure (each re-render would shift it).
+  const [now] = useState(() => Date.now());
 
   const {
     data: entries,
@@ -25,7 +27,7 @@ export function PerformanceLeaderboardCard() {
   const isLoading = entriesLoading || employeesLoading;
   const isError = entriesError || employeesError;
 
-  const since = Date.now() - days * 86_400_000;
+  const since = now - days * 86_400_000;
   const sumByEmployee = new Map<string, number>();
   for (const e of entries?.results ?? []) {
     if (e.status !== "ACTIVE") continue; // voided and disputed entries don't rank

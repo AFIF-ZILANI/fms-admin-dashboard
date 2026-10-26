@@ -21,6 +21,8 @@ import { useOutstanding } from "@/pages/sales/use-outstanding";
 export function PurchasesAnalyticsSection() {
   const [open, setOpen] = useState(true);
   const [days, setDays] = useState(30);
+  // Captured once per mount: Date.now() during render is impure (each re-render would shift it).
+  const [now] = useState(() => Date.now());
 
   const { data: byCategory, isLoading: byCategoryLoading } = useGetData<PurchasesByCategoryRow[]>(
     `/analytics/purchases/by-category?days=${days}`,
@@ -36,7 +38,7 @@ export function PurchasesAnalyticsSection() {
   const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("PURCHASE");
 
   const totalSpend = (byCategory ?? []).reduce((sum, r) => sum + parseFloat(r.total), 0);
-  const since = Date.now() - days * 86_400_000;
+  const since = now - days * 86_400_000;
   const purchaseCount = (purchases?.results ?? []).filter((p) => new Date(p.purchase_date).getTime() >= since).length;
   // Money still owed is a running total, not a windowed one -- what's unpaid from four
   // months ago is just as payable. Hinted on the card so it isn't read as a range figure.

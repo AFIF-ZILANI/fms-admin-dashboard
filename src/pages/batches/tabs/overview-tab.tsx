@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Bird, Calendar, Home, Scale, Skull, TrendingUp } from "lucide-react";
 import { KPICard } from "@/components/shared/kpi-card";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -11,6 +12,8 @@ function ageInDays(startingDate: string): number {
 }
 
 export function OverviewTab({ batch }: { batch: Batch }) {
+  // Captured once per mount: Date.now() during render is impure (each re-render would shift it).
+  const [now] = useState(() => Date.now());
   const { data: mortalityLogs, isLoading: mortalityLoading } = useGetData<Paginated<MortalityLog>>(
     `/mortality-logs?batch_id=${batch.id}&limit=100`,
     ["mortality-logs", batch.id]
@@ -27,7 +30,7 @@ export function OverviewTab({ batch }: { batch: Batch }) {
   const occupiedHouses = batch.houseBalances.filter((b) => b.quantity > 0);
 
   const daysToSelling = Math.ceil(
-    (new Date(batch.expected_selling_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    (new Date(batch.expected_selling_date).getTime() - now) / (1000 * 60 * 60 * 24),
   );
   const latestWeight = (weightRecords?.results ?? [])
     .slice()

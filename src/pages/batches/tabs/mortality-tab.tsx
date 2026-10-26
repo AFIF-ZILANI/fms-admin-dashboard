@@ -40,12 +40,13 @@ export function MortalityTab({ batch }: { batch: Batch }) {
       const key = log.date.slice(0, 10);
       byDate.set(key, (byDate.get(key) ?? 0) + log.count_died);
     }
-    const sortedDates = Array.from(byDate.keys()).sort();
+    const series: { date: string; cumulative: number }[] = [];
     let running = 0;
-    return sortedDates.map((date) => {
+    for (const date of Array.from(byDate.keys()).sort()) {
       running += byDate.get(date)!;
-      return { date, cumulative: running };
-    });
+      series.push({ date, cumulative: running });
+    }
+    return series;
   }, [data]);
 
   return (
