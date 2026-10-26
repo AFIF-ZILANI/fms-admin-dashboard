@@ -1,3 +1,5 @@
+import type { Expense } from "@/pages/finance/types";
+
 export const DISCOUNT_TYPES = ["FLAT", "PERCENT"] as const;
 export type DiscountType = (typeof DISCOUNT_TYPES)[number];
 
@@ -35,4 +37,6 @@ export type Purchase = {
   // unlike GET /api/suppliers, this has no `name`/`mobile`. Look those up
   // separately (see supplierName() usage in the list/detail pages).
   supplier: { id: string; company: string | null } | null;
+  /** Detail endpoint only: transport/labour landed into these items' cost (Expense cost_type STOCK). */
+  charges?: Expense[];
 };

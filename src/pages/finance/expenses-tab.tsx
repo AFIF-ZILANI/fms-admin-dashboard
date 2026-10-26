@@ -20,11 +20,16 @@ import { useGetData, type Paginated } from "@/lib/api";
 import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import { ExpenseCreateDialog } from "@/pages/finance/expense-create-dialog";
-import { COST_TYPES, type Expense, type ExpenseSummary } from "@/pages/finance/types";
+import { EXPENSE_COST_TYPES, type Expense, type ExpenseSummary } from "@/pages/finance/types";
 
 /** Wage and fee expenses are paid by their payroll payout, never by a payment here. */
 const PAYROLL_CATEGORIES = ["SALARY", "FESTIVAL_BONUS", "SALARY_TRANSFER_FEE"];
-const COST_TYPE_LABEL: Record<string, string> = { DIRECT: "Batch", SHARED_PERIOD: "Farm-wide", SHARED_CAPITAL: "Capital" };
+const COST_TYPE_LABEL: Record<string, string> = {
+  DIRECT: "Batch",
+  SHARED_PERIOD: "Farm-wide",
+  SHARED_CAPITAL: "Capital",
+  STOCK: "Purchase charge",
+};
 import type { LookupRow } from "@/pages/settings/lookup-types";
 
 export function ExpensesTab() {
@@ -155,13 +160,13 @@ export function ExpensesTab() {
           <Label htmlFor="expense-cost-type-filter">Cost type</Label>
           <Select value={costType} onValueChange={(v) => setCostType(v ?? "ALL")}>
             <SelectTrigger id="expense-cost-type-filter" className="w-40">
-              <SelectValue>{(v: string) => (v === "ALL" ? "All cost types" : humanizeEnum(v))}</SelectValue>
+              <SelectValue>{(v: string) => (v === "ALL" ? "All cost types" : (COST_TYPE_LABEL[v] ?? humanizeEnum(v)))}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All cost types</SelectItem>
-              {COST_TYPES.map((c) => (
+              {EXPENSE_COST_TYPES.map((c) => (
                 <SelectItem key={c} value={c}>
-                  {humanizeEnum(c)}
+                  {COST_TYPE_LABEL[c] ?? humanizeEnum(c)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -217,7 +222,12 @@ export function ExpensesTab() {
           icon={Wallet}
           isLoading={summaryLoading}
           isError={summaryError}
-          hint={summary ? `${summary.count.toLocaleString()} expense${summary.count === 1 ? "" : "s"}` : undefined}
+          hint={
+            summary
+              ? `${summary.count.toLocaleString()} expense${summary.count === 1 ? "" : "s"}` +
+                (summary.stock > 0 ? ` · ${formatMoney(summary.stock)} purchase charges (in stock cost)` : "")
+              : undefined
+          }
         />
         <KPICard
           label="Still to pay"

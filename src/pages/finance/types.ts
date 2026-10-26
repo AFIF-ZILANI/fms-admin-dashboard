@@ -1,11 +1,15 @@
 export const COST_TYPES = ["DIRECT", "SHARED_PERIOD", "SHARED_CAPITAL"] as const;
 export type CostType = (typeof COST_TYPES)[number];
+/** Every cost type an expense can carry: STOCK is a purchase's charge, only created through its purchase. */
+export const EXPENSE_COST_TYPES = [...COST_TYPES, "STOCK"] as const;
+export type ExpenseCostType = (typeof EXPENSE_COST_TYPES)[number];
 
 export type Expense = {
   id: string;
   batch_id: string | null;
   category: string;
-  cost_type: CostType;
+  cost_type: ExpenseCostType;
+  purchase_id?: string | null;
   amount: string;
   date: string;
   remarks: string | null;
@@ -147,6 +151,8 @@ export type ExpenseSummary = {
   direct: number;
   shared: number;
   capital: number;
+  /** Purchase charges -- money out, but costed through stock (landed cost), not as an expense. */
+  stock: number;
   paid: number;
   unpaid: number;
   by_category: { code: string; label: string; amount: number }[];

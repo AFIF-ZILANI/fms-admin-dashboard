@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, CreditCard, Receipt } from "lucide-react";
+import { ArrowLeft, CreditCard, Plus, Receipt, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,17 +9,20 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { paymentStatus } from "@/pages/sales/types";
 import type { Purchase, PurchaseItemLine } from "@/pages/purchases/types";
 import type { Supplier } from "@/pages/suppliers/types";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
+import { PurchaseChargeDialog } from "@/pages/purchases/purchase-charge-dialog";
+import type { LookupRow } from "@/pages/settings/lookup-types";
 
 export function PurchaseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [chargeOpen, setChargeOpen] = useState(false);
 
   const { data: purchase, isLoading } = useGetData<Purchase>(`/purchases/${id}`, ["purchases", id]);
   usePageTitle(purchase?.invoice_no ?? "Purchase");
@@ -28,12 +31,34 @@ export function PurchaseDetailPage() {
   const { data: suppliers } = useGetData<Paginated<Supplier>>("/suppliers?limit=100", ["suppliers"]);
   const supplierName = suppliers?.results.find((s) => s.id === purchase?.supplier_id)?.profile.name;
   const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("PURCHASE");
+  const { data: expenseCategories } = useGetData<Paginated<LookupRow>>(
+    "/expense-categories?active=true&limit=100",
+    ["expense-categories", "active"]
+  );
+  const categoryLabel = (code: string) =>
+    expenseCategories?.results.find((c) => c.code === code)?.label ?? humanizeEnum(code);
+
+  // Landed cost, same rule as the server (lib/purchase-charges.ts): charges split over lines by value.
+  const charges = purchase?.charges ?? [];
+  const chargesTotal = charges.reduce((sum, c) => sum + Number(c.amount), 0);
+  const linesTotal = (purchase?.items ?? []).reduce((sum, l) => sum + Number(l.total_price), 0);
+  const ratio = linesTotal > 0 ? chargesTotal / linesTotal : 0;
 
   const columns: Column<PurchaseItemLine>[] = [
     { key: "item", header: "Item", render: (l) => l.item.name },
     { key: "quantity", header: "Quantity", render: (l) => `${l.quantity} ${l.unit}`, numeric: true },
     { key: "unit_price", header: "Unit price", render: (l) => formatMoney(l.unit_price), numeric: true },
     { key: "total", header: "Total", render: (l) => formatMoney(l.total_price), numeric: true },
+    ...(ratio > 0
+      ? [
+          {
+            key: "landed",
+            header: "Real unit cost",
+            render: (l: PurchaseItemLine) => formatMoney((Number(l.total_price) * (1 + ratio)) / Number(l.quantity)),
+            numeric: true,
+          },
+        ]
+      : []),
     { key: "mfg", header: "Mfg date", render: (l) => (l.mfg_date ? new Date(l.mfg_date).toLocaleDateString() : "—") },
     {
       key: "exp",
@@ -108,6 +133,46 @@ export function PurchaseDetailPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Extra charges</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Transport, labour, unloading — added to the items' cost by value
+              {ratio > 0 && ` (+${(ratio * 100).toFixed(1)}% on each item)`}.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setChargeOpen(true)}>
+            <Plus />
+            Add charge
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {charges.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No charges on this purchase.</p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-border text-sm">
+              {charges.map((c) => (
+                <li key={c.id} className="flex items-center justify-between gap-4 py-2">
+                  <span className="flex items-center gap-2">
+                    <Truck className="size-4 text-muted-foreground" />
+                    {categoryLabel(c.category)}
+                    {c.remarks && <span className="text-muted-foreground">· {c.remarks}</span>}
+                    <span className="text-xs text-muted-foreground">{new Date(c.date).toLocaleDateString()}</span>
+                  </span>
+                  <span className="tabular-nums">{formatMoney(c.amount)}</span>
+                </li>
+              ))}
+              <li className="flex items-center justify-between py-2 font-medium">
+                <span>Goods {formatMoney(linesTotal)} + charges</span>
+                <span className="tabular-nums">{formatMoney(linesTotal + chargesTotal)}</span>
+              </li>
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <PurchaseChargeDialog purchaseId={purchase.id} open={chargeOpen} onOpenChange={setChargeOpen} />
       <PaymentCreateDialog
         open={paymentOpen}
         onOpenChange={setPaymentOpen}

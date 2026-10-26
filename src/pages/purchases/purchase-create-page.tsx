@@ -29,7 +29,6 @@ import type { Supplier } from "@/pages/suppliers/types";
 import type { PaymentInstrument } from "@/pages/payments/types";
 import { DISCOUNT_TYPES, type DiscountType, type Purchase } from "@/pages/purchases/types";
 import type { Batch } from "@/pages/batches/types";
-import { COST_TYPES, type CostType } from "@/pages/finance/types";
 import { BindCodesPrompt } from "@/pages/purchases/bind-codes-prompt";
 import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 
@@ -131,21 +130,20 @@ function blankPayment(purchaseDate: string): PendingPayment {
   };
 }
 
-type PendingExpense = {
-  enabled: boolean;
+/** Transport, labour, unloading paid for this delivery -- added to the stock's cost (landed cost),
+ * split over the lines by value on the server. Never a separate batch/farm expense. */
+type PendingCharge = {
+  key: string;
   category: string;
-  cost_type: CostType | "";
-  /** DIRECT costs only -- the server rejects a DIRECT expense with no batch. */
-  batch_id: string;
   amount: string;
   remarks: string;
-  /** paid on the spot from this account; "" = not paid yet */
-  paid_from_instrument_id: string;
+  /** paid on the spot from paid_from_instrument_id; otherwise owed */
   paid: boolean;
+  paid_from_instrument_id: string;
 };
 
-function blankExpense(): PendingExpense {
-  return { enabled: false, category: "", cost_type: "", batch_id: "", amount: "", remarks: "", paid: true, paid_from_instrument_id: "" };
+function blankCharge(): PendingCharge {
+  return { key: crypto.randomUUID(), category: "", amount: "", remarks: "", paid: true, paid_from_instrument_id: "" };
 }
 
 export function PurchaseCreatePage() {
@@ -154,8 +152,10 @@ export function PurchaseCreatePage() {
   const [bindPromptPurchase, setBindPromptPurchase] = useState<Purchase | null>(null);
   const [payment, setPayment] = useState<PendingPayment>(() => blankPayment(new Date().toISOString().slice(0, 10)));
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [expense, setExpense] = useState<PendingExpense>(blankExpense);
-  const [expenseError, setExpenseError] = useState<string | null>(null);
+  const [charges, setCharges] = useState<PendingCharge[]>([]);
+  const [chargeError, setChargeError] = useState<string | null>(null);
+  const setCharge = (key: string, patch: Partial<PendingCharge>) =>
+    setCharges((list) => list.map((c) => (c.key === key ? { ...c, ...patch } : c)));
   const [detailsIndex, setDetailsIndex] = useState<number | null>(null);
 
   const {
@@ -202,7 +202,6 @@ export function PurchaseCreatePage() {
   );
 
   const createPurchase = usePostData<Purchase, Record<string, unknown>>("/purchases", ["purchases"]);
-  const createExpense = usePostData<unknown, Record<string, unknown>>("/expenses", ["expenses"]);
 
   const itemOptions = items?.results ?? [];
   const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
@@ -238,6 +237,7 @@ export function PurchaseCreatePage() {
   /** The amount that will actually be posted as a Payment. "Paid in full" always tracks the live
    * net total rather than a stored number, so it can't go stale if a line or discount changes after picking it. */
   const paymentAmount = payment.status === "PAID" ? netTotalPreview : Number(payment.amount);
+  const chargesTotal = charges.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
   const onSubmit = (values: PurchaseFormValues) => {
     for (const [i, line] of values.items.entries()) {
@@ -273,29 +273,13 @@ export function PurchaseCreatePage() {
       }
     }
 
-    setExpenseError(null);
-    if (expense.enabled) {
-      const amount = Number(expense.amount);
-      if (!expense.category) {
-        setExpenseError("Select an expense category.");
-        return;
-      }
-      if (!expense.cost_type) {
-        setExpenseError("Select a cost type.");
-        return;
-      }
-      if (expense.cost_type === "DIRECT" && !expense.batch_id) {
-        setExpenseError("A direct cost belongs to a batch — select the batch.");
-        return;
-      }
-      if (!Number.isFinite(amount) || amount <= 0) {
-        setExpenseError("Enter a valid expense amount.");
-        return;
-      }
-      if (expense.paid && !expense.paid_from_instrument_id) {
-        setExpenseError("Select the account the expense was paid from.");
-        return;
-      }
+    setChargeError(null);
+    for (const [i, c] of charges.entries()) {
+      const amount = Number(c.amount);
+      if (!c.category) return setChargeError(`Charge ${i + 1}: select a category.`);
+      if (!Number.isFinite(amount) || amount <= 0) return setChargeError(`Charge ${i + 1}: enter a valid amount.`);
+      if (c.paid && !c.paid_from_instrument_id)
+        return setChargeError(`Charge ${i + 1}: select the account it was paid from.`);
     }
 
     // The payment travels with the purchase and is written in the same transaction, so a purchase
@@ -318,48 +302,26 @@ export function PurchaseCreatePage() {
         expiration_date: line.expiration_date || undefined,
         batch_id: (isChickItem(line.item_id) && line.batch_id) || undefined,
       })),
+      // Written in the purchase's own transaction -- a charge can't be lost the way a second request could.
+      charges: charges.map((c) => ({
+        category: c.category,
+        amount: Number(c.amount),
+        remarks: c.remarks.trim() || undefined,
+        paid_amount: c.paid ? Number(c.amount) : 0,
+        paid_from_instrument_id: c.paid ? c.paid_from_instrument_id : undefined,
+      })),
     };
 
     return createPurchase.mutate(payload, {
       onSuccess: (purchase) => {
         toast.success(paying ? `Purchase recorded and ${formatMoney(paymentAmount)} paid` : "Purchase recorded");
-        const afterExpense = () => {
-          const hasCodedItems = purchase.items.some((line) => CODED_CATEGORIES.includes(line.item.category));
-          if (hasCodedItems) setBindPromptPurchase(purchase);
-          else navigate(`/purchases/${purchase.id}`);
-        };
-        if (!expense.enabled) {
-          afterExpense();
-          return;
-        }
-        const expenseAmount = Number(expense.amount);
-        createExpense.mutate(
-          {
-            category: expense.category,
-            cost_type: expense.cost_type,
-            batch_id: (expense.cost_type === "DIRECT" && expense.batch_id) || undefined,
-            amount: expenseAmount,
-            date: values.purchase_date,
-            remarks: expense.remarks || undefined,
-            paid_amount: expense.paid ? expenseAmount : 0,
-            paid_from_instrument_id: expense.paid ? expense.paid_from_instrument_id : undefined,
-          },
-          {
-            onSuccess: () => {
-              toast.success(expense.paid ? "Expense recorded and paid" : "Expense recorded as unpaid");
-              afterExpense();
-            },
-            onError: (error) => {
-              // Surface the field reason (e.g. "A DIRECT cost needs a batch"), not just "Validation failed".
-              const reason = Object.values(error.fields ?? {})[0] ?? error.message;
-              toast.warning(`Purchase saved, but the expense failed: ${reason}`);
-              afterExpense();
-            },
-          }
-        );
+        const hasCodedItems = purchase.items.some((line) => CODED_CATEGORIES.includes(line.item.category));
+        if (hasCodedItems) setBindPromptPurchase(purchase);
+        else navigate(`/purchases/${purchase.id}`);
       },
       onError: (error) => {
-        toast.error(error.fieldError("purchase_date") ?? error.message);
+        // The field reason (e.g. a charge's missing account), not just "Validation failed".
+        toast.error(error.fieldError("purchase_date") ?? Object.values(error.fields ?? {})[0] ?? error.message);
       },
     });
   };
@@ -714,116 +676,88 @@ export function PurchaseCreatePage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Related expense</CardTitle>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={expense.enabled}
-                onChange={(e) => setExpense((p) => ({ ...p, enabled: e.target.checked }))}
-              />
-              e.g. transportation for this delivery
-            </label>
+            <div>
+              <CardTitle className="text-base">Extra charges</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Transport, labour, unloading for this delivery — added to the items' cost, not a separate expense.
+              </p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => setCharges((l) => [...l, blankCharge()])}>
+              <Plus />
+              Add charge
+            </Button>
           </CardHeader>
-          {expense.enabled && (
-            <CardContent className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label>Category</Label>
-                <Select
-                  value={expense.category}
-                  onValueChange={(v) => setExpense((p) => ({ ...p, category: v ?? "" }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue>
-                      {(v: string) =>
-                        v
-                          ? (expenseCategories?.results.find((c) => c.code === v)?.label ?? humanizeEnum(v))
-                          : "Select category"
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(expenseCategories?.results ?? []).map((c) => (
-                      <SelectItem key={c.code} value={c.code}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Cost type</Label>
-                <Select
-                  value={expense.cost_type}
-                  onValueChange={(v) => setExpense((p) => ({ ...p, cost_type: (v as CostType) ?? "" }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue>{(v: string) => (v ? humanizeEnum(v) : "Select cost type")}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COST_TYPES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {humanizeEnum(c)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {expense.cost_type === "DIRECT" && (
-                <div className="flex flex-col gap-1.5">
-                  <Label>Batch</Label>
-                  <Select
-                    value={expense.batch_id}
-                    onValueChange={(v) => setExpense((p) => ({ ...p, batch_id: v ?? "" }))}
-                  >
-                    <SelectTrigger className="w-full">
+          {charges.length > 0 && (
+            <CardContent className="flex flex-col gap-4">
+              {charges.map((c) => (
+                <div key={c.key} className="grid grid-cols-2 gap-3 rounded-md border border-border p-3 sm:grid-cols-[1fr_8rem_1fr_auto]">
+                  <Select value={c.category} onValueChange={(v) => setCharge(c.key, { category: v ?? "" })}>
+                    <SelectTrigger className="w-full" aria-label="Charge category">
                       <SelectValue>
-                        {(v: string) => runningBatches?.results.find((b) => b.id === v)?.batch_code ?? "Select batch"}
+                        {(v: string) =>
+                          v
+                            ? (expenseCategories?.results.find((e) => e.code === v)?.label ?? humanizeEnum(v))
+                            : "Category"
+                        }
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {(runningBatches?.results ?? []).map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.batch_code}
+                      {(expenseCategories?.results ?? []).map((e) => (
+                        <SelectItem key={e.code} value={e.code}>
+                          {e.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-              )}
-              <div className="flex flex-col gap-1.5">
-                <Label>Amount</Label>
-                <NumericInput
-                  allowDecimal
-                  decimalPlaces={2}
-                  value={expense.amount}
-                  onChange={(e) => setExpense((p) => ({ ...p, amount: e.target.value }))}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Remarks (optional)</Label>
-                <Input
-                  value={expense.remarks}
-                  onChange={(e) => setExpense((p) => ({ ...p, remarks: e.target.value }))}
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={expense.paid}
-                  onChange={(e) => setExpense((p) => ({ ...p, paid: e.target.checked }))}
-                />
-                Paid on the spot
-              </label>
-              {expense.paid && (
-                <div className="flex flex-col gap-1.5">
-                  <Label>Paid from</Label>
-                  <FarmAccountSelect
-                    value={expense.paid_from_instrument_id}
-                    onChange={(v) => setExpense((p) => ({ ...p, paid_from_instrument_id: v }))}
+                  <NumericInput
+                    allowDecimal
+                    decimalPlaces={2}
+                    placeholder="Amount"
+                    aria-label="Charge amount"
+                    value={c.amount}
+                    onChange={(e) => setCharge(c.key, { amount: e.target.value })}
                   />
+                  <Input
+                    placeholder="Remarks (optional)"
+                    aria-label="Charge remarks"
+                    value={c.remarks}
+                    onChange={(e) => setCharge(c.key, { remarks: e.target.value })}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Remove charge"
+                    onClick={() => setCharges((l) => l.filter((x) => x.key !== c.key))}
+                  >
+                    <Trash2 />
+                  </Button>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={c.paid}
+                      onChange={(e) => setCharge(c.key, { paid: e.target.checked })}
+                    />
+                    Paid on the spot
+                  </label>
+                  {c.paid && (
+                    <div className="sm:col-span-2">
+                      <FarmAccountSelect
+                        value={c.paid_from_instrument_id}
+                        onChange={(v) => setCharge(c.key, { paid_from_instrument_id: v })}
+                      />
+                    </div>
+                  )}
                 </div>
+              ))}
+              {chargesTotal > 0 && subtotalPreview > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Goods {formatMoney(subtotalPreview)} + charges {formatMoney(chargesTotal)} ={" "}
+                  <span className="font-medium text-foreground">{formatMoney(subtotalPreview + chargesTotal)}</span> real
+                  cost (+{((chargesTotal / subtotalPreview) * 100).toFixed(1)}% on each item)
+                </p>
               )}
-              {expenseError && <p className="col-span-2 text-xs text-destructive">{expenseError}</p>}
+              {chargeError && <p className="text-xs text-destructive">{chargeError}</p>}
             </CardContent>
           )}
         </Card>
