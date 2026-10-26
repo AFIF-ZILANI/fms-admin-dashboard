@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { CODES_PER_PAGE, PRINT_LAYOUT } from "@/pages/inventory/types";
 
 type CodePrintSheetProps = {
   /** Unit ids -- each id IS the QR payload, so no other fields are needed to print. */
@@ -45,7 +46,8 @@ export function CodePrintSheet({ ids, open, onOpenChange }: CodePrintSheetProps)
         <DialogHeader className="print:hidden">
           <DialogTitle>Print codes</DialogTitle>
           <DialogDescription>
-            {ids.length} code{ids.length === 1 ? "" : "s"} · 1.9 cm, 117 per A4 page. In the browser print dialog
+            {ids.length} code{ids.length === 1 ? "" : "s"} · {PRINT_LAYOUT.codeMm / 10} cm, {CODES_PER_PAGE} per A4
+            page. In the browser print dialog
             set scale to "Actual size" / 100% so codes print at true size.
           </DialogDescription>
         </DialogHeader>

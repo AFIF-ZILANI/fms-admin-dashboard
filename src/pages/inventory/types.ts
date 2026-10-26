@@ -234,3 +234,7 @@ export type Consumption = {
   item: Item;
   stock_unit: StockUnit | null;
 };
+
+/** A4 print layout -- must match the @media print grid in index.css (19mm codes, 2.5mm gaps, 8mm margins). */
+export const PRINT_LAYOUT = { codeMm: 19, gapMm: 2.5, marginMm: 8, columns: 9, rows: 13 } as const;
+export const CODES_PER_PAGE = PRINT_LAYOUT.columns * PRINT_LAYOUT.rows;
