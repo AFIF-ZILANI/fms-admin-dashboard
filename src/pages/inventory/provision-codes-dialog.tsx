@@ -19,7 +19,7 @@ import { usePostData } from "@/lib/api";
 import { CODES_PER_PAGE, PRINT_LAYOUT, type StockUnit } from "@/pages/inventory/types";
 
 /** Server cap per request (stock-unit.validator.ts). */
-const MAX_CODES = 500;
+const MAX_CODES = 1170; // 10 full A4 pages of 117
 const MAX_PAGES = Math.floor(MAX_CODES / CODES_PER_PAGE);
 
 type Mode = "pages" | "codes";
