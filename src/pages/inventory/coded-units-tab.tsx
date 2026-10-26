@@ -22,6 +22,7 @@ import { useGetData, usePatchData, useDelete, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import { STOCK_UNIT_STATUSES, type StockUnit, type StockUnitStatus } from "@/pages/inventory/types";
 import { ProvisionCodesDialog } from "@/pages/inventory/provision-codes-dialog";
+import { ReprintCodesDialog } from "@/pages/inventory/reprint-codes-dialog";
 import { CodePrintSheet } from "@/pages/inventory/code-print-sheet";
 import { BindCodeDialog } from "@/pages/inventory/bind-code-dialog";
 import { StockUnitDetailSheet } from "@/pages/inventory/stock-unit-detail-sheet";
@@ -34,6 +35,7 @@ export function CodedUnitsTab() {
   const [search, setSearch] = useState("");
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [bindOpen, setBindOpen] = useState(false);
+  const [reprintOpen, setReprintOpen] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<StockUnit | null>(null);
   const [bindUnit, setBindUnit] = useState<StockUnit | null>(null);
   const [statusUnit, setStatusUnit] = useState<StockUnit | null>(null);
@@ -226,6 +228,10 @@ export function CodedUnitsTab() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setReprintOpen(true)}>
+            <Printer />
+            Print blank codes
+          </Button>
           <Button variant="outline" onClick={() => setBindOpen(true)}>
             Bind code
           </Button>
@@ -315,6 +321,12 @@ export function CodedUnitsTab() {
         open={provisionOpen}
         onOpenChange={setProvisionOpen}
         onProvisioned={(newUnits) => setPrintIds(newUnits.map((u) => u.id))}
+      />
+      <ReprintCodesDialog
+        open={reprintOpen}
+        onOpenChange={setReprintOpen}
+        available={counts?.UNASSIGNED ?? 0}
+        onReady={setPrintIds}
       />
       <CodePrintSheet ids={printIds ?? []} open={!!printIds} onOpenChange={(open) => !open && setPrintIds(null)} />
       <BindCodeDialog open={bindOpen} onOpenChange={setBindOpen} />
