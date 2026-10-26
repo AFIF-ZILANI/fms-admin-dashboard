@@ -26,3 +26,8 @@ dist-ssr
 
 # local worktrees for isolated agent work
 .worktrees
+
+# env files
+.env
+.env.local
+.env.*.local
