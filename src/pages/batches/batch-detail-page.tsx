@@ -30,6 +30,7 @@ import { FeedingProgramTab } from "@/pages/batches/tabs/feeding-program-tab";
 import { EnvironmentTab } from "@/pages/batches/tabs/environment-tab";
 import { TreatmentsTab } from "@/pages/batches/tabs/treatments-tab";
 import { FinancialsTab } from "@/pages/batches/tabs/financials-tab";
+import { cycleDay } from "@/pages/batches/cycle-day";
 
 const STATUS_TONE: Record<BatchStatus, Tone> = { RUNNING: "success", CLOSED: "neutral", SOLD: "neutral" };
 
@@ -48,10 +49,6 @@ const DAY_MS = 1000 * 60 * 60 * 24;
 
 function daysBetween(from: string, to: string): number {
   return Math.floor((new Date(to).getTime() - new Date(from).getTime()) / DAY_MS);
-}
-
-function ageInDays(startingDate: string): number {
-  return Math.floor((Date.now() - new Date(startingDate).getTime()) / DAY_MS);
 }
 
 /** label over value, tabular — the header's at-a-glance facts (docs/design.md §3). */
@@ -88,7 +85,7 @@ export function BatchDetailPage() {
     );
   }
 
-  const age = ageInDays(batch.starting_date);
+  const age = cycleDay(batch.starting_date);
   const cycleLength = Math.max(daysBetween(batch.starting_date, batch.expected_selling_date), 1);
   const progress = Math.min(Math.max(age / cycleLength, 0), 1);
   const daysToSelling = cycleLength - age;

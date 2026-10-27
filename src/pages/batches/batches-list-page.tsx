@@ -12,12 +12,9 @@ import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { BATCH_STATUSES, BIRD_BREEDS, PHASES, liveBirdCount, type Batch, type BatchStatus, type BirdBreed, type Phase } from "@/pages/batches/types";
 import type { BatchPerformance } from "@/pages/analytics/types";
+import { cycleDay } from "@/pages/batches/cycle-day";
 
 const STATUS_TONE: Record<BatchStatus, Tone> = { RUNNING: "success", CLOSED: "neutral", SOLD: "neutral" };
-
-function ageInDays(startingDate: string): number {
-  return Math.floor((Date.now() - new Date(startingDate).getTime()) / (1000 * 60 * 60 * 24));
-}
 
 function daysUntil(dateStr: string): number {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -90,7 +87,7 @@ export function BatchesListPage() {
     // the chosen sort is.
     if ((a.status === "RUNNING") !== (b.status === "RUNNING"))
       return a.status === "RUNNING" ? -1 : 1;
-    if (sortBy === "days_running") return ageInDays(b.starting_date) - ageInDays(a.starting_date);
+    if (sortBy === "days_running") return cycleDay(b.starting_date) - cycleDay(a.starting_date);
     if (sortBy === "mortality_rate") {
       const rateA = performanceByBatch.get(a.id)?.cumulative_mortality_rate ?? 0;
       const rateB = performanceByBatch.get(b.id)?.cumulative_mortality_rate ?? 0;
@@ -108,7 +105,7 @@ export function BatchesListPage() {
     },
     { key: "breed", header: "Breed", render: (b) => humanizeEnum(b.breed) },
     { key: "phase", header: "Phase", render: (b) => humanizeEnum(b.phase) },
-    { key: "days", header: "Days running", render: (b) => ageInDays(b.starting_date), numeric: true },
+    { key: "days", header: "Day", render: (b) => cycleDay(b.starting_date), numeric: true },
     { key: "live", header: "Live birds", render: (b) => liveBirdCount(b).toLocaleString(), numeric: true },
     {
       key: "status",

@@ -6,10 +6,7 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
 import { liveBirdCount, type Batch, type HouseBalance, type MortalityLog, type WeightRecord } from "@/pages/batches/types";
-
-function ageInDays(startingDate: string): number {
-  return Math.floor((Date.now() - new Date(startingDate).getTime()) / (1000 * 60 * 60 * 24));
-}
+import { cycleDay } from "@/pages/batches/cycle-day";
 
 export function OverviewTab({ batch }: { batch: Batch }) {
   // Captured once per mount: Date.now() during render is impure (each re-render would shift it).
@@ -73,7 +70,7 @@ export function OverviewTab({ batch }: { batch: Batch }) {
           isLoading={weightLoading}
           hint={latestWeight ? `sampled ${formatDate(latestWeight.date)}` : "no samples yet"}
         />
-        <KPICard label="Age" value={`${ageInDays(batch.starting_date)} d`} icon={Calendar} />
+        <KPICard label="Age" value={`Day ${cycleDay(batch.starting_date)}`} icon={Calendar} />
         <KPICard
           label={batch.status === "RUNNING" && daysToSelling < 0 ? "Past selling date" : "Days to selling"}
           value={batch.status === "RUNNING" ? Math.abs(daysToSelling) : "—"}

@@ -25,8 +25,9 @@ import type { Item } from "@/pages/inventory/types";
 const feedingProgramSchema = z.object({
   feed_type: z.enum(FEED_TYPES, "Select a feed type"),
   item_id: z.string().min(1, "Select a feed item"),
-  start_day: z.coerce.number().int().nonnegative("Must be 0 or more"),
-  end_day: optionalNumber(z.coerce.number().int().nonnegative("Must be 0 or more")),
+  // Day 1 is the placement day.
+  start_day: z.coerce.number().int().positive("Day 1 is the placement day"),
+  end_day: optionalNumber(z.coerce.number().int().positive("Day 1 is the placement day")),
 });
 
 type FeedingProgramFormInput = z.input<typeof feedingProgramSchema>;
@@ -150,12 +151,12 @@ export function FeedingProgramFormDialog({ open, onOpenChange, batchId }: Feedin
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="start_day">Start day</Label>
-              <NumericInput id="start_day" allowZero {...register("start_day")} aria-invalid={!!errors.start_day} />
+              <NumericInput id="start_day" {...register("start_day")} aria-invalid={!!errors.start_day} />
               {errors.start_day && <p className="text-xs text-destructive">{errors.start_day.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="end_day">End day (optional)</Label>
-              <NumericInput id="end_day" allowZero {...register("end_day")} aria-invalid={!!errors.end_day} />
+              <NumericInput id="end_day" {...register("end_day")} aria-invalid={!!errors.end_day} />
               {errors.end_day && <p className="text-xs text-destructive">{errors.end_day.message}</p>}
             </div>
           </div>

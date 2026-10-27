@@ -12,12 +12,7 @@ import { humanizeEnum } from "@/lib/utils";
 import type { Batch, BatchFeedingProgram, Consumption } from "@/pages/batches/types";
 import type { Item } from "@/pages/inventory/types";
 import { FeedingProgramFormDialog } from "@/pages/batches/tabs/feeding-program-form-dialog";
-
-function daysFromStart(startingDate: string, dayOffset: number): Date {
-  const d = new Date(startingDate);
-  d.setUTCDate(d.getUTCDate() + dayOffset);
-  return d;
-}
+import { dayStart } from "@/pages/batches/cycle-day";
 
 function EndProgramDialog({
   row,
@@ -91,8 +86,8 @@ export function FeedingProgramTab({ batch }: { batch: Batch }) {
   );
 
   const actualConsumed = (program: BatchFeedingProgram): number => {
-    const windowStart = daysFromStart(batch.starting_date, program.start_day);
-    const windowEnd = program.end_day != null ? daysFromStart(batch.starting_date, program.end_day + 1) : new Date();
+    const windowStart = dayStart(batch.starting_date, program.start_day);
+    const windowEnd = program.end_day != null ? dayStart(batch.starting_date, program.end_day + 1) : new Date();
     return (consumptions?.results ?? [])
       .filter((c) => c.item_id === program.item_id)
       .filter((c) => {
