@@ -30,7 +30,8 @@ export type Sale = {
 export type BirdSale = {
   id: string;
   batch_id: string;
-  house_id: string;
+  /** where the birds were caught, and how many from each -- one row unless the load came from several houses */
+  houses: { house_id: string; birds_count: number }[];
   customer_id: string | null;
   sale_date: string;
   grade: BirdGrade;
@@ -52,7 +53,7 @@ export type BirdSale = {
   recorded_by_id: string;
   created_at: string;
   // getAll/getById return the flat BirdSale row — no batch/house/customer
-  // relations included. Look names up separately, same pattern as Purchases.
+  // relations included (houses are ids only). Look names up separately, same pattern as Purchases.
 };
 
 export type PaymentStatusInfo = { tone: "success" | "warning" | "neutral"; label: string };

@@ -35,7 +35,16 @@ export function BirdSaleDetailPage() {
   const { trueAmounts } = useOutstanding("BIRD_SALE");
 
   const batchCode = batches?.results.find((b) => b.id === sale?.batch_id)?.batch_code;
-  const houseName = houses?.results.find((h) => h.id === sale?.house_id)?.name;
+  // "Shed A (120), Shed B (80)" when the load came from several houses; just the name for one.
+  const saleHouses = sale?.houses ?? [];
+  const houseList = houses?.results ?? [];
+  const houseName =
+    saleHouses
+      .map((sh) => {
+        const name = houseList.find((h) => h.id === sh.house_id)?.name ?? "—";
+        return saleHouses.length > 1 ? `${name} (${sh.birds_count.toLocaleString()})` : name;
+      })
+      .join(", ") || undefined;
   const customerName = customers?.results.find((c) => c.id === sale?.customer_id)?.profile.name;
 
   if (isLoading) {
