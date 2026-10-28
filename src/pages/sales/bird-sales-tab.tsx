@@ -60,7 +60,9 @@ export function BirdSalesTab() {
   const { trueAmounts } = useOutstanding("BIRD_SALE");
 
   const batchCode = (id: string) => batches?.results.find((b) => b.id === id)?.batch_code ?? "—";
-  const houseName = (id: string) => houses?.results.find((h) => h.id === id)?.name ?? "—";
+  const houseList = houses?.results ?? [];
+  const houseNames = (s: BirdSale) =>
+    s.houses.map((sh) => houseList.find((h) => h.id === sh.house_id)?.name ?? "—").join(", ") || "—";
   const customerName = (id: string | null) => customers?.results.find((c) => c.id === id)?.profile.name ?? "—";
 
   const birdSales = data?.results ?? [];
@@ -73,7 +75,7 @@ export function BirdSalesTab() {
       sortValue: (s) => s.sale_date,
     },
     { key: "batch", header: "Batch", render: (s) => batchCode(s.batch_id), sortValue: (s) => batchCode(s.batch_id) },
-    { key: "house", header: "House", render: (s) => houseName(s.house_id), sortValue: (s) => houseName(s.house_id) },
+    { key: "house", header: "House", render: (s) => houseNames(s), sortValue: (s) => houseNames(s) },
     {
       key: "customer",
       header: "Customer",

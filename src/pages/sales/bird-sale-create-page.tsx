@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,9 +34,13 @@ const PAYMENT_LABELS: Record<SalePaymentStatus, string> = {
 };
 const PAYMENT_TONE: Record<SalePaymentStatus, Tone> = { DUE: "neutral", FULL: "success", PARTIAL: "warning" };
 
+/** One house the birds were caught in. birds is only used when there are several -- with one house,
+ * the sale's own bird count is that house's count. */
+type HouseRow = { house_id: string; birds: string };
+
 type Form = {
   batch_id: string;
-  house_id: string;
+  houses: HouseRow[];
   customer_id: string;
   sale_date: string;
   grade: BirdGrade | "";
@@ -70,7 +74,7 @@ const DEFAULT_DEDUCTION_G = "300";
 function blankForm(keep?: Partial<Form>): Form {
   return {
     batch_id: "",
-    house_id: "",
+    houses: [{ house_id: "", birds: "" }],
     customer_id: "",
     sale_date: today(),
     grade: "",
@@ -99,12 +103,19 @@ function blankForm(keep?: Partial<Form>): Form {
 const num = (v: string) => (v.trim() === "" ? 0 : Number(v));
 const kg = (n: number) => `${n.toLocaleString(undefined, { maximumFractionDigits: 3 })} kg`;
 
-type Errors = Partial<Record<keyof Form | "net", string>>;
+type Errors = Partial<Record<keyof Form | "house_id" | "net", string>>;
 
-function validate(f: Form, s: SaleFigures, liveInHouse: number | undefined): Errors {
+function validate(f: Form, s: SaleFigures, liveOf: (houseId: string) => number | undefined): Errors {
   const e: Errors = {};
+  const multi = f.houses.length > 1;
+  const liveInHouse = multi ? undefined : liveOf(f.houses[0]!.house_id);
   if (!f.batch_id) e.batch_id = "Choose the batch the birds came from";
-  if (!f.house_id) e.house_id = "Choose the house they were caught in";
+  if (f.houses.some((h) => !h.house_id)) e.house_id = "Choose the house they were caught in";
+  else if (multi) {
+    const short = f.houses.find((h) => num(h.birds) > (liveOf(h.house_id) ?? Infinity));
+    if (f.houses.some((h) => num(h.birds) <= 0)) e.house_id = "Enter how many birds came from each house";
+    else if (short) e.house_id = `Only ${liveOf(short.house_id)} birds are live in one of these houses`;
+  }
   if (!f.sale_date) e.sale_date = "Enter the sale date";
   if (!f.grade) e.grade = "Choose a grade";
   const birds = num(f.birds);
@@ -147,7 +158,10 @@ export function BirdSaleCreatePage() {
 
   const batch = batches?.results.find((b) => b.id === f.batch_id);
   const houses = (batch?.houseBalances ?? []).filter((hb) => hb.quantity > 0);
-  const liveInHouse = houses.find((hb) => hb.house_id === f.house_id)?.quantity;
+  const liveOf = (houseId: string) => houses.find((hb) => hb.house_id === houseId)?.quantity;
+  const houseNameOf = (houseId: string) => houses.find((hb) => hb.house_id === houseId)?.house.name;
+  const multi = f.houses.length > 1;
+  const liveInHouse = multi ? undefined : liveOf(f.houses[0]!.house_id);
 
   const s = computeSale({
     totalWeightKg: num(f.total_weight),
@@ -161,7 +175,7 @@ export function BirdSaleCreatePage() {
     payment: f.payment,
     receivedPartial: num(f.received),
   });
-  const errors = validate(f, s, liveInHouse);
+  const errors = validate(f, s, liveOf);
   const err = (k: keyof Errors) => (showErrors ? errors[k] : undefined);
   // The house ceiling is worth knowing before submit.
   const birdsOver = liveInHouse !== undefined && num(f.birds) > liveInHouse;
@@ -170,7 +184,7 @@ export function BirdSaleCreatePage() {
     const next = batches?.results.find((b) => b.id === id);
     const live = (next?.houseBalances ?? []).filter((hb) => hb.quantity > 0);
     // One house holding birds is the usual case -- no need to make anyone pick it.
-    setF((p) => ({ ...p, batch_id: id, house_id: live.length === 1 ? live[0]!.house_id : "" }));
+    setF((p) => ({ ...p, batch_id: id, houses: [{ house_id: live.length === 1 ? live[0]!.house_id : "", birds: "" }] }));
   };
 
   /** Female follows birds − male until someone types it themselves. */
@@ -179,6 +193,23 @@ export function BirdSaleCreatePage() {
     const rest = num(birds) - num(male);
     return rest >= 0 ? String(rest) : p.female;
   };
+
+  /** With several houses the sale's bird count is their sum. Going from one house to several, the
+   * count already typed belongs to the house already picked (always row 0). */
+  const setRows = (rows: HouseRow[]) =>
+    setF((p) => {
+      if (rows.length === 1) return { ...p, houses: rows };
+      const firstId = p.houses.length === 1 ? p.houses[0]!.house_id : "";
+      const next = rows.map((r, i) =>
+        i === 0 && firstId && r.house_id === firstId && r.birds === "" ? { ...r, birds: p.birds } : r,
+      );
+      const total = next.reduce((n, r) => n + num(r.birds), 0);
+      const birds = total > 0 ? String(total) : "";
+      return { ...p, houses: next, birds, female: followFemale(p, birds, p.male) };
+    });
+  const setRow = (i: number, patch: Partial<HouseRow>) =>
+    setRows(f.houses.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const unpicked = houses.filter((h) => !f.houses.some((r) => r.house_id === h.house_id));
 
   const onFinalChange = (v: string) => {
     setFinalDraft(v);
@@ -197,7 +228,9 @@ export function BirdSaleCreatePage() {
     const female = f.female === "" ? undefined : num(f.female);
     const payload = {
       batch_id: f.batch_id,
-      house_id: f.house_id,
+      ...(multi
+        ? { houses: f.houses.map((h) => ({ house_id: h.house_id, birds_count: num(h.birds) })) }
+        : { house_id: f.houses[0]!.house_id }),
       customer_id: f.customer_id || undefined,
       sale_date: f.sale_date,
       grade: f.grade,
@@ -226,7 +259,7 @@ export function BirdSaleCreatePage() {
         toast.success(`Bird sale recorded: ${num(f.birds)} birds, ${formatMoney(s.final)}`);
         if (another) {
           // Next truck from the same shed: keep where, when and the price; clear the load itself.
-          setF(blankForm({ batch_id: f.batch_id, house_id: f.house_id, sale_date: f.sale_date, price: f.price, crate_size: f.crate_size, round_crates: f.round_crates, deduction_g: f.deduction_g }));
+          setF(blankForm({ batch_id: f.batch_id, houses: f.houses.map((h) => ({ house_id: h.house_id, birds: "" })), sale_date: f.sale_date, price: f.price, crate_size: f.crate_size, round_crates: f.round_crates, deduction_g: f.deduction_g }));
           setShowErrors(false);
           window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
@@ -236,6 +269,7 @@ export function BirdSaleCreatePage() {
       onError: (error) => {
         toast.error(
           error.fieldError("birds_count") ??
+            error.fieldError("houses") ??
             error.fieldError("paid_to_instrument_id") ??
             error.fieldError("labour_cost") ??
             error.message,
@@ -292,27 +326,76 @@ export function BirdSaleCreatePage() {
                   <p className="text-xs text-muted-foreground">No batch is running, so there are no birds to sell.</p>
                 )}
               </Field>
-              <Field
-                label="House"
-                htmlFor="house"
-                error={err("house_id")}
-                hint={liveInHouse !== undefined ? `${liveInHouse.toLocaleString()} birds live here` : undefined}
-              >
-                <Select value={f.house_id} onValueChange={(v) => set("house_id", v ?? "")} disabled={!batch}>
-                  <SelectTrigger id="house" className="w-full" aria-invalid={!!err("house_id")}>
-                    <SelectValue>
-                      {(v: string) => houses.find((h) => h.house_id === v)?.house.name ?? (batch ? "Choose a house" : "Choose a batch first")}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {houses.map((h) => (
-                      <SelectItem key={h.house_id} value={h.house_id}>
-                        {h.house.name} ({h.quantity.toLocaleString()} live)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+              <div className={cn("flex flex-col gap-1.5", multi && "sm:col-span-2")}>
+                <Label htmlFor="house-0">{multi ? "Houses" : "House"}</Label>
+                {f.houses.map((row, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Select value={row.house_id} onValueChange={(v) => setRow(i, { house_id: v ?? "" })} disabled={!batch}>
+                      <SelectTrigger id={`house-${i}`} className="w-full min-w-0 flex-1" aria-invalid={!!err("house_id") && !row.house_id}>
+                        <SelectValue>
+                          {(v: string) => houseNameOf(v) ?? (batch ? "Choose a house" : "Choose a batch first")}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {houses
+                          .filter((h) => h.house_id === row.house_id || unpicked.includes(h))
+                          .map((h) => (
+                            <SelectItem key={h.house_id} value={h.house_id}>
+                              {h.house.name} ({h.quantity.toLocaleString()} live)
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    {multi && (
+                      <>
+                        <NumericInput
+                          aria-label={`Birds from ${houseNameOf(row.house_id) ?? `house ${i + 1}`}`}
+                          placeholder="Birds"
+                          className="w-28"
+                          value={row.birds}
+                          onChange={(e) => setRow(i, { birds: e.target.value })}
+                          aria-invalid={!!err("house_id") && (num(row.birds) <= 0 || num(row.birds) > (liveOf(row.house_id) ?? Infinity))}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Remove this house"
+                          onClick={() => setRows(f.houses.filter((_, j) => j !== i))}
+                        >
+                          <X />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                ))}
+                {err("house_id") ? (
+                  <p className="text-xs text-destructive" role="alert">
+                    {err("house_id")}
+                  </p>
+                ) : (
+                  liveInHouse !== undefined && (
+                    <p className="text-xs text-muted-foreground tabular-nums">{liveInHouse.toLocaleString()} birds live here</p>
+                  )
+                )}
+                {/* Most loads come from one house; a truck filled from several gets a row per house. */}
+                {batch && unpicked.length > 0 && f.houses.every((r) => r.house_id) && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setRows([...f.houses, { house_id: "", birds: "" }])}>
+                      <Plus />
+                      Add another house
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setRows([...f.houses, ...unpicked.map((h) => ({ house_id: h.house_id, birds: "" }))])}
+                    >
+                      All houses
+                    </Button>
+                  </div>
+                )}
+              </div>
               <Field label="Customer" htmlFor="customer" hint="Leave empty for a walk-in buyer">
                 <Select value={f.customer_id} onValueChange={(v) => set("customer_id", v ?? "")}>
                   <SelectTrigger id="customer" className="w-full">
@@ -361,9 +444,15 @@ export function BirdSaleCreatePage() {
               <CardDescription>Male and female are optional. Fill one and the other follows.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-3">
-              <Field label="Number of birds" htmlFor="birds" error={err("birds") ?? (birdsOver ? `Only ${liveInHouse} birds are live in this house` : undefined)}>
+              <Field
+                label="Number of birds"
+                htmlFor="birds"
+                error={err("birds") ?? (birdsOver ? `Only ${liveInHouse} birds are live in this house` : undefined)}
+                hint={multi ? "Added up from the houses above" : undefined}
+              >
                 <NumericInput
                   id="birds"
+                  readOnly={multi}
                   value={f.birds}
                   onChange={(e) => {
                     const birds = e.target.value;
@@ -615,7 +704,7 @@ export function BirdSaleCreatePage() {
           f={f}
           s={s}
           batchCode={batch?.batch_code}
-          houseName={houses.find((h) => h.house_id === f.house_id)?.house.name}
+          houseName={f.houses.map((h) => houseNameOf(h.house_id)).filter(Boolean).join(", ") || undefined}
           saving={saving}
           onSaveAnother={() => submit(true)}
           onCancel={() => navigate("/sales?tab=birds")}
