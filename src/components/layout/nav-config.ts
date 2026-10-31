@@ -37,6 +37,10 @@ import {
   Stethoscope,
   ClipboardList,
   ListChecks,
+  ArrowLeftRight,
+  Skull,
+  Scale,
+  Thermometer,
   type LucideIcon,
 } from "lucide-react";
 
@@ -50,6 +54,28 @@ const tab = (base: string, id: string, label: string, icon: LucideIcon): NavChil
   label,
   icon,
 });
+
+// A batch's pages: /batches/:id is the overview, the rest are /batches/:id/<value>. The sidebar shows
+// them under Batches only while a batch is open, since every link needs its id.
+export const BATCH_SECTIONS = [
+  { value: "overview", label: "Overview", icon: LayoutDashboard },
+  { value: "allocations", label: "Houses", icon: ArrowLeftRight },
+  { value: "mortality", label: "Mortality", icon: Skull },
+  { value: "weight", label: "Weight", icon: Scale },
+  { value: "feeding", label: "Feeding", icon: Wheat },
+  { value: "treatments", label: "Treatments", icon: Syringe },
+  { value: "vaccines", label: "Vaccines", icon: ShieldCheck },
+  { value: "environment", label: "Environment", icon: Thermometer },
+  { value: "financials", label: "Financials", icon: Wallet },
+] as const;
+
+export type BatchSection = (typeof BATCH_SECTIONS)[number]["value"];
+
+export const batchSectionPath = (id: string, section: BatchSection) =>
+  section === "overview" ? `/batches/${id}` : `/batches/${id}/${section}`;
+
+export const batchNavChildren = (id: string): NavChild[] =>
+  BATCH_SECTIONS.map(({ value, label, icon }) => ({ to: batchSectionPath(id, value), label, icon }));
 
 export const OPERATIONAL_NAV: NavItem[] = [
   { to: "/analytics", label: "Analytics", icon: LayoutDashboard },

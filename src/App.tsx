@@ -49,7 +49,7 @@ function App() {
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="batches" element={<BatchesListPage />} />
             <Route path="batches/new" element={<BatchCreatePage />} />
-            <Route path="batches/:id" element={<BatchDetailPage />} />
+            <Route path="batches/:id/:section?" element={<BatchDetailPage />} />
             <Route path="houses" element={<HousesListPage />} />
             <Route path="houses/:id" element={<HouseDetailPage />} />
             <Route path="inventory" element={<InventoryPage />} />

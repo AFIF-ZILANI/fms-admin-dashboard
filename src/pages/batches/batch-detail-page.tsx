@@ -1,26 +1,14 @@
-import { useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
-import {
-  ArrowLeft,
-  ArrowLeftRight,
-  LayoutDashboard,
-  Lock,
-  Scale,
-  Skull,
-  Syringe,
-  ShieldCheck,
-  Thermometer,
-  Wallet,
-  Wheat,
-} from "lucide-react";
+import { useState, type ComponentType } from "react";
+import { Navigate, useNavigate, useParams } from "react-router";
+import { ArrowLeft, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge, type Tone } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData } from "@/lib/api";
 import { formatDate, humanizeEnum } from "@/lib/utils";
+import { BATCH_SECTIONS, type BatchSection } from "@/components/layout/nav-config";
 import { liveBirdCount, type Batch, type BatchStatus } from "@/pages/batches/types";
 import { BatchCloseDialog } from "@/pages/batches/batch-close-dialog";
 import { OverviewTab } from "@/pages/batches/tabs/overview-tab";
@@ -36,17 +24,18 @@ import { cycleDay } from "@/pages/batches/cycle-day";
 
 const STATUS_TONE: Record<BatchStatus, Tone> = { RUNNING: "success", CLOSED: "neutral", SOLD: "neutral" };
 
-const TABS = [
-  { value: "overview", label: "Overview", icon: LayoutDashboard },
-  { value: "allocations", label: "Houses", icon: ArrowLeftRight },
-  { value: "mortality", label: "Mortality", icon: Skull },
-  { value: "weight", label: "Weight", icon: Scale },
-  { value: "feeding", label: "Feeding", icon: Wheat },
-  { value: "treatments", label: "Treatments", icon: Syringe },
-  { value: "vaccines", label: "Vaccines", icon: ShieldCheck },
-  { value: "environment", label: "Environment", icon: Thermometer },
-  { value: "financials", label: "Financials", icon: Wallet },
-] as const;
+// Each section is its own page (/batches/:id/<section>); the sidebar is their navigation.
+const SECTION_PAGES: Record<BatchSection, ComponentType<{ batch: Batch }>> = {
+  overview: OverviewTab,
+  allocations: AllocationsTab,
+  mortality: MortalityTab,
+  weight: WeightTab,
+  feeding: FeedingProgramTab,
+  treatments: TreatmentsTab,
+  vaccines: VaccineTab,
+  environment: EnvironmentTab,
+  financials: FinancialsTab,
+};
 
 const DAY_MS = 1000 * 60 * 60 * 24;
 
@@ -66,17 +55,15 @@ function Fact({ label, value }: { label: string; value: string }) {
 
 // See docs/batches-redesign-design.md for the full page design.
 export function BatchDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id, section } = useParams<{ id: string; section?: string }>();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [closeOpen, setCloseOpen] = useState(false);
 
   const { data: batch, isLoading } = useGetData<Batch>(`/batches/${id}`, ["batches", id]);
-  usePageTitle(batch?.batch_code ?? "Batch");
+  const active = BATCH_SECTIONS.find((s) => s.value === (section ?? "overview"));
+  usePageTitle(`${batch?.batch_code ?? "Batch"} · ${active?.label ?? ""}`);
 
-  // Tab lives in the URL so a reload, a back button, or a shared link lands on the same tab.
-  const tabParam = searchParams.get("tab");
-  const activeTab = TABS.some((t) => t.value === tabParam) ? tabParam! : "overview";
+  if (!active || section === "overview") return <Navigate to={`/batches/${id}`} replace />;
 
   if (isLoading || !batch) {
     return (
@@ -88,6 +75,7 @@ export function BatchDetailPage() {
     );
   }
 
+  const SectionPage = SECTION_PAGES[active.value];
   const age = cycleDay(batch.starting_date);
   const cycleLength = Math.max(daysBetween(batch.starting_date, batch.expected_selling_date), 1);
   const progress = Math.min(Math.max(age / cycleLength, 0), 1);
@@ -150,45 +138,9 @@ export function BatchDetailPage() {
         </CardContent>
       </Card>
 
-      <Tabs value={activeTab} onValueChange={(value) => setSearchParams({ tab: String(value) }, { replace: true })}>
-        <div className="-mx-1 overflow-x-auto px-1 pb-1">
-          <TabsList variant="line" className="w-max">
-            {TABS.map(({ value, label, icon: Icon }) => (
-              <TabsTrigger key={value} value={value} className="gap-1.5 px-3">
-                <Icon />
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
-        <TabsContent value="overview" className="pt-2">
-          <OverviewTab batch={batch} />
-        </TabsContent>
-        <TabsContent value="allocations" className="pt-2">
-          <AllocationsTab batch={batch} />
-        </TabsContent>
-        <TabsContent value="mortality" className="pt-2">
-          <MortalityTab batch={batch} />
-        </TabsContent>
-        <TabsContent value="weight" className="pt-2">
-          <WeightTab batch={batch} />
-        </TabsContent>
-        <TabsContent value="feeding" className="pt-2">
-          <FeedingProgramTab batch={batch} />
-        </TabsContent>
-        <TabsContent value="treatments" className="pt-2">
-          <TreatmentsTab batch={batch} />
-        </TabsContent>
-        <TabsContent value="vaccines" className="pt-2">
-          <VaccineTab batch={batch} />
-        </TabsContent>
-        <TabsContent value="environment" className="pt-2">
-          <EnvironmentTab batch={batch} />
-        </TabsContent>
-        <TabsContent value="financials" className="pt-2">
-          <FinancialsTab batch={batch} />
-        </TabsContent>
-      </Tabs>
+      <section key={active.value} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
+        <SectionPage batch={batch} />
+      </section>
 
       <BatchCloseDialog open={closeOpen} onOpenChange={setCloseOpen} batch={batch} />
     </div>

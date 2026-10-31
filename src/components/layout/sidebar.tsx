@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router";
+import { matchPath, NavLink, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
-import { OPERATIONAL_NAV, SYSTEM_NAV, type NavChild, type NavItem } from "@/components/layout/nav-config";
+import { batchNavChildren, OPERATIONAL_NAV, SYSTEM_NAV, type NavChild, type NavItem } from "@/components/layout/nav-config";
 import { type UseThemeProps } from "next-themes";
 
 /** Path children match on the path; ?tab= children on the tab param, the first one being the default. */
@@ -63,6 +63,7 @@ function NavGroup({ items }: { items: NavItem[] }) {
                       <NavLink
                         key={child.to}
                         to={child.to}
+                        end
                         className={cn(
                           "flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors",
                           childActive(child, i, pathname, search)
@@ -85,7 +86,16 @@ function NavGroup({ items }: { items: NavItem[] }) {
   );
 }
 
+/** Inside a batch, Batches gets that batch's pages as sub-navigation. */
+function useOperationalNav(): NavItem[] {
+  const { pathname } = useLocation();
+  const id = matchPath("/batches/:id/:section?", pathname)?.params.id;
+  if (!id || id === "new") return OPERATIONAL_NAV;
+  return OPERATIONAL_NAV.map((item) => (item.to === "/batches" ? { ...item, children: batchNavChildren(id) } : item));
+}
+
 export function Sidebar({ theme }: { theme: UseThemeProps }) {
+  const operationalNav = useOperationalNav();
   const isDark =
     theme.theme === "dark" ||
     (theme.theme === "system" && theme.systemTheme === "dark");
@@ -100,7 +110,7 @@ export function Sidebar({ theme }: { theme: UseThemeProps }) {
         <span className="text-xs">FMS Admin Dashboard</span>
       </div>
       <nav className="flex flex-1 flex-col justify-between overflow-y-auto">
-        <NavGroup items={OPERATIONAL_NAV} />
+        <NavGroup items={operationalNav} />
         <div className="mt-4 flex flex-col gap-2">
           <div className="mx-1 border-t border-sidebar-border lg:mx-2" />
           <NavGroup items={SYSTEM_NAV} />
