@@ -8,6 +8,7 @@ import {
   Scale,
   Skull,
   Syringe,
+  ShieldCheck,
   Thermometer,
   Wallet,
   Wheat,
@@ -29,6 +30,7 @@ import { WeightTab } from "@/pages/batches/tabs/weight-tab";
 import { FeedingProgramTab } from "@/pages/batches/tabs/feeding-program-tab";
 import { EnvironmentTab } from "@/pages/batches/tabs/environment-tab";
 import { TreatmentsTab } from "@/pages/batches/tabs/treatments-tab";
+import { VaccineTab } from "@/pages/batches/tabs/vaccine-tab";
 import { FinancialsTab } from "@/pages/batches/tabs/financials-tab";
 import { cycleDay } from "@/pages/batches/cycle-day";
 
@@ -41,6 +43,7 @@ const TABS = [
   { value: "weight", label: "Weight", icon: Scale },
   { value: "feeding", label: "Feeding", icon: Wheat },
   { value: "treatments", label: "Treatments", icon: Syringe },
+  { value: "vaccines", label: "Vaccines", icon: ShieldCheck },
   { value: "environment", label: "Environment", icon: Thermometer },
   { value: "financials", label: "Financials", icon: Wallet },
 ] as const;
@@ -175,6 +178,9 @@ export function BatchDetailPage() {
         </TabsContent>
         <TabsContent value="treatments" className="pt-2">
           <TreatmentsTab batch={batch} />
+        </TabsContent>
+        <TabsContent value="vaccines" className="pt-2">
+          <VaccineTab batch={batch} />
         </TabsContent>
         <TabsContent value="environment" className="pt-2">
           <EnvironmentTab batch={batch} />

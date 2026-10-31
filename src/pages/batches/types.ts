@@ -119,7 +119,8 @@ export type Vaccination = {
   batch_id: string;
   consumption_id: string | null;
   vaccine_name: string;
-  dosage: number;
+  dosage: string; // Decimal -- vaccines come in doses or litres
+  schedule_id: string | null;
   cause: string | null;
   period: string | null;
   administered_by_id: string;
@@ -135,4 +136,46 @@ export type Consumption = {
   item_id: string;
   quantity: string;
   date: string;
+};
+
+export type VaccineScheduleStatus = "PENDING" | "DONE" | "CANCELLED";
+
+/** A batch's own copy of a vaccine plan row (GET /batch-vaccine-schedules?batch_id=). */
+export type BatchVaccineSchedule = {
+  id: string;
+  batch_id: string;
+  template_id: string | null;
+  item_id: string;
+  item: { id: string; name: string; unit: string; itemUnits: { unit: string }[] };
+  purpose: string;
+  method: string | null;
+  note: string | null;
+  planned_day: number;
+  day: number;
+  status: VaccineScheduleStatus;
+  reason: string | null;
+  confirmed_by: { id: string; name: string } | null;
+  confirmed_at: string | null;
+  vaccinations: {
+    id: string;
+    dosage: string;
+    consumption: { quantity: string; unit: string; stock_unit_id: string | null; house: { id: string; name: string } } | null;
+  }[];
+};
+
+export type VaccineTemplateEntry = {
+  id: string;
+  day: number;
+  item_id: string;
+  item: { id: string; name: string; unit: string };
+  purpose: string;
+  method: string | null;
+  note: string | null;
+};
+
+export type VaccineTemplate = {
+  id: string;
+  name: string;
+  is_active: boolean;
+  entries: VaccineTemplateEntry[];
 };

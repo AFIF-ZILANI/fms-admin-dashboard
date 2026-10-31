@@ -6,6 +6,7 @@ import {
   Package,
   Ruler,
   Smartphone,
+  Syringe,
   Tags,
   Truck,
   UserCog,
@@ -16,6 +17,7 @@ import { LookupManagerCard } from "@/pages/settings/lookup-manager-card";
 import { DevicesTab } from "@/pages/settings/devices-tab";
 import { AccountSection } from "@/pages/settings/account-section";
 import { RoleSalaryCard } from "@/pages/settings/role-salary-card";
+import { VaccineTemplatesTab } from "@/pages/settings/vaccine-templates-tab";
 
 type Section = { id: string; label: string; description: string; icon: LucideIcon; content: ReactNode };
 type Group = { label: string; sections: Section[] };
@@ -50,6 +52,13 @@ const GROUPS: Group[] = [
             />
           </div>
         ),
+      },
+      {
+        id: "vaccine-templates",
+        label: "Vaccine templates",
+        description: "Vaccine timelines to apply to a batch.",
+        icon: Syringe,
+        content: <VaccineTemplatesTab />,
       },
     ],
   },
