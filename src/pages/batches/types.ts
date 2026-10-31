@@ -114,21 +114,6 @@ export type Medication = {
   date: string;
 };
 
-export type Vaccination = {
-  id: string;
-  batch_id: string;
-  consumption_id: string | null;
-  vaccine_name: string;
-  dosage: string; // Decimal -- vaccines come in doses or litres
-  schedule_id: string | null;
-  cause: string | null;
-  period: string | null;
-  administered_by_id: string;
-  doctor_id: string | null;
-  remarks: string | null;
-  date: string;
-};
-
 export type Consumption = {
   id: string;
   batch_id: string | null;
