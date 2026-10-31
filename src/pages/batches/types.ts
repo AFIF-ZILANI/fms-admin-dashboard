@@ -140,15 +140,25 @@ export type Consumption = {
 
 export type VaccineScheduleStatus = "PENDING" | "DONE" | "CANCELLED";
 
+export const VACCINE_METHODS = [
+  "EYE_DROP",
+  "NASAL_DROP",
+  "DRINKING_WATER",
+  "MUSCLE_INJECTION",
+  "NECK_INJECTION",
+  "SPRAY",
+] as const;
+export type VaccineMethod = (typeof VACCINE_METHODS)[number];
+export type VaccinePurposeRef = { code: string; label: string };
+
 /** A batch's own copy of a vaccine plan row (GET /batch-vaccine-schedules?batch_id=). */
 export type BatchVaccineSchedule = {
   id: string;
   batch_id: string;
   template_id: string | null;
-  item_id: string;
-  item: { id: string; name: string; unit: string; itemUnits: { unit: string }[] };
   purpose: string;
-  method: string | null;
+  purposeRef: VaccinePurposeRef;
+  method: VaccineMethod | null;
   note: string | null;
   planned_day: number;
   day: number;
@@ -159,6 +169,7 @@ export type BatchVaccineSchedule = {
   vaccinations: {
     id: string;
     dosage: string;
+    vaccine_name: string;
     consumption: { quantity: string; unit: string; stock_unit_id: string | null; house: { id: string; name: string } } | null;
   }[];
 };
@@ -166,10 +177,9 @@ export type BatchVaccineSchedule = {
 export type VaccineTemplateEntry = {
   id: string;
   day: number;
-  item_id: string;
-  item: { id: string; name: string; unit: string };
   purpose: string;
-  method: string | null;
+  purposeRef: VaccinePurposeRef;
+  method: VaccineMethod | null;
   note: string | null;
 };
 

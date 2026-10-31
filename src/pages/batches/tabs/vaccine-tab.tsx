@@ -23,8 +23,8 @@ import { useConfirm } from "@/components/shared/confirm-dialog";
 import { useDelete, useGetData, usePatchData, usePostData } from "@/lib/api";
 import { formatDate, humanizeEnum } from "@/lib/utils";
 import { cycleDay, dayStart } from "@/pages/batches/cycle-day";
-import type { Batch, BatchVaccineSchedule, VaccineTemplate } from "@/pages/batches/types";
-import { useVaccineItems } from "@/pages/batches/use-vaccine-items";
+import type { Batch, BatchVaccineSchedule, VaccineMethod, VaccineTemplate } from "@/pages/batches/types";
+import { MethodSelect, PurposeSelect } from "@/pages/batches/vaccine-fields";
 
 /** Due/overdue are derived, never stored: only PENDING moves with the calendar. */
 function rowState(row: BatchVaccineSchedule, today: number): { tone: Tone; label: string } {
@@ -35,16 +35,14 @@ function rowState(row: BatchVaccineSchedule, today: number): { tone: Tone; label
   return { tone: "neutral", label: "Upcoming" };
 }
 
-type RowBody = { day: number; item_id: string; purpose: string; method?: string };
+type RowBody = { day: number; purpose: string; method?: VaccineMethod };
 
 function RowDialog({ batch, row, onClose }: { batch: Batch; row?: BatchVaccineSchedule; onClose: () => void }) {
   const [day, setDay] = useState(row ? String(row.day) : "");
-  const [itemId, setItemId] = useState(row?.item_id ?? "");
   const [purpose, setPurpose] = useState(row?.purpose ?? "");
-  const [method, setMethod] = useState(row?.method ?? "");
-  // React Compiler: read optional fields into locals before closures use them (see the SelectValue below).
-  const currentName = row?.item.name;
-  const vaccines = useVaccineItems();
+  const [method, setMethod] = useState<VaccineMethod | null>(row?.method ?? null);
+  // React Compiler: read optional fields into locals before closures use them.
+  const currentLabel = row?.purposeRef.label;
   const key = ["batch-vaccine-schedules", batch.id];
   const create = usePostData<BatchVaccineSchedule, RowBody & { batch_id: string }>("/batch-vaccine-schedules", key);
   const update = usePatchData<BatchVaccineSchedule, RowBody>(`/batch-vaccine-schedules/${row?.id}`, key);
@@ -52,9 +50,8 @@ function RowDialog({ batch, row, onClose }: { batch: Batch; row?: BatchVaccineSc
   const submit = () => {
     const n = Number(day);
     if (!Number.isInteger(n) || n < 1) return toast.error("Day must be 1 or later");
-    if (!itemId) return toast.error("Select a vaccine");
-    if (!purpose.trim()) return toast.error("Purpose is required");
-    const body = { day: n, item_id: itemId, purpose: purpose.trim(), ...(method.trim() && { method: method.trim() }) };
+    if (!purpose) return toast.error("Select a purpose");
+    const body = { day: n, purpose, ...(method && { method }) };
     const done = {
       onSuccess: () => {
         toast.success(row ? "Vaccine updated" : "Vaccine added");
@@ -82,28 +79,13 @@ function RowDialog({ batch, row, onClose }: { batch: Batch; row?: BatchVaccineSc
             <NumericInput id="vax-day" value={day} onChange={(e) => setDay(e.target.value)} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>Vaccine</Label>
-            <Select value={itemId} onValueChange={(v) => setItemId(String(v))}>
-              <SelectTrigger className="w-full">
-                <SelectValue>{(v: string) => vaccines.find((i) => i.id === v)?.name ?? currentName ?? "Select vaccine"}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {vaccines.map((i) => (
-                  <SelectItem key={i.id} value={i.id}>
-                    {i.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Purpose</Label>
+            <PurposeSelect value={purpose} fallbackLabel={currentLabel} onChange={setPurpose} />
           </div>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="vax-purpose">Purpose</Label>
-          <Input id="vax-purpose" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="e.g. Newcastle + IB" />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="vax-method">Method (optional)</Label>
-          <Input id="vax-method" value={method} onChange={(e) => setMethod(e.target.value)} placeholder="Eye drop" />
+          <Label>Method (optional)</Label>
+          <MethodSelect value={method} onChange={setMethod} />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
@@ -154,7 +136,7 @@ function ReasonDialog({
         <DialogHeader>
           <DialogTitle>{mode === "reschedule" ? "Reschedule vaccine" : "Cancel vaccine"}</DialogTitle>
           <DialogDescription>
-            {row.item.name} · {row.purpose} · planned Day {row.planned_day}
+            {row.purposeRef.label} · planned Day {row.planned_day}
             {mode === "reschedule" && ". Moving it to today lets the worker confirm it early."}
           </DialogDescription>
         </DialogHeader>
@@ -309,14 +291,11 @@ export function VaccineTab({ batch }: { batch: Batch }) {
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={row.status === "CANCELLED" ? "font-medium line-through" : "font-medium"}>
-                          {row.item.name}
+                          {row.purposeRef.label}
                         </span>
                         <StatusBadge tone={state.tone} label={state.label} />
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {row.purpose}
-                        {row.method && ` · ${row.method}`}
-                      </p>
+                      {row.method && <p className="text-sm text-muted-foreground">{humanizeEnum(row.method)}</p>}
                       {row.reason && (
                         <p className="text-xs text-muted-foreground">
                           {row.status === "CANCELLED" ? "Cancelled" : "Rescheduled"}: {row.reason}
@@ -328,7 +307,7 @@ export function VaccineTab({ batch }: { batch: Batch }) {
                           {row.vaccinations
                             .map((v) =>
                               v.consumption
-                                ? `${Number(v.consumption.quantity)} ${humanizeEnum(v.consumption.unit)} (…${v.consumption.stock_unit_id?.slice(-7)}, ${v.consumption.house.name})`
+                                ? `${v.vaccine_name} ${Number(v.consumption.quantity)} ${humanizeEnum(v.consumption.unit)} (…${v.consumption.stock_unit_id?.slice(-7)}, ${v.consumption.house.name})`
                                 : `${Number(v.dosage)}`
                             )
                             .join(", ")}
