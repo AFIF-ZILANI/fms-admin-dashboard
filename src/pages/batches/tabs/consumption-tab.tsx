@@ -33,13 +33,13 @@ type ItemRow = Amounts & {
   unit_cost: number | null;
   houses: HouseRow[];
 };
-type DayRow = { day: number; feed_cost: number; health_cost: number; other_cost: number; feed_kg: number; birds: number };
+type DayRow = { day: number; feed_cost: number; medicine_cost: number; vaccine_cost: number; other_cost: number; feed_kg: number; birds: number };
 /** GET /analytics/batches/:id/stock */
 type BatchStock = {
   items: ItemRow[];
   stays: { house_id: string; house_name: string; from: string; to: string }[];
   total_cost: number;
-  cost_by_category: { feed: number; health: number; other: number };
+  cost_by_category: { feed: number; medicine: number; vaccine: number; other: number };
   uncosted_items: string[];
   daily: DayRow[];
 };
@@ -87,10 +87,10 @@ function ChartCard({ title, empty, children }: { title: string; empty: string | 
 
 type Slice = { name: string; cost: number; amount: string; color: string };
 
-/** Medicine cost by medicine: the top four get a colour each, the rest fold into Other (the palette has four). */
-function medicineSlices(items: ItemRow[]): Slice[] {
+/** Cost by item within one category: the top four get a colour each, the rest fold into Other (the palette has four). */
+function categorySlices(items: ItemRow[], categories: string[]): Slice[] {
   const meds = items
-    .filter((i) => i.category === "MEDICINE" && (i.cost ?? 0) > 0)
+    .filter((i) => categories.includes(i.category) && (i.cost ?? 0) > 0)
     .sort((a, b) => b.cost! - a.cost!);
   const top: Slice[] = meds.slice(0, 4).map((i, n) => ({
     name: i.item_name,
@@ -109,19 +109,19 @@ function medicineSlices(items: ItemRow[]): Slice[] {
   return top;
 }
 
-function MedicineDonut({ items }: { items: ItemRow[] }) {
-  const slices = medicineSlices(items);
+function CategoryDonut({ items, categories, title, noun }: { items: ItemRow[]; categories: string[]; title: string; noun: string }) {
+  const slices = categorySlices(items, categories);
   const total = slices.reduce((s, x) => s + x.cost, 0);
   const pct = (v: number) => `${((v / total) * 100).toFixed(0)}%`;
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">Medicine cost by medicine</CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         {slices.length === 0 ? (
           <div className="flex items-center justify-center text-sm text-muted-foreground" style={{ height: CHART_HEIGHT }}>
-            No medicine used yet.
+            No {noun} used yet.
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 sm:flex-row">
@@ -153,7 +153,7 @@ function MedicineDonut({ items }: { items: ItemRow[] }) {
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-lg font-semibold tabular-nums">{formatMoney(Number(total.toFixed(2)))}</span>
-                <span className="text-xs text-muted-foreground">medicine</span>
+                <span className="text-xs text-muted-foreground">{noun}</span>
               </div>
             </div>
             <ul className="flex w-full min-w-0 flex-col gap-2">
@@ -356,7 +356,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
         <div className="grid gap-4 lg:grid-cols-2">
           <ChartCard
             title="Daily stock cost by day of the batch"
-            empty={daily.some((d) => d.feed_cost + d.health_cost + d.other_cost > 0) ? null : "No costed stock used yet."}
+            empty={daily.some((d) => d.feed_cost + d.medicine_cost + d.vaccine_cost + d.other_cost > 0) ? null : "No costed stock used yet."}
           >
             <BarChart data={daily}>
               <CartesianGrid {...chartGridProps} />
@@ -367,10 +367,11 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
                 labelFormatter={(d) => `Day ${d}`}
                 formatter={(v: TooltipValueType | undefined, name) => [formatMoney(Number(v ?? 0)), name]}
               />
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} itemSorter={null} />
               <Bar dataKey="feed_cost" name="Feed" stackId="c" fill={CATEGORICAL_COLORS[0]} />
-              <Bar dataKey="health_cost" name="Medicine & vaccines" stackId="c" fill={CATEGORICAL_COLORS[1]} />
-              <Bar dataKey="other_cost" name="Other" stackId="c" fill={CATEGORICAL_COLORS[2]} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="medicine_cost" name="Medicine & supplements" stackId="c" fill={CATEGORICAL_COLORS[1]} />
+              <Bar dataKey="vaccine_cost" name="Vaccines" stackId="c" fill={CATEGORICAL_COLORS[2]} />
+              <Bar dataKey="other_cost" name="Other" stackId="c" fill={CATEGORICAL_COLORS[3]} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ChartCard>
 
@@ -405,7 +406,8 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
             <BarChart
               data={[
                 { name: "Feed", cost: data?.cost_by_category.feed ?? 0 },
-                { name: "Medicine & vaccines", cost: data?.cost_by_category.health ?? 0 },
+                { name: "Medicine & supplements", cost: data?.cost_by_category.medicine ?? 0 },
+                { name: "Vaccines", cost: data?.cost_by_category.vaccine ?? 0 },
                 { name: "Other", cost: data?.cost_by_category.other ?? 0 },
               ]}
               layout="vertical"
@@ -422,14 +424,15 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
                 ]}
               />
               <Bar dataKey="cost" radius={[0, 4, 4, 0]} barSize={18}>
-                {CATEGORICAL_COLORS.slice(0, 3).map((c) => (
+                {CATEGORICAL_COLORS.map((c) => (
                   <Cell key={c} fill={c} />
                 ))}
               </Bar>
             </BarChart>
           </ChartCard>
 
-          <MedicineDonut items={items} />
+          <CategoryDonut items={items} categories={["MEDICINE", "SUPPLEMENT"]} title="Medicine & supplement cost by item" noun="medicine & supplements" />
+          <CategoryDonut items={items} categories={["VACCINE"]} title="Vaccine cost by vaccine" noun="vaccines" />
         </div>
       )}
 
