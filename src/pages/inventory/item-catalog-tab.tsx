@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { TruncatedText } from "@/components/shared/truncated-text";
 import { useNavigate } from "react-router";
-import { AlertCircle, AlertTriangle, Layers, Package, Pencil, Plus, Power, PowerOff, QrCode, Search, Settings2, Trash2, Wheat, X } from "lucide-react";
+import { AlertCircle, AlertTriangle, Layers, MoreVertical, Package, Pencil, Plus, Power, PowerOff, QrCode, Search, Settings2, Trash2, Wheat, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -170,30 +171,42 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
       key: "actions",
       header: "",
       render: (i) => (
-        <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="icon-sm" aria-label="Edit item" onClick={() => openEdit(i)}>
-            <Pencil />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={i.is_active ? "Deactivate item" : "Reactivate item"}
-            title={i.is_active ? "Deactivate" : "Reactivate"}
-            onClick={() => toggleActive(i)}
-            disabled={(deactivate.isPending && deactivate.variables === i.id) || (reactivate.isPending && reactivate.variables === i.id)}
+        <DropdownMenu>
+          {/* Hidden until row hover on mouse devices; always shown on touch, where there is no hover. */}
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Actions for ${i.name}`}
+                className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 pointer-coarse:opacity-100"
+              />
+            }
           >
-            {i.is_active ? <PowerOff /> : <Power />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Delete item"
-            onClick={() => void deleteItem(i)}
-            disabled={remove.isPending && remove.variables === i.id}
-          >
-            <Trash2 />
-          </Button>
-        </div>
+            <MoreVertical />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem onClick={() => openEdit(i)}>
+              <Pencil />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => toggleActive(i)}
+              disabled={(deactivate.isPending && deactivate.variables === i.id) || (reactivate.isPending && reactivate.variables === i.id)}
+            >
+              {i.is_active ? <PowerOff /> : <Power />}
+              {i.is_active ? "Deactivate" : "Reactivate"}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => void deleteItem(i)}
+              disabled={remove.isPending && remove.variables === i.id}
+            >
+              <Trash2 />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
       className: "text-right",
     },

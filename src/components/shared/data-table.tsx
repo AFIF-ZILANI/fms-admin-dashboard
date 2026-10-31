@@ -214,7 +214,7 @@ export function DataTable<T>({
                 <TableRow
                   key={rowKey(row)}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
-                  className={cn(onRowClick && "cursor-pointer")}
+                  className={cn("group", onRowClick && "cursor-pointer")}
                 >
                   {selectable && (
                     <TableCell onClick={(e) => e.stopPropagation()}>
