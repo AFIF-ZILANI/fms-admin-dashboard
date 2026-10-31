@@ -8,7 +8,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
-import { PaginationBar } from "@/components/shared/pagination-bar";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, usePostData, useDelete, type Paginated } from "@/lib/api";
 import { useConfirm } from "@/components/shared/confirm-dialog";
@@ -28,35 +27,20 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
   const navigate = useNavigate();
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-
   const query = new URLSearchParams({ limit: "100" });
   if (categoryFilter !== "ALL") query.set("category", categoryFilter);
   const { data, isLoading } = useGetData<Paginated<Item>>(`/items?${query}`, ["items", categoryFilter]);
 
-  // The table pages on the server; the full fetch above still feeds the KPIs and search.
-  const pageQuery = new URLSearchParams({ page: String(page), limit: String(pageSize), is_active: "true" });
-  if (categoryFilter !== "ALL") pageQuery.set("category", categoryFilter);
-  const { data: pageData, isLoading: pageLoading } = useGetData<Paginated<Item>>(`/items?${pageQuery}`, [
-    "items",
-    "page",
-    categoryFilter,
-    page,
-    pageSize,
-  ]);
-
-  // No search endpoint on GET /api/items (docs/api.md §6.1) — but the page already
+  // No search or sort on GET /api/items (docs/api.md §6.1) — but the page already
   // fetches up to limit=100 (effectively "everything" for a realistic catalog size),
-  // so filtering that in memory is instant and needs no debounce or network round-trip.
+  // so search, sort and paging all run in memory on that one fetch.
+  // ponytail: a catalog past 100 items needs server-side search/sort/paging.
   const allItems = data?.results ?? [];
   const q = search.trim().toLowerCase();
-  // ponytail: search has no API, so it filters the loaded 100 and suspends server paging while active.
   const matches = q
     ? allItems.filter((i) => i.name.toLowerCase().includes(q) || humanizeEnum(i.category).toLowerCase().includes(q))
     : allItems;
-  const items = q ? matches.filter((i) => i.is_active) : (pageData?.results ?? []);
-  // Inactive items are few, so they ride on the full fetch instead of paging on the server.
+  const items = matches.filter((i) => i.is_active);
   const inactiveItems = matches.filter((i) => !i.is_active);
 
   const totalItems = data?.total ?? allItems.length;
@@ -149,7 +133,7 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
   };
 
   const columns: Column<Item>[] = [
-    { key: "name", header: "Name", render: (i) => <TruncatedText text={i.name} className="max-w-48 font-medium" /> },
+    { key: "name", header: "Name", render: (i) => <TruncatedText text={i.name} className="max-w-48 font-medium" />, sortValue: (i) => i.name.toLowerCase() },
     { key: "category", header: "Category", render: (i) => humanizeEnum(i.category) },
     {
       key: "warehouse_stock",
@@ -251,10 +235,7 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
             )}
           </div>
 
-          <Select value={categoryFilter} onValueChange={(v) => {
-              setCategoryFilter(v ?? "ALL");
-              setPage(1);
-            }}>
+          <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v ?? "ALL")}>
             <SelectTrigger className="w-48">
               <SelectValue>
                 {(value: string) =>
@@ -291,8 +272,7 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
         columns={columns}
         rows={items}
         rowKey={(i) => i.id}
-        isLoading={q ? isLoading : pageLoading}
-        paginate={!!q}
+        isLoading={isLoading}
         empty={
           search
             ? { icon: Search, title: "No items match your search", description: "Try a different name or category." }
@@ -304,20 +284,6 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
               }
         }
       />
-
-      {!q && pageData && (
-        <PaginationBar
-          page={pageData.page}
-          pageSize={pageSize}
-          total={pageData.total}
-          totalPages={pageData.totalPages}
-          onPageChange={setPage}
-          onPageSizeChange={(n) => {
-            setPageSize(n);
-            setPage(1);
-          }}
-        />
-      )}
 
       {inactiveItems.length > 0 && (
         <div className="flex flex-col gap-2">
