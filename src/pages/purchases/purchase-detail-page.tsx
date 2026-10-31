@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { TruncatedText } from "@/components/shared/truncated-text";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, CreditCard, Plus, Receipt, Truck } from "lucide-react";
+import { ArrowLeft, CreditCard, Plus, Receipt, Trash2, Truck } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,7 +10,8 @@ import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
-import { useGetData, type Paginated } from "@/lib/api";
+import { useConfirm } from "@/components/shared/confirm-dialog";
+import { useDelete, useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { paymentStatus } from "@/pages/sales/types";
 import type { Purchase, PurchaseItemLine } from "@/pages/purchases/types";
@@ -26,6 +28,9 @@ export function PurchaseDetailPage() {
   const [chargeOpen, setChargeOpen] = useState(false);
 
   const { data: purchase, isLoading } = useGetData<Purchase>(`/purchases/${id}`, ["purchases", id]);
+  // Removal touches stock, payments, payables and spend, so refetch everything (empty key = every query).
+  const remove = useDelete<null, string>((purchaseId) => `/purchases/${purchaseId}`, []);
+  const { confirm, confirmDialog } = useConfirm();
   usePageTitle(purchase?.invoice_no ?? "Purchase");
 
   // Purchase's own `supplier` relation has no name (see types.ts) — look it up separately.
@@ -78,6 +83,24 @@ export function PurchaseDetailPage() {
   }
 
   const amounts = trueAmounts(purchase.id, purchase.paid_amount, purchase.due_amount);
+
+  const removePurchase = async () => {
+    const ok = await confirm({
+      title: "Remove this purchase?",
+      description:
+        "For a purchase entered by mistake. Its stock, payments and extra charges are all taken out, and a full copy is kept in the Audit Log. Record the correct purchase again afterwards. This can't be done once its stock has been used, moved or QR-coded.",
+      confirmLabel: "Remove purchase",
+      destructive: true,
+    });
+    if (!ok) return;
+    remove.mutate(purchase.id, {
+      onSuccess: () => {
+        toast.success("Purchase removed");
+        navigate("/purchases");
+      },
+      onError: (error) => toast.error(error.message),
+    });
+  };
   const status = paymentStatus(amounts.paid, amounts.due);
 
   return (
@@ -107,10 +130,20 @@ export function PurchaseDetailPage() {
               <CreditCard />
               {parseFloat(amounts.due) <= 0 ? "Fully paid" : "Record payment"}
             </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Remove purchase"
+              title="Remove purchase"
+              disabled={remove.isPending}
+              onClick={() => void removePurchase()}
+            >
+              <Trash2 />
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="text-xs text-muted-foreground">
-          Purchases are append-only — a correction is a new purchase, not an edit.
+          Entered by mistake? Remove it with the bin icon and record it again.
         </CardContent>
       </Card>
 
@@ -180,6 +213,7 @@ export function PurchaseDetailPage() {
         defaultRefType="PURCHASE"
         defaultRefId={purchase.id}
       />
+      {confirmDialog}
     </div>
   );
 }
