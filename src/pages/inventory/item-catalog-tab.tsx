@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { TruncatedText } from "@/components/shared/truncated-text";
 import { useNavigate } from "react-router";
-import { AlertCircle, AlertTriangle, Layers, Package, Pencil, Plus, QrCode, Search, Settings2, Trash2, Wheat, X } from "lucide-react";
+import { AlertCircle, AlertTriangle, Layers, Package, Pencil, Plus, Power, PowerOff, QrCode, Search, Settings2, Trash2, Wheat, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { KPICard } from "@/components/shared/kpi-card";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { activeStatus } from "@/components/shared/status-tone";
 import { useGetData, usePostData, useDelete, type Paginated } from "@/lib/api";
 import { useConfirm } from "@/components/shared/confirm-dialog";
 import { humanizeEnum } from "@/lib/utils";
@@ -39,7 +37,7 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
   const { data, isLoading } = useGetData<Paginated<Item>>(`/items?${query}`, ["items", categoryFilter]);
 
   // The table pages on the server; the full fetch above still feeds the KPIs and search.
-  const pageQuery = new URLSearchParams({ page: String(page), limit: String(pageSize) });
+  const pageQuery = new URLSearchParams({ page: String(page), limit: String(pageSize), is_active: "true" });
   if (categoryFilter !== "ALL") pageQuery.set("category", categoryFilter);
   const { data: pageData, isLoading: pageLoading } = useGetData<Paginated<Item>>(`/items?${pageQuery}`, [
     "items",
@@ -55,9 +53,12 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
   const allItems = data?.results ?? [];
   const q = search.trim().toLowerCase();
   // ponytail: search has no API, so it filters the loaded 100 and suspends server paging while active.
-  const items = q
+  const matches = q
     ? allItems.filter((i) => i.name.toLowerCase().includes(q) || humanizeEnum(i.category).toLowerCase().includes(q))
-    : (pageData?.results ?? []);
+    : allItems;
+  const items = q ? matches.filter((i) => i.is_active) : (pageData?.results ?? []);
+  // Inactive items are few, so they ride on the full fetch instead of paging on the server.
+  const inactiveItems = matches.filter((i) => !i.is_active);
 
   const totalItems = data?.total ?? allItems.length;
   const activeCount = allItems.filter((i) => i.is_active).length;
@@ -169,14 +170,6 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
     { key: "reorder_level", header: "Reorder level", render: (i) => i.reorder_level ?? "—", numeric: true },
     { key: "lead_time", header: "Lead time", render: (i) => (i.lead_time_days != null ? `${i.lead_time_days}d` : "—"), numeric: true },
     {
-      key: "status",
-      header: "Status",
-      render: (i) => {
-        const { tone, label } = activeStatus(i.is_active);
-        return <StatusBadge tone={tone} label={label} />;
-      },
-    },
-    {
       key: "actions",
       header: "",
       render: (i) => (
@@ -185,12 +178,14 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
             <Pencil />
           </Button>
           <Button
-            variant={i.is_active ? "destructive" : "outline"}
-            size="sm"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={i.is_active ? "Deactivate item" : "Reactivate item"}
+            title={i.is_active ? "Deactivate" : "Reactivate"}
             onClick={() => toggleActive(i)}
             disabled={(deactivate.isPending && deactivate.variables === i.id) || (reactivate.isPending && reactivate.variables === i.id)}
           >
-            {i.is_active ? "Deactivate" : "Reactivate"}
+            {i.is_active ? <PowerOff /> : <Power />}
           </Button>
           <Button
             variant="ghost"
@@ -312,6 +307,20 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
             setPage(1);
           }}
         />
+      )}
+
+      {inactiveItems.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium text-muted-foreground">Inactive items ({inactiveItems.length})</h3>
+          <DataTable
+            columns={columns}
+            rows={inactiveItems}
+            rowKey={(i) => i.id}
+            isLoading={isLoading}
+            exportName="inactive-items"
+            empty={{ icon: Package, title: "No inactive items" }}
+          />
+        </div>
       )}
 
       <StockBreakdownSheet
