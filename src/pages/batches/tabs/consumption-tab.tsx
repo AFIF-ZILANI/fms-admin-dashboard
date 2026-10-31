@@ -153,7 +153,7 @@ function CategoryDonut({ items, categories, title, noun }: { items: ItemRow[]; c
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-lg font-semibold tabular-nums">{formatMoney(Number(total.toFixed(2)))}</span>
-                <span className="text-xs text-muted-foreground">{noun}</span>
+                <span className="max-w-20 text-center text-xs leading-tight text-muted-foreground">{noun}</span>
               </div>
             </div>
             <ul className="flex w-full min-w-0 flex-col gap-2">
