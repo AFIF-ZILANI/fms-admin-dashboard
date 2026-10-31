@@ -14,6 +14,7 @@ import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Item } from "@/pages/inventory/types";
 import { formatStock } from "@/pages/inventory/stock-qty";
+import { toWeeks, type DayRow, type WeekRow } from "@/pages/batches/tabs/weekly";
 import {
   CATEGORICAL_COLORS,
   CHART_HEIGHT,
@@ -36,7 +37,8 @@ type ItemRow = Amounts & {
   unit_cost: number | null;
   houses: HouseRow[];
 };
-type DayRow = { day: number; feed_cost: number; medicine_cost: number; vaccine_cost: number; other_cost: number; feed_kg: number; birds: number };
+/** "Week 3 (days 15–21)" -- feed is recorded weekly, so the charts read by week of the batch. */
+const weekLabel = (w: number) => `Week ${w} (days ${(w - 1) * 7 + 1}–${w * 7})`;
 /** GET /analytics/batches/:id/stock */
 type BatchStock = {
   items: ItemRow[];
@@ -248,9 +250,8 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
     (s, i) => s + (i.cost !== null && i.unit_cost !== null && !i.non_depleting ? i.in_use * i.unit_cost : 0),
     0,
   );
-  const feedPerBird = daily
-    .filter((d) => d.birds > 0 && d.feed_kg > 0)
-    .map((d) => ({ day: d.day, grams: Math.round((d.feed_kg * 1000) / d.birds) }));
+  const weeks = toWeeks(daily);
+  const feedPerBird = weeks.filter((w) => w.feed_g_per_bird !== null);
   const houseCost = new Map<string, { house: string; cost: number }>();
   for (const i of items)
     for (const h of i.houses) {
@@ -358,16 +359,16 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           <ChartCard
-            title="Daily stock cost by day of the batch"
-            empty={daily.some((d) => d.feed_cost + d.medicine_cost + d.vaccine_cost + d.other_cost > 0) ? null : "No costed stock used yet."}
+            title="Weekly stock cost by week of the batch"
+            empty={weeks.some((w) => w.feed_cost + w.medicine_cost + w.vaccine_cost + w.other_cost > 0) ? null : "No costed stock used yet."}
           >
-            <BarChart data={daily}>
+            <BarChart data={weeks}>
               <CartesianGrid {...chartGridProps} />
-              <XAxis dataKey="day" {...chartAxisProps} />
+              <XAxis dataKey="week" tickFormatter={(w) => `W${w}`} {...chartAxisProps} />
               <YAxis {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
-                labelFormatter={(d) => `Day ${d}`}
+                labelFormatter={(w) => weekLabel(Number(w))}
                 formatter={(v: TooltipValueType | undefined, name) => [formatMoney(Number(v ?? 0)), name]}
               />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} itemSorter={null} />
@@ -378,17 +379,29 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
             </BarChart>
           </ChartCard>
 
-          <ChartCard title="Feed per live bird (g / day)" empty={feedPerBird.length ? null : "No feed with a weight unit used yet."}>
+          <ChartCard
+            title="Feed per live bird (g / day, weekly average)"
+            empty={feedPerBird.length ? null : "No feed with a weight unit used yet."}
+          >
             <LineChart data={feedPerBird}>
               <CartesianGrid {...chartGridProps} />
-              <XAxis dataKey="day" {...chartAxisProps} />
+              <XAxis dataKey="week" tickFormatter={(w) => `W${w}`} {...chartAxisProps} />
               <YAxis {...chartAxisProps} allowDecimals={false} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
-                labelFormatter={(d) => `Day ${d}`}
-                formatter={(v: TooltipValueType | undefined) => [`${v} g`, "Feed per bird"]}
+                labelFormatter={(w) => weekLabel(Number(w))}
+                formatter={(v: TooltipValueType | undefined, _name, entry) => [
+                  `${v} g per bird per day · ${qty((entry.payload as WeekRow).feed_kg)} kg that week`,
+                  "Feed",
+                ]}
               />
-              <Line type="monotone" dataKey="grams" stroke={SINGLE_SERIES_STROKE} strokeWidth={2} dot={false} />
+              <Line
+                type="monotone"
+                dataKey="feed_g_per_bird"
+                stroke={SINGLE_SERIES_STROKE}
+                strokeWidth={2}
+                dot={{ r: 4, fill: SINGLE_SERIES_STROKE, stroke: "var(--color-card)", strokeWidth: 2 }}
+              />
             </LineChart>
           </ChartCard>
 
