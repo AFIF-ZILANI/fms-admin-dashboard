@@ -41,6 +41,7 @@ import {
   Skull,
   Scale,
   Thermometer,
+  PackageOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -66,6 +67,7 @@ export const BATCH_SECTIONS = [
   { value: "treatments", label: "Treatments", icon: Syringe },
   { value: "vaccines", label: "Vaccines", icon: ShieldCheck },
   { value: "environment", label: "Environment", icon: Thermometer },
+  { value: "consumption", label: "Consumption", icon: PackageOpen },
   { value: "financials", label: "Financials", icon: Wallet },
 ] as const;
 

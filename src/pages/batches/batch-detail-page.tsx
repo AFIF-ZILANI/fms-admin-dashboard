@@ -20,6 +20,7 @@ import { EnvironmentTab } from "@/pages/batches/tabs/environment-tab";
 import { TreatmentsTab } from "@/pages/batches/tabs/treatments-tab";
 import { VaccineTab } from "@/pages/batches/tabs/vaccine-tab";
 import { FinancialsTab } from "@/pages/batches/tabs/financials-tab";
+import { ConsumptionTab } from "@/pages/batches/tabs/consumption-tab";
 import { cycleDay } from "@/pages/batches/cycle-day";
 
 const STATUS_TONE: Record<BatchStatus, Tone> = { RUNNING: "success", CLOSED: "neutral", SOLD: "neutral" };
@@ -34,6 +35,7 @@ const SECTION_PAGES: Record<BatchSection, ComponentType<{ batch: Batch }>> = {
   treatments: TreatmentsTab,
   vaccines: VaccineTab,
   environment: EnvironmentTab,
+  consumption: ConsumptionTab,
   financials: FinancialsTab,
 };
 
