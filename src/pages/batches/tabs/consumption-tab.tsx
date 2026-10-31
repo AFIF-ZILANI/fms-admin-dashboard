@@ -12,6 +12,8 @@ import { TruncatedText } from "@/components/shared/truncated-text";
 import { useGetData } from "@/lib/api";
 import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
+import type { Item } from "@/pages/inventory/types";
+import { formatStock } from "@/pages/inventory/stock-qty";
 import {
   CATEGORICAL_COLORS,
   CHART_HEIGHT,
@@ -29,6 +31,7 @@ type ItemRow = Amounts & {
   item_name: string;
   category: string;
   unit: string;
+  itemUnits: Item["itemUnits"];
   non_depleting: boolean;
   unit_cost: number | null;
   houses: HouseRow[];
@@ -52,11 +55,11 @@ function costCell(r: { cost: number | null }, nonDepleting: boolean) {
   return r.cost === null ? <span className="text-muted-foreground">No price</span> : formatMoney(r.cost);
 }
 
-function inUseCell(r: Amounts, unit: string) {
+function inUseCell(r: Amounts, item: ItemRow) {
   if (r.in_use_units === 0) return muted;
   return (
     <span>
-      {qty(r.in_use)} {humanizeEnum(unit)}
+      {formatStock(r.in_use, item)}
       <span className="ml-1 text-xs text-muted-foreground">
         ({r.in_use_units} open)
       </span>
@@ -95,7 +98,7 @@ function categorySlices(items: ItemRow[], categories: string[]): Slice[] {
   const top: Slice[] = meds.slice(0, 4).map((i, n) => ({
     name: i.item_name,
     cost: i.cost!,
-    amount: `${qty(i.used + i.in_use)} ${humanizeEnum(i.unit)}`,
+    amount: formatStock(i.used + i.in_use, i),
     color: CATEGORICAL_COLORS[n]!,
   }));
   const rest = meds.slice(4);
@@ -177,9 +180,9 @@ function CategoryDonut({ items, categories, title, noun }: { items: ItemRow[]; c
 function ItemHousesSheet({ item, stays, onClose }: { item: ItemRow | null; stays: BatchStock["stays"]; onClose: () => void }) {
   const columns: Column<HouseRow>[] = [
     { key: "house", header: "House", render: (h) => h.house_name, sortValue: (h) => h.house_name },
-    { key: "used", header: "Used", render: (h) => qty(h.used), numeric: true, sortValue: (h) => h.used },
-    { key: "in_use", header: "In use", render: (h) => inUseCell(h, item?.unit ?? ""), numeric: true, sortValue: (h) => h.in_use },
-    { key: "allocated", header: "Allocated", render: (h) => (h.allocated ? qty(h.allocated) : muted), numeric: true, sortValue: (h) => h.allocated },
+    { key: "used", header: "Used", render: (h) => formatStock(h.used, item!), numeric: true, sortValue: (h) => h.used },
+    { key: "in_use", header: "In use", render: (h) => inUseCell(h, item!), numeric: true, sortValue: (h) => h.in_use },
+    { key: "allocated", header: "Allocated", render: (h) => (h.allocated ? formatStock(h.allocated, item!) : muted), numeric: true, sortValue: (h) => h.allocated },
     { key: "cost", header: "Cost", render: (h) => costCell(h, !!item?.non_depleting), numeric: true, sortValue: (h) => h.cost ?? -1 },
   ];
   const stayOf = (houseId: string) => stays.find((s) => s.house_id === houseId);
@@ -273,16 +276,16 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
     {
       key: "used",
       header: "Used",
-      render: (i) => `${qty(i.used)} ${humanizeEnum(i.unit)}`,
+      render: (i) => formatStock(i.used, i),
       numeric: true,
       sortValue: (i) => i.used,
       exportValue: (i) => i.used,
     },
-    { key: "in_use", header: "In use", render: (i) => inUseCell(i, i.unit), numeric: true, sortValue: (i) => i.in_use, exportValue: (i) => i.in_use },
+    { key: "in_use", header: "In use", render: (i) => inUseCell(i, i), numeric: true, sortValue: (i) => i.in_use, exportValue: (i) => i.in_use },
     {
       key: "allocated",
       header: "Allocated",
-      render: (i) => (i.allocated ? `${qty(i.allocated)} ${humanizeEnum(i.unit)}` : muted),
+      render: (i) => (i.allocated ? formatStock(i.allocated, i) : muted),
       numeric: true,
       sortValue: (i) => i.allocated,
       exportValue: (i) => i.allocated,
