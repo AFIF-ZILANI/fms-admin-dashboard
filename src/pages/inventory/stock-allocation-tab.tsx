@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { ArrowRightLeft, Boxes, Home, PackagePlus, Plus, Route, Undo2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,7 @@ export function StockAllocationTab() {
         </span>
       ),
     },
-    { key: "item", header: "Item", render: (e) => e.stock_unit.purchase_item?.item.name ?? "—" },
+    { key: "item", header: "Item", render: (e) => <TruncatedText text={e.stock_unit.purchase_item?.item.name ?? "—"} className="max-w-48" /> },
     {
       key: "type",
       header: "Type",

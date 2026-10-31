@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { Plus, Wheat } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -105,7 +106,7 @@ export function FeedingProgramTab({ batch }: { batch: Batch }) {
       sortValue: (p) => p.start_day,
     },
     { key: "feed_type", header: "Feed type", render: (p) => humanizeEnum(p.feed_type), sortValue: (p) => p.feed_type },
-    { key: "item", header: "Item", render: (p) => itemName(p.item_id) },
+    { key: "item", header: "Item", render: (p) => <TruncatedText text={itemName(p.item_id)} className="max-w-48" /> },
     {
       key: "status",
       header: "Status",

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { ArrowRightLeft, BookText, PackageMinus, PackagePlus, Plus, Trash2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -62,7 +63,7 @@ export function StockLedgerTab() {
       render: (e) => new Date(e.occurred_at).toLocaleDateString(),
       sortValue: (e) => new Date(e.occurred_at).getTime(),
     },
-    { key: "item", header: "Item", render: (e) => e.item.name, sortValue: (e) => e.item.name },
+    { key: "item", header: "Item", render: (e) => <TruncatedText text={e.item.name} className="max-w-48" />, sortValue: (e) => e.item.name },
     {
       key: "direction",
       header: "Direction",

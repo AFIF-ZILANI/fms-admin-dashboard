@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { Plus, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -32,7 +33,7 @@ export function TreatmentsTab({ batch }: { batch: Batch }) {
 
   const medicationColumns: Column<Medication>[] = [
     { key: "date", header: "Date", render: (m) => formatDate(m.date), sortValue: (m) => m.date },
-    { key: "medicine", header: "Medicine", render: (m) => m.medicine_name },
+    { key: "medicine", header: "Medicine", render: (m) => <TruncatedText text={m.medicine_name} className="max-w-48" /> },
     { key: "dosage", header: "Dosage", render: (m) => m.dosage },
     { key: "cause", header: "Cause", render: (m) => m.cause ?? "—" },
     { key: "administered_by", header: "Administered by", render: (m) => adminName(m.administered_by_id) },

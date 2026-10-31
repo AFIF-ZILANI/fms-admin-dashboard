@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { CalendarDays, Coins, ListTree, Plus, Tags, Wheat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -65,7 +66,7 @@ export function ConsumptionLogTab() {
       render: (c) => new Date(c.date).toLocaleDateString(),
       sortValue: (c) => new Date(c.date).getTime(),
     },
-    { key: "item", header: "Item", render: (c) => c.item.name, sortValue: (c) => c.item.name },
+    { key: "item", header: "Item", render: (c) => <TruncatedText text={c.item.name} className="max-w-48" />, sortValue: (c) => c.item.name },
     { key: "quantity", header: "Quantity", render: (c) => c.quantity, numeric: true },
     { key: "house", header: "House", render: (c) => c.house.name },
     { key: "batch", header: "Batch", render: (c) => c.batch?.batch_code ?? "—" },

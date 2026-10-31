@@ -1,4 +1,5 @@
 import { Package } from "lucide-react";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,7 @@ export function HouseStockDialog({ houseId, houseName, open, onOpenChange }: Hou
   );
 
   const columns: Column<LocationStockRow>[] = [
-    { key: "item", header: "Item", render: (row) => row.item_name },
+    { key: "item", header: "Item", render: (row) => <TruncatedText text={row.item_name} className="max-w-48" /> },
     { key: "balance", header: "On hand", render: (row) => `${row.balance} ${row.unit}`, numeric: true },
   ];
 

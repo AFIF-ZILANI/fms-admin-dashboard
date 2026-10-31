@@ -1,4 +1,5 @@
 import { AlertCircle, AlertTriangle, CheckCircle2, ClipboardList, Hourglass, TrendingDown } from "lucide-react";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData } from "@/lib/api";
@@ -21,7 +22,7 @@ export function LowStockTab() {
   const noReorderQty = items.filter((i) => i.preferred_reorder_qty === null).length;
 
   const columns: Column<LowStockItem>[] = [
-    { key: "name", header: "Item", render: (i) => <span className="font-medium">{i.name}</span> },
+    { key: "name", header: "Item", render: (i) => <TruncatedText text={i.name} className="max-w-48 font-medium" /> },
     { key: "category", header: "Category", render: (i) => humanizeEnum(i.category) },
     {
       key: "current_balance",

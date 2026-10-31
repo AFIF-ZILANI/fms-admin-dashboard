@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { useNavigate } from "react-router";
 import { AlertCircle, AlertTriangle, Layers, Package, Pencil, Plus, QrCode, Search, Settings2, Trash2, Wheat, X } from "lucide-react";
 import { toast } from "sonner";
@@ -148,7 +149,7 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
   };
 
   const columns: Column<Item>[] = [
-    { key: "name", header: "Name", render: (i) => <span className="font-medium">{i.name}</span> },
+    { key: "name", header: "Name", render: (i) => <TruncatedText text={i.name} className="max-w-48 font-medium" /> },
     { key: "category", header: "Category", render: (i) => humanizeEnum(i.category) },
     { key: "unit", header: "Unit", render: (i) => humanizeEnum(i.unit) },
     {

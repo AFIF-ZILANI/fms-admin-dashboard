@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, CreditCard, Plus, Receipt, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ export function PurchaseDetailPage() {
   const ratio = linesTotal > 0 ? chargesTotal / linesTotal : 0;
 
   const columns: Column<PurchaseItemLine>[] = [
-    { key: "item", header: "Item", render: (l) => l.item.name },
+    { key: "item", header: "Item", render: (l) => <TruncatedText text={l.item.name} className="max-w-48" /> },
     { key: "quantity", header: "Quantity", render: (l) => `${l.quantity} ${l.unit}`, numeric: true },
     { key: "unit_price", header: "Unit price", render: (l) => formatMoney(l.unit_price), numeric: true },
     { key: "total", header: "Total", render: (l) => formatMoney(l.total_price), numeric: true },

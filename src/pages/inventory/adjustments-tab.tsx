@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { ClipboardEdit, Package, PackageX, Plus, ShieldAlert, TrendingDown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -36,7 +37,7 @@ export function AdjustmentsTab() {
       render: (a) => new Date(a.created_at).toLocaleDateString(),
       sortValue: (a) => new Date(a.created_at).getTime(),
     },
-    { key: "item", header: "Item", render: (a) => a.item.name, sortValue: (a) => a.item.name },
+    { key: "item", header: "Item", render: (a) => <TruncatedText text={a.item.name} className="max-w-48" />, sortValue: (a) => a.item.name },
     {
       key: "change",
       header: "Before → after",

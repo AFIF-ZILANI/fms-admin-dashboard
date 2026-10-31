@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useGetData } from "@/lib/api";
@@ -32,7 +33,7 @@ export function ReorderSuggestionsPanel({ onRecordPurchase }: ReorderSuggestions
         <ul className="flex flex-col gap-1 text-sm">
           {items.map((item) => (
             <li key={item.id} className="flex items-center justify-between">
-              <span>{item.name}</span>
+              <TruncatedText text={item.name} className="max-w-48" />
               <span className="tabular-nums text-muted-foreground">
                 {item.current_balance} / {item.reorder_level ?? "—"} reorder level
               </span>
