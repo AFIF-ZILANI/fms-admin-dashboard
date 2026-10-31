@@ -14,15 +14,13 @@ import { useConfirm } from "@/components/shared/confirm-dialog";
 import { humanizeEnum } from "@/lib/utils";
 import type { Item, ItemStockByLocation, LowStockItem } from "@/pages/inventory/types";
 import { StockBreakdownSheet } from "@/pages/inventory/stock-breakdown-sheet";
+import { formatStock } from "@/pages/inventory/stock-qty";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 
 /** Sum on-hand balances for display. ponytail: JS floats are fine for a shown stock total at
  * farm scale; round to 3dp to shed accumulation noise. Individual balances stay exact strings. */
 function sumBalances(rows: ItemStockByLocation[]) {
   return rows.reduce((total, r) => total + Number(r.balance), 0);
-}
-function formatQty(n: number) {
-  return String(Number(n.toFixed(3)));
 }
 
 export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void }) {
@@ -144,7 +142,7 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
         onClick={() => setBreakdown({ itemId: item.id, itemName: item.name, unit: item.unit, kind })}
         className="tabular-nums text-primary underline-offset-2 hover:underline"
       >
-        {formatQty(total)}
+        {formatStock(total, item)}
       </button>
     );
   };
@@ -152,7 +150,6 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
   const columns: Column<Item>[] = [
     { key: "name", header: "Name", render: (i) => <TruncatedText text={i.name} className="max-w-48 font-medium" /> },
     { key: "category", header: "Category", render: (i) => humanizeEnum(i.category) },
-    { key: "unit", header: "Unit", render: (i) => humanizeEnum(i.unit) },
     {
       key: "warehouse_stock",
       header: "Warehouse stock",
