@@ -157,6 +157,12 @@ export type BatchVaccineSchedule = {
     vaccine_name: string;
     consumption: { quantity: string; unit: string; stock_unit_id: string | null; house: { id: string; name: string } } | null;
   }[];
+  /** Every house the batch is in (plus any that confirmed and since emptied); DONE once all have confirmed. */
+  houses: {
+    id: string;
+    name: string;
+    confirm: { confirmed_at: string; confirmed_by: { id: string; name: string } } | null;
+  }[];
 };
 
 export type VaccineTemplateEntry = {

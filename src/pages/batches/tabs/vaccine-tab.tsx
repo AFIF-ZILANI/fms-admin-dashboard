@@ -275,6 +275,7 @@ export function VaccineTab({ batch }: { batch: Batch }) {
         <ol className="flex flex-col gap-2">
           {list.map((row, i) => {
             const state = rowState(row, today);
+            const housesDone = row.houses.filter((h) => h.confirm).length;
             const pending = row.status === "PENDING";
             return (
               <li key={row.id} className="flex flex-col gap-2">
@@ -294,6 +295,11 @@ export function VaccineTab({ batch }: { batch: Batch }) {
                           {row.purposeRef.label}
                         </span>
                         <StatusBadge tone={state.tone} label={state.label} />
+                        {pending && row.houses.length > 1 && (
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {housesDone} of {row.houses.length} houses
+                          </span>
+                        )}
                       </div>
                       {row.method && <p className="text-sm text-muted-foreground">{humanizeEnum(row.method)}</p>}
                       {row.reason && (
@@ -301,18 +307,7 @@ export function VaccineTab({ batch }: { batch: Batch }) {
                           {row.status === "CANCELLED" ? "Cancelled" : "Rescheduled"}: {row.reason}
                         </p>
                       )}
-                      {row.status === "DONE" && (
-                        <p className="text-xs text-muted-foreground">
-                          {row.confirmed_by?.name ?? "Someone"} confirmed {row.confirmed_at ? formatDate(row.confirmed_at) : ""} ·{" "}
-                          {row.vaccinations
-                            .map((v) =>
-                              v.consumption
-                                ? `${v.vaccine_name} ${Number(v.consumption.quantity)} ${humanizeEnum(v.consumption.unit)} (…${v.consumption.stock_unit_id?.slice(-7)}, ${v.consumption.house.name})`
-                                : `${Number(v.dosage)}`
-                            )
-                            .join(", ")}
-                        </p>
-                      )}
+                      {row.status !== "CANCELLED" && <HouseLines row={row} />}
                     </div>
                     {pending && running && (
                       <div className="flex flex-wrap gap-1 sm:justify-end">
@@ -348,6 +343,28 @@ export function VaccineTab({ batch }: { batch: Batch }) {
       )}
       {confirmDialog}
     </div>
+  );
+}
+
+/** One line per house: who confirmed it and with which bottles, or still waiting. */
+function HouseLines({ row }: { row: BatchVaccineSchedule }) {
+  if (row.houses.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+      {row.houses.map((h) => {
+        const bottles = row.vaccinations
+          .filter((v) => v.consumption?.house.id === h.id)
+          .map((v) => `${v.vaccine_name} ${Number(v.consumption!.quantity)} ${humanizeEnum(v.consumption!.unit)} (…${v.consumption!.stock_unit_id?.slice(-7)})`);
+        return (
+          <li key={h.id}>
+            <span className="font-medium text-foreground">{h.name}</span>
+            {h.confirm
+              ? ` · ${h.confirm.confirmed_by.name} confirmed ${formatDate(h.confirm.confirmed_at)}${bottles.length ? ` · ${bottles.join(", ")}` : ""}`
+              : " · waiting"}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
