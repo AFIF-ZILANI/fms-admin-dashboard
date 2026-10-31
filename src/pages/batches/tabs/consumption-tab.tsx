@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Home, Package } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TooltipValueType } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { SectionHeader } from "@/components/shared/section-header";
+import { TruncatedText } from "@/components/shared/truncated-text";
 import { useGetData } from "@/lib/api";
 import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
@@ -17,6 +18,7 @@ import {
   chartAxisProps,
   chartGridProps,
   chartTooltipContentStyle,
+  OTHER_COLOR,
   SINGLE_SERIES_STROKE,
 } from "@/pages/analytics/chart-theme";
 
@@ -77,6 +79,94 @@ function ChartCard({ title, empty, children }: { title: string; empty: string | 
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             {children}
           </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+type Slice = { name: string; cost: number; amount: string; color: string };
+
+/** Medicine cost by medicine: the top four get a colour each, the rest fold into Other (the palette has four). */
+function medicineSlices(items: ItemRow[]): Slice[] {
+  const meds = items
+    .filter((i) => i.category === "MEDICINE" && (i.cost ?? 0) > 0)
+    .sort((a, b) => b.cost! - a.cost!);
+  const top: Slice[] = meds.slice(0, 4).map((i, n) => ({
+    name: i.item_name,
+    cost: i.cost!,
+    amount: `${qty(i.used + i.in_use)} ${humanizeEnum(i.unit)}`,
+    color: CATEGORICAL_COLORS[n]!,
+  }));
+  const rest = meds.slice(4);
+  if (rest.length)
+    top.push({
+      name: `Other (${rest.length})`,
+      cost: Number(rest.reduce((s, i) => s + i.cost!, 0).toFixed(2)),
+      amount: rest.map((i) => i.item_name).join(", "),
+      color: OTHER_COLOR,
+    });
+  return top;
+}
+
+function MedicineDonut({ items }: { items: ItemRow[] }) {
+  const slices = medicineSlices(items);
+  const total = slices.reduce((s, x) => s + x.cost, 0);
+  const pct = (v: number) => `${((v / total) * 100).toFixed(0)}%`;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium text-muted-foreground">Medicine cost by medicine</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {slices.length === 0 ? (
+          <div className="flex items-center justify-center text-sm text-muted-foreground" style={{ height: CHART_HEIGHT }}>
+            No medicine used yet.
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-4 sm:flex-row">
+            <div className="relative size-48 shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={slices}
+                    dataKey="cost"
+                    nameKey="name"
+                    innerRadius="62%"
+                    outerRadius="100%"
+                    paddingAngle={1}
+                    stroke="var(--color-card)"
+                    strokeWidth={2}
+                  >
+                    {slices.map((x) => (
+                      <Cell key={x.name} fill={x.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={chartTooltipContentStyle}
+                    formatter={(v: TooltipValueType | undefined, _name, entry) => {
+                      const x = entry.payload as Slice;
+                      return [`${formatMoney(Number(v ?? 0))} · ${pct(Number(v))} · ${x.amount}`, x.name];
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-lg font-semibold tabular-nums">{formatMoney(Number(total.toFixed(2)))}</span>
+                <span className="text-xs text-muted-foreground">medicine</span>
+              </div>
+            </div>
+            <ul className="flex w-full min-w-0 flex-col gap-2">
+              {slices.map((x) => (
+                <li key={x.name} className="flex items-center gap-2 text-sm">
+                  <span className="size-2.5 shrink-0 rounded-full" style={{ background: x.color }} />
+                  <TruncatedText text={x.name} className="max-w-none min-w-0 flex-1" />
+                  <span className="shrink-0 tabular-nums">{formatMoney(x.cost)}</span>
+                  <span className="w-9 shrink-0 text-right text-xs text-muted-foreground tabular-nums">{pct(x.cost)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -173,7 +263,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
       header: "Item",
       render: (i) => (
         <div>
-          <p className="font-medium">{i.item_name}</p>
+          <TruncatedText text={i.item_name} className="max-w-56 font-medium" />
           <p className="text-xs text-muted-foreground">{humanizeEnum(i.category)}</p>
         </div>
       ),
@@ -338,6 +428,8 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
               </Bar>
             </BarChart>
           </ChartCard>
+
+          <MedicineDonut items={items} />
         </div>
       )}
 
