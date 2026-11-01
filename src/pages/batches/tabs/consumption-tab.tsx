@@ -49,12 +49,14 @@ type BatchStock = {
   daily: DayRow[];
 };
 
+/** Money on this page, in taka. */
+const tk = (n: number) => `৳${formatMoney(n)}`;
 const qty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 const muted = <span className="text-muted-foreground">—</span>;
 
 function costCell(r: { cost: number | null }, nonDepleting: boolean) {
   if (nonDepleting) return <span className="text-muted-foreground">Depreciation</span>;
-  return r.cost === null ? <span className="text-muted-foreground">No price</span> : formatMoney(r.cost);
+  return r.cost === null ? <span className="text-muted-foreground">No price</span> : tk(r.cost);
 }
 
 function inUseCell(r: Amounts, item: ItemRow) {
@@ -151,13 +153,13 @@ function CategoryDonut({ items, categories, title, noun }: { items: ItemRow[]; c
                     contentStyle={chartTooltipContentStyle}
                     formatter={(v: TooltipValueType | undefined, _name, entry) => {
                       const x = entry.payload as Slice;
-                      return [`${formatMoney(Number(v ?? 0))} · ${pct(Number(v))} · ${x.amount}`, x.name];
+                      return [`${tk(Number(v ?? 0))} · ${pct(Number(v))} · ${x.amount}`, x.name];
                     }}
                   />
                 </PieChart>
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-lg font-semibold tabular-nums">{formatMoney(Number(total.toFixed(2)))}</span>
+                <span className="text-lg font-semibold tabular-nums">{tk(Number(total.toFixed(2)))}</span>
                 <span className="max-w-20 text-center text-xs leading-tight text-muted-foreground">{noun}</span>
               </div>
             </div>
@@ -166,7 +168,7 @@ function CategoryDonut({ items, categories, title, noun }: { items: ItemRow[]; c
                 <li key={x.name} className="flex items-center gap-2 text-sm">
                   <span className="size-2.5 shrink-0 rounded-full" style={{ background: x.color }} />
                   <TruncatedText text={x.name} className="max-w-none min-w-0 flex-1" />
-                  <span className="shrink-0 tabular-nums">{formatMoney(x.cost)}</span>
+                  <span className="shrink-0 tabular-nums">{tk(x.cost)}</span>
                   <span className="w-9 shrink-0 text-right text-xs text-muted-foreground tabular-nums">{pct(x.cost)}</span>
                 </li>
               ))}
@@ -178,7 +180,7 @@ function CategoryDonut({ items, categories, title, noun }: { items: ItemRow[]; c
   );
 }
 
-/** Per-house breakdown of one item, plus when the batch was in each house -- allocated only counts that window. */
+/** Per-house breakdown of one item, plus when the batch was in each house. */
 function ItemHousesSheet({ item, stays, onClose }: { item: ItemRow | null; stays: BatchStock["stays"]; onClose: () => void }) {
   const columns: Column<HouseRow>[] = [
     { key: "house", header: "House", render: (h) => h.house_name, sortValue: (h) => h.house_name },
@@ -197,7 +199,7 @@ function ItemHousesSheet({ item, stays, onClose }: { item: ItemRow | null; stays
             <SheetTitle>{item.item_name}</SheetTitle>
             <SheetDescription>
               {humanizeEnum(item.category)} · amounts in {humanizeEnum(item.unit)}
-              {item.unit_cost !== null && !item.non_depleting && ` · avg ${formatMoney(item.unit_cost)} per ${humanizeEnum(item.unit)}`}
+              {item.unit_cost !== null && !item.non_depleting && ` · avg ${tk(item.unit_cost)} per ${humanizeEnum(item.unit)}`}
             </SheetDescription>
           </SheetHeader>
           <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-4">
@@ -221,8 +223,8 @@ function ItemHousesSheet({ item, stays, onClose }: { item: ItemRow | null; stays
                 );
               })}
               <p className="text-xs text-muted-foreground">
-                Allocated counts only stock moved into a house during these dates. In use is what's left in opened
-                bottles this batch drew from last.
+                Allocated is what's in the house right now, not opened yet. In use is what's left in opened
+                bottles. Only used and in use are charged to the batch.
               </p>
             </div>
           </div>
@@ -305,14 +307,14 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
     <div className="flex flex-col gap-6">
       <SectionHeader
         title="Consumption"
-        description="Stock this batch used, has open, and was allocated, across every house it stayed in"
+        description="Stock this batch used and has open, and what's waiting unopened in its houses now"
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KPICard label="Stock cost" value={data ? formatMoney(data.total_cost) : ""} isLoading={isLoading} hint="used + in use" />
+        <KPICard label="Stock cost" value={data ? tk(data.total_cost) : ""} isLoading={isLoading} hint="used + in use" />
         <KPICard
           label="Cost per bird"
-          value={data && placed > 0 ? formatMoney(Number((data.total_cost / placed).toFixed(2))) : "—"}
+          value={data && placed > 0 ? tk(Number((data.total_cost / placed).toFixed(2))) : "—"}
           isLoading={isLoading}
           hint={`of ${placed.toLocaleString()} placed`}
         />
@@ -324,7 +326,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
         />
         <KPICard
           label="Open stock"
-          value={formatMoney(Number(openValue.toFixed(2)))}
+          value={tk(Number(openValue.toFixed(2)))}
           isLoading={isLoading}
           hint="left in opened bottles, counted in cost"
         />
@@ -349,7 +351,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
         {data && (
           <div className="flex items-baseline justify-between rounded-lg border border-border px-4 py-3">
             <span className="text-sm font-semibold">Total</span>
-            <span className="text-xl font-semibold tabular-nums">{formatMoney(data.total_cost)}</span>
+            <span className="text-xl font-semibold tabular-nums">{tk(data.total_cost)}</span>
           </div>
         )}
       </div>
@@ -369,7 +371,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
                 labelFormatter={(w) => weekLabel(Number(w))}
-                formatter={(v: TooltipValueType | undefined, name) => [formatMoney(Number(v ?? 0)), name]}
+                formatter={(v: TooltipValueType | undefined, name) => [tk(Number(v ?? 0)), name]}
               />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} itemSorter={null} />
               <Bar dataKey="feed_cost" name="Feed" stackId="c" fill={CATEGORICAL_COLORS[0]} />
@@ -412,7 +414,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
               <YAxis type="category" dataKey="house" width={110} {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
-                formatter={(v: TooltipValueType | undefined) => [formatMoney(Number(v ?? 0)), "Cost"]}
+                formatter={(v: TooltipValueType | undefined) => [tk(Number(v ?? 0)), "Cost"]}
               />
               <Bar dataKey="cost" fill={SINGLE_SERIES_STROKE} radius={[0, 4, 4, 0]} barSize={18} />
             </BarChart>
@@ -435,7 +437,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
                 formatter={(v: TooltipValueType | undefined) => [
-                  `${formatMoney(Number(v ?? 0))} (${data && data.total_cost > 0 ? ((Number(v) / data.total_cost) * 100).toFixed(0) : 0}%)`,
+                  `${tk(Number(v ?? 0))} (${data && data.total_cost > 0 ? ((Number(v) / data.total_cost) * 100).toFixed(0) : 0}%)`,
                   "Cost",
                 ]}
               />
