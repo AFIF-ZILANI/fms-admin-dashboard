@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pencil, Plus, Syringe, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -151,14 +152,38 @@ export function VaccineTemplatesTab() {
   );
 
   const columns: Column<VaccineTemplate>[] = [
-    { key: "name", header: "Name", render: (t) => t.name, sortValue: (t) => t.name },
+    {
+      key: "name",
+      header: "Name",
+      render: (t) => (
+        <div className="flex flex-col">
+          <span className="font-medium">{t.name}</span>
+          <span className="text-xs text-muted-foreground">
+            {t.entries.length} {t.entries.length === 1 ? "vaccine" : "vaccines"}
+          </span>
+        </div>
+      ),
+      sortValue: (t) => t.name,
+    },
     {
       key: "rows",
-      header: "Vaccines",
+      header: "Schedule",
       render: (t) =>
-        t.entries.length
-          ? t.entries.map((e) => `Day ${e.day} ${e.purposeRef.label}${e.method ? ` (${humanizeEnum(e.method)})` : ""}`).join(" · ")
-          : "—",
+        t.entries.length ? (
+          <ul className="flex flex-col gap-1 py-0.5">
+            {[...t.entries]
+              .sort((a, b) => a.day - b.day)
+              .map((e) => (
+                <li key={e.id} className="flex items-baseline gap-2 text-sm">
+                  <span className="w-12 shrink-0 text-xs tabular-nums text-muted-foreground">Day {e.day}</span>
+                  <span className="font-medium">{e.purposeRef.label}</span>
+                  {e.method && <span className="text-xs text-muted-foreground">{humanizeEnum(e.method)}</span>}
+                </li>
+              ))}
+          </ul>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
     {
       key: "status",
@@ -167,17 +192,17 @@ export function VaccineTemplatesTab() {
     },
     {
       key: "actions",
-      header: "",
+      header: "Actions",
       className: "text-right",
       render: (t) => (
         <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>
+          <Button variant="ghost" size="icon-sm" aria-label={`Edit ${t.name}`} onClick={() => setEditing(t)}>
             <Pencil />
-            Edit
           </Button>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
+            disabled={setActive.isPending && setActive.variables?.id === t.id}
             onClick={() =>
               setActive.mutate(
                 { id: t.id, is_active: !t.is_active },
@@ -193,25 +218,33 @@ export function VaccineTemplatesTab() {
   ];
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
-        <Button size="sm" onClick={() => setEditing("new")}>
-          <Plus />
-          New template
-        </Button>
-      </div>
-      <DataTable
-        columns={columns}
-        rows={data ?? []}
-        rowKey={(t) => t.id}
-        isLoading={isLoading}
-        empty={{
-          icon: Syringe,
-          title: "No vaccine templates yet",
-          description: "Build a timeline once, then apply it to every new batch.",
-          action: { label: "New template", onClick: () => setEditing("new") },
-        }}
-      />
+    <div className="flex flex-col gap-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Syringe className="size-4" />
+            Templates
+          </CardTitle>
+          <Button size="sm" onClick={() => setEditing("new")}>
+            <Plus />
+            New template
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            columns={columns}
+            rows={data ?? []}
+            rowKey={(t) => t.id}
+            isLoading={isLoading}
+            empty={{
+              icon: Syringe,
+              title: "No vaccine templates yet",
+              description: "Build a timeline once, then apply it to every new batch.",
+              action: { label: "New template", onClick: () => setEditing("new") },
+            }}
+          />
+        </CardContent>
+      </Card>
       <LookupManagerCard
         title="Vaccine purposes"
         singular="Vaccine purpose"
