@@ -1,20 +1,27 @@
 import { useMemo, useState } from "react";
 import { Plus, Skull } from "lucide-react";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TooltipValueType } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { SectionHeader } from "@/components/shared/section-header";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatDate } from "@/lib/utils";
 import type { Batch, MortalityLog } from "@/pages/batches/types";
 import { MortalityFormDialog } from "@/pages/batches/tabs/mortality-form-dialog";
+import { cycleDay } from "@/pages/batches/cycle-day";
 import { CHART_HEIGHT, chartAxisProps, chartGridProps, chartTooltipContentStyle, SINGLE_SERIES_STROKE } from "@/pages/analytics/chart-theme";
+
+/** "6/9/2026, 14:30" in the farm's (browser's) zone. Mortality is an instant, unlike the UTC-midnight
+ * dates formatDate handles. Web logs made before the time field existed show 06:00 (UTC midnight in BD). */
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short", hourCycle: "h23" });
 
 export function MortalityTab({ batch }: { batch: Batch }) {
   const [formOpen, setFormOpen] = useState(false);
+  const [chart, setChart] = useState<"cumulative" | "age">("cumulative");
 
   const { data, isLoading } = useGetData<Paginated<MortalityLog>>(
     `/mortality-logs?batch_id=${batch.id}&limit=100`,
@@ -28,7 +35,8 @@ export function MortalityTab({ batch }: { batch: Batch }) {
   const rate = batch.initial_chick_count > 0 ? (totalDied / batch.initial_chick_count) * 100 : 0;
 
   const columns: Column<MortalityLog>[] = [
-    { key: "date", header: "Date", render: (m) => formatDate(m.date), sortValue: (m) => m.date },
+    { key: "date", header: "Date & time", render: (m) => formatDateTime(m.date), sortValue: (m) => m.date },
+    { key: "age", header: "Age", render: (m) => `Day ${cycleDay(batch.starting_date, new Date(m.date))}`, numeric: true, sortValue: (m) => m.date },
     { key: "house", header: "House", render: (m) => houseName(m.house_id), sortValue: (m) => houseName(m.house_id) },
     { key: "count", header: "Died", render: (m) => m.count_died.toLocaleString(), numeric: true, sortValue: (m) => m.count_died },
     { key: "cause", header: "Cause", render: (m) => m.cause_note ?? <span className="text-muted-foreground">—</span> },
@@ -49,6 +57,17 @@ export function MortalityTab({ batch }: { batch: Batch }) {
     return series;
   }, [data]);
 
+  // Every day from 1 to the last logged day, zeros included, so quiet days read as quiet rather than vanish.
+  const byAgeSeries = useMemo(() => {
+    const byDay = new Map<number, number>();
+    for (const log of data?.results ?? []) {
+      const day = cycleDay(batch.starting_date, new Date(log.date));
+      byDay.set(day, (byDay.get(day) ?? 0) + log.count_died);
+    }
+    const last = Math.max(0, ...byDay.keys());
+    return Array.from({ length: last }, (_, i) => ({ day: i + 1, died: byDay.get(i + 1) ?? 0 }));
+  }, [data, batch.starting_date]);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
@@ -67,8 +86,16 @@ export function MortalityTab({ batch }: { batch: Batch }) {
         </SectionHeader>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Cumulative deaths over time</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {chart === "cumulative" ? "Cumulative deaths over time" : "Deaths by age (day of batch)"}
+            </CardTitle>
+            <Tabs value={chart} onValueChange={(v) => setChart(v as typeof chart)}>
+              <TabsList>
+                <TabsTrigger value="cumulative">Cumulative</TabsTrigger>
+                <TabsTrigger value="age">By age</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent>
             {isLoading && <Skeleton style={{ height: CHART_HEIGHT }} className="w-full" />}
@@ -77,7 +104,7 @@ export function MortalityTab({ batch }: { batch: Batch }) {
                 No mortality logged yet — the curve appears after the first entry.
               </div>
             )}
-            {!isLoading && cumulativeSeries.length > 0 && (
+            {!isLoading && cumulativeSeries.length > 0 && chart === "cumulative" && (
               <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
                 <LineChart data={cumulativeSeries}>
                   <CartesianGrid {...chartGridProps} />
@@ -89,6 +116,21 @@ export function MortalityTab({ batch }: { batch: Batch }) {
                   />
                   <Line type="monotone" dataKey="cumulative" name="Cumulative died" stroke={SINGLE_SERIES_STROKE} strokeWidth={2} dot={false} />
                 </LineChart>
+              </ResponsiveContainer>
+            )}
+            {!isLoading && cumulativeSeries.length > 0 && chart === "age" && (
+              <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                <BarChart data={byAgeSeries}>
+                  <CartesianGrid {...chartGridProps} />
+                  <XAxis dataKey="day" {...chartAxisProps} />
+                  <YAxis {...chartAxisProps} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={chartTooltipContentStyle}
+                    labelFormatter={(day) => `Day ${day}`}
+                    formatter={(v: TooltipValueType | undefined) => [String(v), "Died"]}
+                  />
+                  <Bar dataKey="died" name="Died" fill={SINGLE_SERIES_STROKE} radius={[2, 2, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             )}
           </CardContent>

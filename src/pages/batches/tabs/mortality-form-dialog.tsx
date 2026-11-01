@@ -28,6 +28,12 @@ const mortalitySchema = z.object({
   date: z.string().min(1, "Date is required"),
 });
 
+/** Now as a datetime-local value ("YYYY-MM-DDTHH:MM") in the browser's zone. */
+const nowLocal = () => {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+};
+
 type MortalityFormInput = z.input<typeof mortalitySchema>;
 type MortalityFormValues = z.output<typeof mortalitySchema>;
 
@@ -47,7 +53,7 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
       house_id: "",
       count_died: undefined,
       cause_note: "",
-      date: new Date().toISOString().slice(0, 10),
+      date: nowLocal(),
     },
   });
 
@@ -59,7 +65,7 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
         house_id: "",
         count_died: undefined,
         cause_note: "",
-        date: new Date().toISOString().slice(0, 10),
+        date: nowLocal(),
       });
     }
   }, [open, reset]);
@@ -73,7 +79,8 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
   );
 
   const onSubmit = (values: MortalityFormValues) => {
-    const payload = { ...values, batch_id: batch.id, cause_note: values.cause_note || undefined };
+    // datetime-local has no zone; send the instant so the log keeps its HH:MM.
+    const payload = { ...values, date: new Date(values.date).toISOString(), batch_id: batch.id, cause_note: values.cause_note || undefined };
     return createMortalityLog.mutate(payload, {
       onSuccess: () => {
         // Mortality decrements the batch's house balances — the detail page's own
@@ -138,8 +145,8 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="date">Date</Label>
-            <Input id="date" type="date" {...register("date")} aria-invalid={!!errors.date} />
+            <Label htmlFor="date">Date & time</Label>
+            <Input id="date" type="datetime-local" {...register("date")} aria-invalid={!!errors.date} />
             {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
           </div>
 
