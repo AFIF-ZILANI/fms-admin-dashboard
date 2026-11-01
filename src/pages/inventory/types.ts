@@ -121,7 +121,6 @@ export const STOCK_REASONS = [
   "WASTAGE",
   "EXPIRED",
   "ADJUSTMENT",
-  "OPENING_BALANCE",
 ] as const;
 export type StockReason = (typeof STOCK_REASONS)[number];
 

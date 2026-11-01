@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { NumericInput } from "@/components/utils/NumaricInput";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { cn, humanizeEnum } from "@/lib/utils";
 import { ADJUSTMENT_REASONS, type InventoryAdjustment, type Item, type LocationStockRow, type Warehouse } from "@/pages/inventory/types";
@@ -51,11 +49,9 @@ type AdjustmentFormValues = z.output<typeof adjustmentSchema>;
 type AdjustmentFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Stock Ledger's "Record opening balance" action reuses this same dialog -- pre-fills reason and locks quantity_before to 0 instead of building a second form. */
-  openingBalance?: boolean;
 };
 
-export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: AdjustmentFormDialogProps) {
+export function AdjustmentFormDialog({ open, onOpenChange }: AdjustmentFormDialogProps) {
   const {
     control,
     register,
@@ -70,19 +66,14 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
       item_id: "",
       warehouse_id: "",
       house_id: "",
-      quantity_before: openingBalance ? 0 : undefined,
+      quantity_before: undefined,
       quantity_after: undefined,
-      reason: openingBalance ? "Opening balance" : "",
+      reason: "",
       note: "",
     },
   });
 
-  // Opening balance only applies to items with no stock history yet -- once anything has been
-  // purchased or recorded, the ledger already tracks it (the server refuses the rest too).
-  const { data: items } = useGetData<Paginated<Item>>(
-    openingBalance ? "/items?has_stock_history=false&limit=100" : "/items?limit=100",
-    openingBalance ? ["items", "no-stock-history"] : ["items"]
-  );
+  const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
   const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
@@ -102,23 +93,10 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
   const after = toNum(watch("quantity_after"));
   const delta = !Number.isNaN(before) && !Number.isNaN(after) ? after - before : null;
 
-  // Opening balance is entered in the item's base unit or any purchasable unit -- same choices as
-  // the purchase form (purchase-create-page.tsx) -- and converted to base quantity on submit.
-  const [openingUnit, setOpeningUnit] = useState("");
   const selectedItemId = watch("item_id");
-  const selectedItem = items?.results.find((i) => i.id === selectedItemId);
-  const openingUnits = selectedItem
-    ? [
-        { unit: selectedItem.unit, factor_to_base: "1" },
-        ...(selectedItem.itemUnits ?? []).filter((u) => u.is_purchasable),
-      ]
-    : [];
-  const openingUnitValue = openingUnits.some((u) => u.unit === openingUnit)
-    ? openingUnit
-    : (openingUnits[0]?.unit ?? "");
 
   // Current on-hand balance at whichever location is selected, so the user can see what's
-  // already there before setting an opening balance or typing quantity_before -- house wins if
+  // already there before typing quantity_before -- house wins if
   // both are set, same tie-break the backend uses (inventory-adjustment.service.ts).
   const selectedWarehouseId = watch("warehouse_id");
   const selectedHouseId = watch("house_id");
@@ -130,7 +108,7 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
   const { data: houseStock } = useGetData<LocationStockRow[]>(
     `/houses/${selectedHouseId}/stock`,
     ["houses", selectedHouseId, "stock"],
-    { enabled: !openingBalance && !!selectedHouseId }
+    { enabled: !!selectedHouseId }
   );
   const currentBalance =
     (selectedHouseId && houseStock?.find((s) => s.item_id === selectedItemId)) ||
@@ -138,19 +116,12 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
     undefined;
 
   const onSubmit = (values: AdjustmentFormValues) => {
-    let quantity_after = values.quantity_after;
-    if (openingBalance) {
-      const unitRow = openingUnits.find((u) => u.unit === openingUnitValue);
-      quantity_after = values.quantity_after * Number(unitRow?.factor_to_base ?? 1);
-    }
-
     const { warehouse_id, house_id, ...rest } = values;
     return createAdjustment.mutate(
       {
         ...rest,
-        quantity_after,
         ...(warehouse_id && { warehouse_id }),
-        ...(!openingBalance && house_id && { house_id }),
+        ...(house_id && { house_id }),
       },
       {
         onSuccess: () => {
@@ -159,7 +130,7 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
           // mortality-form-dialog.tsx invalidating ["batches"] alongside its own key.
           void queryClient.invalidateQueries({ queryKey: ["stock-ledger"] });
           void queryClient.invalidateQueries({ queryKey: ["items"] });
-          toast.success(openingBalance ? "Opening balance recorded" : "Adjustment recorded");
+          toast.success("Adjustment recorded");
           reset();
           onOpenChange(false);
         },
@@ -182,12 +153,8 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{openingBalance ? "Record opening balance" : "New adjustment"}</DialogTitle>
-          <DialogDescription>
-            {openingBalance
-              ? "Sets a starting balance for an item -- recorded as an adjustment from zero."
-              : "Correct a stock count -- always audited, never edits history."}
-          </DialogDescription>
+          <DialogTitle>New adjustment</DialogTitle>
+          <DialogDescription>Correct a stock count -- always audited, never edits history.</DialogDescription>
         </DialogHeader>
 
         <form className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1" onSubmit={handleSubmit(onSubmit)}>
@@ -216,7 +183,7 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
             {errors.item_id && <p className="text-xs text-destructive">{errors.item_id.message}</p>}
           </div>
 
-          <div className={openingBalance ? "" : "grid grid-cols-2 gap-4"}>
+          <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="warehouse_id">Warehouse</Label>
               <Controller
@@ -240,31 +207,27 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
                 )}
               />
             </div>
-            {/* Opening balance is warehouse-only -- there's no such thing as an opening balance
-                at a house, so the house picker only applies to a manual adjustment. */}
-            {!openingBalance && (
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="house_id">House</Label>
-                <Controller
-                  control={control}
-                  name="house_id"
-                  render={({ field }) => (
-                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                      <SelectTrigger id="house_id" className="w-full">
-                        <SelectValue>{(v: string) => houses?.results.find((h) => h.id === v)?.name ?? "None"}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(houses?.results ?? []).map((h) => (
-                          <SelectItem key={h.id} value={h.id}>
-                            {h.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
-            )}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="house_id">House</Label>
+              <Controller
+                control={control}
+                name="house_id"
+                render={({ field }) => (
+                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <SelectTrigger id="house_id" className="w-full">
+                      <SelectValue>{(v: string) => houses?.results.find((h) => h.id === v)?.name ?? "None"}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(houses?.results ?? []).map((h) => (
+                        <SelectItem key={h.id} value={h.id}>
+                          {h.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
           </div>
           {errors.warehouse_id && <p className="-mt-2 text-xs text-destructive">{errors.warehouse_id.message}</p>}
           {currentBalance && (
@@ -273,103 +236,65 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
             </p>
           )}
 
-          {openingBalance ? (
-            // Opening balance always starts from zero -- there's nothing to record it "against"
-            // yet (that's the whole point), so quantity_before/after collapse into one field.
-            // Entered in whichever purchasable unit the item comes in, converted to base on submit.
+          <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="quantity_after">Quantity</Label>
-              <div className="flex gap-2">
-                <NumericInput
-                  id="quantity_after"
-                  allowDecimal
-                  decimalPlaces={3}
-                  className="flex-1"
-                  {...register("quantity_after")}
-                  aria-invalid={!!errors.quantity_after}
-                />
-                <Select value={openingUnitValue} onValueChange={(v) => setOpeningUnit(v ?? "")}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue>{(v: string) => (v ? unitLabel(v) : "Unit")}</SelectValue>
+              <Label htmlFor="quantity_before">Quantity before</Label>
+              <Input
+                id="quantity_before"
+                type="number"
+                step="0.001"
+                {...register("quantity_before")}
+                aria-invalid={!!errors.quantity_before}
+              />
+              {errors.quantity_before && (
+                <p className="text-xs text-destructive">{errors.quantity_before.message}</p>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="quantity_after">Quantity after</Label>
+              <Input
+                id="quantity_after"
+                type="number"
+                step="0.001"
+                {...register("quantity_after")}
+                aria-invalid={!!errors.quantity_after}
+              />
+              {errors.quantity_after && <p className="text-xs text-destructive">{errors.quantity_after.message}</p>}
+            </div>
+          </div>
+
+          {delta !== null && !Number.isNaN(delta) && (
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Delta:{" "}
+              <span className={cn("font-medium tabular-nums", delta > 0 ? "text-success" : "text-destructive")}>
+                {delta > 0 ? "+" : ""}
+                {delta}
+              </span>
+            </p>
+          )}
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="reason">Reason</Label>
+            <Controller
+              control={control}
+              name="reason"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="reason" className="w-full" aria-invalid={!!errors.reason}>
+                    <SelectValue>{(v: string) => v || "Select reason"}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {openingUnits.map((u) => (
-                      <SelectItem key={u.unit} value={u.unit}>
-                        {unitLabel(u.unit)}
+                    {ADJUSTMENT_REASONS.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              {errors.quantity_after && <p className="text-xs text-destructive">{errors.quantity_after.message}</p>}
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="quantity_before">Quantity before</Label>
-                  <Input
-                    id="quantity_before"
-                    type="number"
-                    step="0.001"
-                    {...register("quantity_before")}
-                    aria-invalid={!!errors.quantity_before}
-                  />
-                  {errors.quantity_before && (
-                    <p className="text-xs text-destructive">{errors.quantity_before.message}</p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="quantity_after">Quantity after</Label>
-                  <Input
-                    id="quantity_after"
-                    type="number"
-                    step="0.001"
-                    {...register("quantity_after")}
-                    aria-invalid={!!errors.quantity_after}
-                  />
-                  {errors.quantity_after && <p className="text-xs text-destructive">{errors.quantity_after.message}</p>}
-                </div>
-              </div>
-
-              {delta !== null && !Number.isNaN(delta) && (
-                <p className="-mt-2 text-xs text-muted-foreground">
-                  Delta:{" "}
-                  <span className={cn("font-medium tabular-nums", delta > 0 ? "text-success" : "text-destructive")}>
-                    {delta > 0 ? "+" : ""}
-                    {delta}
-                  </span>
-                </p>
               )}
-            </>
-          )}
-
-          {/* Opening balance's reason is always exactly "Opening balance" -- inherent in what this
-              dialog does, so there's nothing for the user to pick. */}
-          {!openingBalance && (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="reason">Reason</Label>
-              <Controller
-                control={control}
-                name="reason"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="reason" className="w-full" aria-invalid={!!errors.reason}>
-                      <SelectValue>{(v: string) => v || "Select reason"}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ADJUSTMENT_REASONS.map((r) => (
-                        <SelectItem key={r} value={r}>
-                          {r}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.reason && <p className="text-xs text-destructive">{errors.reason.message}</p>}
-            </div>
-          )}
+            />
+            {errors.reason && <p className="text-xs text-destructive">{errors.reason.message}</p>}
+          </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="note">Note (optional)</Label>
@@ -382,7 +307,7 @@ export function AdjustmentFormDialog({ open, onOpenChange, openingBalance }: Adj
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="animate-spin" />}
-              {openingBalance ? "Record" : "Save adjustment"}
+              Save adjustment
             </Button>
           </DialogFooter>
         </form>

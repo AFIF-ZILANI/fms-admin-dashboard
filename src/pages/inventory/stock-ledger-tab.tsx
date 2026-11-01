@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { TruncatedText } from "@/components/shared/truncated-text";
-import { ArrowRightLeft, BookText, PackageMinus, PackagePlus, Plus, Trash2, Wallet } from "lucide-react";
+import { ArrowRightLeft, BookText, PackageMinus, PackagePlus, Trash2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -10,7 +10,6 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { STOCK_DIRECTIONS, STOCK_REASONS, type Item, type StockDirection, type StockLedgerEntry, type StockReason } from "@/pages/inventory/types";
-import { AdjustmentFormDialog } from "@/pages/inventory/adjustment-form-dialog";
 import { TransferFormDialog } from "@/pages/inventory/transfer-form-dialog";
 
 type LedgerSummary = {
@@ -22,7 +21,6 @@ type LedgerSummary = {
 };
 
 export function StockLedgerTab() {
-  const [openingBalanceOpen, setOpeningBalanceOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [itemFilter, setItemFilter] = useState<string>("ALL");
   const [directionFilter, setDirectionFilter] = useState<StockDirection | "ALL">("ALL");
@@ -113,10 +111,6 @@ export function StockLedgerTab() {
           <ArrowRightLeft />
           Move stock
         </Button>
-        <Button onClick={() => setOpeningBalanceOpen(true)}>
-          <Plus />
-          Record opening balance
-        </Button>
       </div>
 
       <div className="flex items-center gap-2">
@@ -191,7 +185,6 @@ export function StockLedgerTab() {
       )}
 
       <TransferFormDialog open={transferOpen} onOpenChange={setTransferOpen} />
-      <AdjustmentFormDialog open={openingBalanceOpen} onOpenChange={setOpeningBalanceOpen} openingBalance />
     </div>
   );
 }
