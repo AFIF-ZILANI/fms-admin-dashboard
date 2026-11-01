@@ -27,6 +27,7 @@ import type { Item } from "@/pages/inventory/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 import type { Customer } from "@/pages/customers/types";
 import type { Sale } from "@/pages/sales/types";
+import { farmToday } from "@/lib/farm-day";
 
 const lineSchema = z.object({
   item_id: z.string().min(1, "Select an item"),
@@ -63,7 +64,7 @@ function blankLine(): SaleFormInput["items"][number] {
 function blankSale(): SaleFormInput {
   return {
     customer_id: "",
-    sale_date: new Date().toISOString().slice(0, 10),
+    sale_date: farmToday(),
     warehouse_id: "",
     paid_amount: "",
     paid_to_instrument_id: "",
@@ -179,7 +180,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
               <Input
                 id="sale_date"
                 type="date"
-                max={new Date().toISOString().slice(0, 10)}
+                max={farmToday()}
                 {...register("sale_date")}
                 aria-invalid={!!errors.sale_date}
               />

@@ -26,6 +26,7 @@ import {
   criterionPoints,
   type PerformanceScoreEntry,
 } from "@/pages/employees/types";
+import { farmToday } from "@/lib/farm-day";
 
 const scoreEntrySchema = z
   .object({
@@ -64,7 +65,7 @@ function blankScoreEntry(): ScoreEntryFormInput {
     criterion: undefined as unknown as ScoreEntryFormInput["criterion"],
     points: undefined,
     reason: "",
-    incident_date: new Date().toISOString().slice(0, 10),
+    incident_date: farmToday(),
     approved_by_id: undefined,
     notice_doc_url: "",
   };

@@ -8,6 +8,8 @@ export type Me = {
   employee_id: string | null;
   employee_role: string | null;
   must_change_password: boolean;
+  /** Farm-local hour (0-6) the farm day starts at; see lib/farm-day.ts. */
+  farm_day_start_hour: number;
 };
 
 export const ME_KEY = ["auth", "me"];

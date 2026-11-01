@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { NumericInput, PositiveIntegerInput } from "@/components/utils/NumaricInput";
 import { usePostData } from "@/lib/api";
 import type { Batch, WeightRecord } from "@/pages/batches/types";
+import { farmToday } from "@/lib/farm-day";
 
 const weightSchema = z.object({
   house_id: z.string().min(1, "Select a house"),
@@ -46,7 +47,7 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
       house_id: "",
       average_wt_grams: undefined,
       sample_size: undefined,
-      date: new Date().toISOString().slice(0, 10),
+      date: farmToday(),
     },
   });
 
@@ -58,7 +59,7 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
         house_id: "",
         average_wt_grams: undefined,
         sample_size: undefined,
-        date: new Date().toISOString().slice(0, 10),
+        date: farmToday(),
       });
     }
   }, [open, reset]);

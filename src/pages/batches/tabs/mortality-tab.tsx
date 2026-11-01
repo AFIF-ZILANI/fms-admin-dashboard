@@ -12,6 +12,7 @@ import { useGetData, type Paginated } from "@/lib/api";
 import type { Batch, MortalityLog } from "@/pages/batches/types";
 import { MortalityFormDialog } from "@/pages/batches/tabs/mortality-form-dialog";
 import { cycleDay } from "@/pages/batches/cycle-day";
+import { farmToday } from "@/lib/farm-day";
 import { CHART_HEIGHT, chartAxisProps, chartGridProps, chartTooltipContentStyle, SINGLE_SERIES_STROKE } from "@/pages/analytics/chart-theme";
 
 /** "6/9/2026, 14:30" in the farm's (browser's) zone. Mortality is an instant, unlike the UTC-midnight
@@ -45,7 +46,7 @@ export function MortalityTab({ batch }: { batch: Batch }) {
   const cumulativeSeries = useMemo(() => {
     const byDate = new Map<string, number>();
     for (const log of data?.results ?? []) {
-      const key = log.date.slice(0, 10);
+      const key = farmToday(new Date(log.date)); // the farm date it counts toward, not the UTC one
       byDate.set(key, (byDate.get(key) ?? 0) + log.count_died);
     }
     const series: { date: string; cumulative: number }[] = [];

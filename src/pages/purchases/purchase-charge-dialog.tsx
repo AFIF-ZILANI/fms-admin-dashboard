@@ -18,6 +18,7 @@ import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { LookupRow } from "@/pages/settings/lookup-types";
+import { farmToday } from "@/lib/farm-day";
 
 type PurchaseChargeDialogProps = {
   purchaseId: string;
@@ -25,7 +26,7 @@ type PurchaseChargeDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => farmToday();
 
 // A charge that arrives after the purchase (the transport bill). The server re-costs the stock with it,
 // including whatever a batch already used, so batch P&L shows the real cost.

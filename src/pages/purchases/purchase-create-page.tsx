@@ -31,6 +31,7 @@ import { DISCOUNT_TYPES, type DiscountType, type Purchase } from "@/pages/purcha
 import type { Batch } from "@/pages/batches/types";
 import { BindCodesPrompt } from "@/pages/purchases/bind-codes-prompt";
 import { FarmAccountSelect } from "@/components/shared/farm-account-select";
+import { farmToday } from "@/lib/farm-day";
 
 const CODED_CATEGORIES = ["MEDICINE", "VACCINE", "EQUIPMENT"];
 
@@ -150,7 +151,7 @@ export function PurchaseCreatePage() {
   usePageTitle("New purchase");
   const navigate = useNavigate();
   const [bindPromptPurchase, setBindPromptPurchase] = useState<Purchase | null>(null);
-  const [payment, setPayment] = useState<PendingPayment>(() => blankPayment(new Date().toISOString().slice(0, 10)));
+  const [payment, setPayment] = useState<PendingPayment>(() => blankPayment(farmToday()));
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [charges, setCharges] = useState<PendingCharge[]>([]);
   const [chargeError, setChargeError] = useState<string | null>(null);
@@ -170,7 +171,7 @@ export function PurchaseCreatePage() {
       supplier_id: "",
       warehouse_id: "",
       invoice_no: "",
-      purchase_date: new Date().toISOString().slice(0, 10),
+      purchase_date: farmToday(),
       discount_type: undefined,
       discount_value: undefined,
       items: [blankLine()],

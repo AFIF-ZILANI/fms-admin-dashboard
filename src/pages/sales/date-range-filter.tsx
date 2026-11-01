@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { farmToday } from "@/lib/farm-day";
 
 type DateRangeFilterProps = {
   from: string;
@@ -12,7 +13,7 @@ type DateRangeFilterProps = {
  * both cap at today. The bare pair this replaces was two identical unlabelled
  * boxes where from > to silently returned an empty table with no explanation. */
 export function DateRangeFilter({ from, to, onFromChange, onToChange }: DateRangeFilterProps) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = farmToday();
   return (
     <>
       <div className="flex flex-col gap-1">

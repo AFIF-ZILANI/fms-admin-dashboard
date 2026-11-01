@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { DoctorSelect } from "@/components/shared/doctor-select";
 import { usePostData } from "@/lib/api";
 import type { Batch, Medication } from "@/pages/batches/types";
+import { farmToday } from "@/lib/farm-day";
 
 const medicationSchema = z.object({
   medicine_name: z.string().min(1, "Medicine name is required"),
@@ -41,7 +42,7 @@ function blankMedication(): MedicationFormInput {
     period: "",
     doctor_id: "",
     remarks: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: farmToday(),
   };
 }
 

@@ -31,6 +31,7 @@ import type { Purchase } from "@/pages/purchases/types";
 import type { Sale, BirdSale } from "@/pages/sales/types";
 import { paymentStatus } from "@/pages/sales/types";
 import { PAYMENT_REF_TYPES, type Payment, type PaymentInstrument, type PaymentRefType } from "@/pages/payments/types";
+import { farmToday } from "@/lib/farm-day";
 
 /** Money coming in from a customer has no account of ours to leave, so it names only where it landed. */
 const INCOMING_REF_TYPES: readonly PaymentRefType[] = ["SALE", "BIRD_SALE"];
@@ -63,7 +64,7 @@ function blankPayment(defaults?: { ref_type?: PaymentRefType; ref_id?: string })
     ref_type,
     ref_id: defaults?.ref_id ?? "",
     amount: "",
-    payment_date: new Date().toISOString().slice(0, 10),
+    payment_date: farmToday(),
     account_id: "",
     transaction_ref: "",
     note: "",
@@ -453,7 +454,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
                   <Input
                     id="payment_date"
                     type="date"
-                    max={new Date().toISOString().slice(0, 10)}
+                    max={farmToday()}
                     {...register("payment_date")}
                     aria-invalid={!!errors.payment_date}
                   />

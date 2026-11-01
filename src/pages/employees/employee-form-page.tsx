@@ -39,6 +39,7 @@ import {
   type MaritalStatus,
   type Religion,
 } from "@/pages/employees/types";
+import { farmToday } from "@/lib/farm-day";
 
 // Mirrors server/src/validators/employee.validator.ts. Everything docs/employee_hire.md
 // marks Mandatory is required; the reference contact is Recommended, so optional.
@@ -124,7 +125,7 @@ function blank(): EmployeeFormInput {
     role: "",
     reference_salary: undefined,
     override_salary: false,
-    joining_date: new Date().toISOString().slice(0, 10),
+    joining_date: farmToday(),
     employment_status: "APPOINTED",
     probation_end_date: "",
     education: undefined as unknown as EducationLevel,

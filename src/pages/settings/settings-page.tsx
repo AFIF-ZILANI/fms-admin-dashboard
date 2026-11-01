@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 import {
+  Clock,
   UserRound,
   Layers,
   Package,
@@ -18,6 +19,7 @@ import { DevicesTab } from "@/pages/settings/devices-tab";
 import { AccountSection } from "@/pages/settings/account-section";
 import { RoleSalaryCard } from "@/pages/settings/role-salary-card";
 import { VaccineTemplatesTab } from "@/pages/settings/vaccine-templates-tab";
+import { FarmDayCard } from "@/pages/settings/farm-day-card";
 
 type Section = { id: string; label: string; description: string; icon: LucideIcon; content: ReactNode };
 type Group = { label: string; sections: Section[] };
@@ -59,6 +61,18 @@ const GROUPS: Group[] = [
         description: "Vaccine timelines to apply to a batch.",
         icon: Syringe,
         content: <VaccineTemplatesTab />,
+      },
+    ],
+  },
+  {
+    label: "Farm",
+    sections: [
+      {
+        id: "farm-day",
+        label: "Farm day",
+        description: "When the farm's day turns over.",
+        icon: Clock,
+        content: <FarmDayCard />,
       },
     ],
   },

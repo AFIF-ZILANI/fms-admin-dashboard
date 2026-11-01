@@ -26,6 +26,7 @@ import {
   type SaleFigures,
   type SalePaymentStatus,
 } from "@/pages/sales/bird-sale-math";
+import { farmToday } from "@/lib/farm-day";
 
 const PAYMENT_LABELS: Record<SalePaymentStatus, string> = {
   DUE: "Due",
@@ -65,7 +66,7 @@ type Form = {
   labour_account: string;
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => farmToday();
 
 /** The farm's usual crate and its usual deduction -- prefilled, still editable per load. */
 const DEFAULT_CRATE_SIZE_KG = "20";

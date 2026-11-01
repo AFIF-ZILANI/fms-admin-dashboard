@@ -23,6 +23,7 @@ import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import type { Batch } from "@/pages/batches/types";
 import { COST_TYPES, type Expense } from "@/pages/finance/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
+import { farmToday } from "@/lib/farm-day";
 
 /** Wage and fee expenses are paid by their payroll payout, never here (the server refuses it too). */
 const PAYROLL_CATEGORIES = ["SALARY", "FESTIVAL_BONUS", "SALARY_TRANSFER_FEE"];
@@ -66,7 +67,7 @@ function blankExpense(): ExpenseFormInput {
     category: "",
     cost_type: undefined as unknown as ExpenseFormInput["cost_type"],
     amount: undefined,
-    date: new Date().toISOString().slice(0, 10),
+    date: farmToday(),
     remarks: "",
     // Most farm expenses are settled on the spot -- recorded and paid in one go.
     payment: "FULL",

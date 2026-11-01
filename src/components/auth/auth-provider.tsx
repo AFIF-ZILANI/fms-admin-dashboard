@@ -2,6 +2,13 @@ import { useEffect, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, UNAUTHORIZED_EVENT, apiFetch } from "@/lib/api";
 import { AuthContext, ME_KEY, type Me } from "@/lib/auth-context";
+import { setDayStartHour } from "@/lib/farm-day";
+
+/** Every farm-day calculation reads the hour from memory; set it before anything renders with it. */
+const withFarmDay = (me: Me) => {
+  setDayStartHour(me.farm_day_start_hour ?? 0);
+  return me;
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -10,7 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ME_KEY,
     queryFn: async () => {
       try {
-        return await apiFetch<Me>("/auth/me");
+        return withFarmDay(await apiFetch<Me>("/auth/me"));
       } catch (e) {
         if (e instanceof ApiError && e.status === 401) return null;
         throw e;
@@ -41,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    dropOtherSessionData(res.profile);
+    dropOtherSessionData(withFarmDay(res.profile));
     return res.profile;
   };
 
