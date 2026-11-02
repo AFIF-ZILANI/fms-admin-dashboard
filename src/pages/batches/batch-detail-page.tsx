@@ -1,6 +1,6 @@
 import { useState, type ComponentType } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
-import { ArrowLeft, Lock } from "lucide-react";
+import { ArrowLeft, Bird, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +11,7 @@ import { formatDate, humanizeEnum } from "@/lib/utils";
 import { BATCH_SECTIONS, type BatchSection } from "@/components/layout/nav-config";
 import { liveBirdCount, type Batch, type BatchStatus } from "@/pages/batches/types";
 import { BatchCloseDialog } from "@/pages/batches/batch-close-dialog";
+import { ChickDeliveryDialog } from "@/pages/batches/chick-delivery-dialog";
 import { OverviewTab } from "@/pages/batches/tabs/overview-tab";
 import { AllocationsTab } from "@/pages/batches/tabs/allocations-tab";
 import { MortalityTab } from "@/pages/batches/tabs/mortality-tab";
@@ -60,6 +61,7 @@ export function BatchDetailPage() {
   const { id, section } = useParams<{ id: string; section?: string }>();
   const navigate = useNavigate();
   const [closeOpen, setCloseOpen] = useState(false);
+  const [chicksOpen, setChicksOpen] = useState(false);
 
   const { data: batch, isLoading } = useGetData<Batch>(`/batches/${id}`, ["batches", id]);
   const active = BATCH_SECTIONS.find((s) => s.value === (section ?? "overview"));
@@ -102,16 +104,23 @@ export function BatchDetailPage() {
                 {humanizeEnum(batch.breed)} · {humanizeEnum(batch.phase)} phase · started {formatDate(batch.starting_date)}
               </p>
             </div>
-            {batch.status === "RUNNING" ? (
-              <Button variant="outline" size="sm" onClick={() => setCloseOpen(true)}>
-                <Lock />
-                Close batch
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Chicks are bought here, not on Purchases: available after closing too, for a missed bill. */}
+              <Button variant="outline" size="sm" onClick={() => setChicksOpen(true)}>
+                <Bird />
+                Add chick delivery
               </Button>
-            ) : (
-              batch.actual_end_date && (
-                <span className="text-sm text-muted-foreground">Ended {formatDate(batch.actual_end_date)}</span>
-              )
-            )}
+              {batch.status === "RUNNING" ? (
+                <Button variant="outline" size="sm" onClick={() => setCloseOpen(true)}>
+                  <Lock />
+                  Close batch
+                </Button>
+              ) : (
+                batch.actual_end_date && (
+                  <span className="text-sm text-muted-foreground">Ended {formatDate(batch.actual_end_date)}</span>
+                )
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -145,6 +154,7 @@ export function BatchDetailPage() {
       </section>
 
       <BatchCloseDialog open={closeOpen} onOpenChange={setCloseOpen} batch={batch} />
+      {chicksOpen && <ChickDeliveryDialog batch={batch} onClose={() => setChicksOpen(false)} />}
     </div>
   );
 }

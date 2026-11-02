@@ -11,15 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NumericInput, PositiveIntegerInput } from "@/components/utils/NumaricInput";
-import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, usePostData, type ApiError, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { humanizeEnum } from "@/lib/utils";
 import { BIRD_BREEDS, type Batch } from "@/pages/batches/types";
 import type { House } from "@/pages/houses/types";
-import type { Item, Warehouse } from "@/pages/inventory/types";
-import type { Supplier } from "@/pages/suppliers/types";
-import type { Purchase } from "@/pages/purchases/types";
+import { blankChickPurchase, chickProblem, chickTotals, useChickPurchase, type ChickPurchase } from "@/pages/batches/chick-purchase";
+import { ChickPaymentFields, ChickPurchaseFields, PaymentStatusSelect } from "@/pages/batches/chick-purchase-fields";
 
 const batchSchema = z.object({
   batch_code: z.string().trim().min(1, "Batch code is required"),
@@ -56,33 +54,6 @@ function addDays(dateInput: string, days: number): string {
   return toDateInput(d);
 }
 
-const PAYMENT_STATUSES = ["UNPAID", "PARTIAL", "PAID"] as const;
-type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
-const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  UNPAID: "Unpaid",
-  PARTIAL: "Partially paid",
-  PAID: "Paid in full",
-};
-
-/** The chick delivery that starts the batch: a normal Purchase whose one line carries the batch's id
- *  (batch-management-design.md §3), so its cost lands in the batch P&L. Later deliveries for the same
- *  batch are just more purchases from the Purchases page. */
-type ChickPurchase = {
-  enabled: boolean;
-  supplier_id: string;
-  invoice_no: string;
-  /** "" = same as the chicks placed; hatcheries often add a few free extras. */
-  billed: string;
-  unit_price: string;
-  status: PaymentStatus;
-  amount: string;
-  from_instrument_id: string;
-  payment_date: string;
-  transaction_ref: string;
-};
-
-const CHICK_ITEM_NAME = "Day-old chick";
-
 export function BatchCreatePage() {
   usePageTitle("New batch");
   const navigate = useNavigate();
@@ -117,18 +88,8 @@ export function BatchCreatePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startingDate]);
 
-  const [chicks, setChicks] = useState<ChickPurchase>({
-    enabled: true,
-    supplier_id: "",
-    invoice_no: "",
-    billed: "",
-    unit_price: "",
-    status: "UNPAID",
-    amount: "",
-    from_instrument_id: "",
-    payment_date: today,
-    transaction_ref: "",
-  });
+  const [chicksEnabled, setChicksEnabled] = useState(true);
+  const [chicks, setChicks] = useState<ChickPurchase>(() => blankChickPurchase(today));
   const [chickError, setChickError] = useState<string | null>(null);
   const setChick = (patch: Partial<ChickPurchase>) => setChicks((c) => ({ ...c, ...patch }));
 
@@ -136,39 +97,15 @@ export function BatchCreatePage() {
     "/houses?is_active=true&is_available=true&type=BROODER&limit=100",
     ["houses", "available", "brooder"],
   );
-  const { data: suppliers } = useGetData<Paginated<Supplier>>("/suppliers?limit=100", ["suppliers"]);
-  const { data: chickItems } = useGetData<Paginated<Item>>("/items?category=CHICKS&limit=100", ["items", "CHICKS"]);
-  const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
 
   const createBatch = usePostData<Batch, BatchFormValues>("/batches", ["batches"]);
-  const createItem = usePostData<Item, Record<string, unknown>>("/items", ["items"]);
-  const createPurchase = usePostData<Purchase, Record<string, unknown>>("/purchases", ["purchases"]);
+  const chickPurchase = useChickPurchase();
 
   const placed = Number(useWatch({ control, name: "initial_chick_count" })) || 0;
-  const billed = chicks.billed === "" ? placed : Number(chicks.billed);
-  const unitPrice = Number(chicks.unit_price);
-  const total = Number.isFinite(billed * unitPrice) ? billed * unitPrice : 0;
-  const paymentAmount = chicks.status === "PAID" ? total : Number(chicks.amount);
-  const chickItem = chickItems?.results.find((i) => i.is_active) ?? null;
-
-  /** What's wrong with the chick purchase/payment, checked before anything is saved so a bad payment
-   *  can't leave a batch behind with its purchase missing. */
-  function chickProblem(): string | null {
-    if (!chicks.enabled) return null;
-    if (!Number.isFinite(unitPrice) || unitPrice <= 0) return "Enter the price per chick.";
-    if (!Number.isInteger(billed) || billed <= 0) return "Enter how many chicks were billed.";
-    if (!warehouses?.results.length) return "Add a warehouse first — every purchase is filed under one.";
-    if (chicks.status !== "UNPAID") {
-      if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) return "Enter a valid payment amount.";
-      if (chicks.status === "PARTIAL" && paymentAmount >= total)
-        return 'A partial payment must be less than the total — pick "Paid in full" instead.';
-      if (!chicks.from_instrument_id) return "Select which account the payment came from.";
-    }
-    return null;
-  }
+  const { total } = chickTotals(chicks, placed);
 
   const onSubmit = async (values: BatchFormValues) => {
-    const problem = chickProblem();
+    const problem = chicksEnabled ? chickProblem(chicks, placed, chickPurchase.hasWarehouse) : null;
     setChickError(problem);
     if (problem) return;
 
@@ -196,37 +133,21 @@ export function BatchCreatePage() {
       return;
     }
 
-    if (chicks.enabled) {
+    if (chicksEnabled) {
       // ponytail: two requests, not one transaction -- the checks above catch the usual failures; if
       // the purchase still fails, the batch is kept and the message says where to add it.
       try {
-        const item =
-          chickItem ?? (await createItem.mutateAsync({ name: CHICK_ITEM_NAME, category: "CHICKS", unit: "PCS" }));
-        const paying = chicks.status !== "UNPAID";
-        await createPurchase.mutateAsync({
-          supplier_id: chicks.supplier_id || undefined,
-          // Chick lines post no warehouse stock; the purchase is just filed under the first warehouse.
-          warehouse_id: warehouses!.results[0]!.id,
-          invoice_no: chicks.invoice_no.trim() || undefined,
-          purchase_date: values.starting_date || today,
-          paid_amount: paying ? paymentAmount : 0,
-          ...(paying && {
-            paid_from_instrument_id: chicks.from_instrument_id,
-            payment_date: chicks.payment_date || undefined,
-            payment_transaction_ref: chicks.transaction_ref.trim() || undefined,
-          }),
-          items: [{ item_id: item.id, batch_id: batch.id, quantity: billed, unit: item.unit, unit_price: unitPrice }],
-        });
+        await chickPurchase.record(batch.id, chicks, placed, values.starting_date || today);
       } catch (e) {
         toast.warning(
-          `Batch created, but the chick purchase wasn't saved: ${(e as ApiError).message}. Add it from Purchases, choosing this batch.`,
+          `Batch created, but the chick purchase wasn't saved: ${(e as ApiError).message}. Add it with "Add chick delivery" on the batch page.`,
         );
         navigate(`/batches/${batch.id}`);
         return;
       }
     }
 
-    toast.success(chicks.enabled ? "Batch and chick purchase recorded" : "Batch created");
+    toast.success(chicksEnabled ? "Batch and chick purchase recorded" : "Batch created");
     navigate(`/batches/${batch.id}`);
   };
 
@@ -347,133 +268,39 @@ export function BatchCreatePage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Chick purchase</CardTitle>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={chicks.enabled} onChange={(e) => setChick({ enabled: e.target.checked })} />
+              <input type="checkbox" checked={chicksEnabled} onChange={(e) => setChicksEnabled(e.target.checked)} />
               Record the chick purchase
             </label>
           </CardHeader>
-          {chicks.enabled ? (
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="supplier">Supplier / hatchery</Label>
-                <Select value={chicks.supplier_id} onValueChange={(v) => setChick({ supplier_id: v ?? "" })}>
-                  <SelectTrigger id="supplier" className="w-full">
-                    <SelectValue>
-                      {(v: string) => suppliers?.results.find((s) => s.id === v)?.profile.name ?? "Select supplier"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(suppliers?.results ?? []).map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.profile.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="invoice_no">Invoice no. (optional)</Label>
-                <Input id="invoice_no" value={chicks.invoice_no} onChange={(e) => setChick({ invoice_no: e.target.value })} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="unit_price">Price per chick</Label>
-                <NumericInput
-                  id="unit_price"
-                  allowDecimal
-                  decimalPlaces={2}
-                  placeholder="e.g. 45"
-                  value={chicks.unit_price}
-                  onChange={(e) => setChick({ unit_price: e.target.value })}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="billed">Chicks billed</Label>
-                <PositiveIntegerInput
-                  id="billed"
-                  placeholder={placed ? String(placed) : "Same as placed"}
-                  value={chicks.billed}
-                  onChange={(e) => setChick({ billed: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">Leave empty if it's the same as the chicks placed.</p>
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2 text-sm sm:col-span-2">
-                <span className="text-muted-foreground">
-                  {billed || 0} × {formatMoney(Number.isFinite(unitPrice) ? unitPrice : 0)}
-                </span>
-                <span className="font-medium tabular-nums">{formatMoney(total)}</span>
-              </div>
-              {!chickItem && (
-                <p className="text-xs text-muted-foreground sm:col-span-2">
-                  A "{CHICK_ITEM_NAME}" item (Chicks, pcs) will be added to the catalog for this purchase.
-                </p>
-              )}
+          {chicksEnabled ? (
+            <CardContent>
+              <ChickPurchaseFields
+                chicks={chicks}
+                setChick={setChick}
+                defaultBilled={placed}
+                sameAsPlaced
+                suppliers={chickPurchase.suppliers?.results ?? []}
+                showNewItemNote={!chickPurchase.chickItem}
+              />
             </CardContent>
           ) : (
             <CardContent>
               <p className="text-xs text-muted-foreground">
-                The batch is created without a purchase. Record the chicks later from Purchases, choosing this batch.
+                The batch is created without a purchase. Record the chicks later with "Add chick delivery" on the batch page.
               </p>
             </CardContent>
           )}
         </Card>
 
-        {chicks.enabled && (
+        {chicksEnabled && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">Payment</CardTitle>
-              <Select value={chicks.status} onValueChange={(v) => setChick({ status: (v as PaymentStatus) ?? "UNPAID" })}>
-                <SelectTrigger className="w-44">
-                  <SelectValue>{(v: PaymentStatus) => PAYMENT_STATUS_LABELS[v]}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {PAYMENT_STATUS_LABELS[s]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <PaymentStatusSelect value={chicks.status} onChange={(status) => setChick({ status })} />
             </CardHeader>
-            {chicks.status === "UNPAID" ? (
-              <CardContent>
-                <p className="text-xs text-muted-foreground">
-                  {formatMoney(total)} stays due to the supplier — pay it later from Payments.
-                </p>
-              </CardContent>
-            ) : (
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <Label>Amount</Label>
-                  <NumericInput
-                    allowDecimal
-                    decimalPlaces={2}
-                    disabled={chicks.status === "PAID"}
-                    value={chicks.status === "PAID" ? String(total) : chicks.amount}
-                    onChange={(e) => setChick({ amount: e.target.value })}
-                  />
-                  {chicks.status === "PARTIAL" && (
-                    <p className="text-xs text-muted-foreground">
-                      Due after this payment: {formatMoney(Math.max(0, total - (paymentAmount || 0)))}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="from_instrument">Paid from</Label>
-                  <FarmAccountSelect
-                    id="from_instrument"
-                    value={chicks.from_instrument_id}
-                    onChange={(v) => setChick({ from_instrument_id: v })}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Payment date</Label>
-                  <Input type="date" value={chicks.payment_date} onChange={(e) => setChick({ payment_date: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Transaction ref (optional)</Label>
-                  <Input value={chicks.transaction_ref} onChange={(e) => setChick({ transaction_ref: e.target.value })} />
-                </div>
-              </CardContent>
-            )}
+            <CardContent>
+              <ChickPaymentFields chicks={chicks} setChick={setChick} total={total} />
+            </CardContent>
           </Card>
         )}
 

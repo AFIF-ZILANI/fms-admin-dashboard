@@ -29,7 +29,6 @@ import type { LookupRow } from "@/pages/settings/lookup-types";
 import type { Supplier } from "@/pages/suppliers/types";
 import type { PaymentInstrument } from "@/pages/payments/types";
 import { DISCOUNT_TYPES, type DiscountType, type Purchase } from "@/pages/purchases/types";
-import type { Batch } from "@/pages/batches/types";
 import { BindCodesPrompt } from "@/pages/purchases/bind-codes-prompt";
 import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import { farmToday } from "@/lib/farm-day";
@@ -47,9 +46,6 @@ const lineSchema = z.object({
   discount_value: z.coerce.number().nonnegative().optional(),
   mfg_date: z.string().optional(),
   expiration_date: z.string().optional(),
-  // Chicks only: the batch this delivery stocks. Its cost then lands in that batch's P&L, and the
-  // line posts no warehouse stock (the birds are in the batch's house).
-  batch_id: z.string().optional(),
 });
 
 const purchaseSchema = z.object({
@@ -76,7 +72,6 @@ function blankLine(): LineInput {
     discount_value: undefined,
     mfg_date: "",
     expiration_date: "",
-    batch_id: "",
   };
 }
 
@@ -197,11 +192,6 @@ export function PurchaseCreatePage() {
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
   const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
-  const { data: runningBatches } = useGetData<Paginated<Batch>>("/batches?status=RUNNING&limit=100", [
-    "batches",
-    "RUNNING",
-  ]);
-  const isChickItem = (itemId?: string) => items?.results.find((i) => i.id === itemId)?.category === "CHICKS";
   const { data: admins } = useGetData<Paginated<Admin>>("/admins?limit=100", ["admins"]);
   const { data: instruments } = useGetData<Paginated<PaymentInstrument>>(
     "/payment-instruments?limit=100&is_active=true",
@@ -214,7 +204,8 @@ export function PurchaseCreatePage() {
 
   const createPurchase = usePostData<Purchase, Record<string, unknown>>("/purchases", ["purchases"]);
 
-  const itemOptions = items?.results ?? [];
+  // Chicks are bought from their batch ("Add chick delivery"), so they're not offered here.
+  const itemOptions = (items?.results ?? []).filter((i) => i.category !== "CHICKS");
   const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
 
   /** A line's allowed units are the item's own base unit (always purchasable -- see
@@ -265,13 +256,6 @@ export function PurchaseCreatePage() {
       toast.error("Enter a discount type and value, or leave both blank.");
       return;
     }
-    const chickLine = values.items.findIndex((line) => isChickItem(line.item_id) && !line.batch_id);
-    if (chickLine !== -1) {
-      toast.error(`Line ${chickLine + 1}: chicks belong to a batch — pick it under the line's details (⋯).`);
-      setDetailsIndex(chickLine);
-      return;
-    }
-
     setPaymentError(null);
     if (payment.status !== "UNPAID") {
       if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
@@ -315,7 +299,6 @@ export function PurchaseCreatePage() {
         ...line,
         mfg_date: line.mfg_date || undefined,
         expiration_date: line.expiration_date || undefined,
-        batch_id: (isChickItem(line.item_id) && line.batch_id) || undefined,
       })),
       // Written in the purchase's own transaction -- a charge can't be lost the way a second request could.
       charges: charges.map((c) => ({
@@ -783,7 +766,7 @@ export function PurchaseCreatePage() {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Line details</DialogTitle>
-            <DialogDescription>Discount, mfg/expiration for perishables, and the batch for chicks.</DialogDescription>
+            <DialogDescription>Discount, and mfg/expiration for perishables.</DialogDescription>
           </DialogHeader>
           {detailsIndex !== null && (
             <div className="flex flex-col gap-4">
@@ -819,32 +802,6 @@ export function PurchaseCreatePage() {
                   })}
                 />
               </div>
-              {isChickItem(watchedItems?.[detailsIndex]?.item_id) && (
-                <div className="flex flex-col gap-1.5">
-                  <Label>Batch</Label>
-                  <Controller
-                    control={control}
-                    name={`items.${detailsIndex}.batch_id`}
-                    render={({ field: f }) => (
-                      <Select value={f.value ?? ""} onValueChange={(v) => f.onChange(v ?? "")}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue>
-                            {(v: string) => runningBatches?.results.find((b) => b.id === v)?.batch_code ?? "Select batch"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(runningBatches?.results ?? []).map((b) => (
-                            <SelectItem key={b.id} value={b.id}>
-                              {b.batch_code}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  <p className="text-xs text-muted-foreground">Chicks are charged to this batch.</p>
-                </div>
-              )}
               <div className="flex flex-col gap-1.5">
                 <Label>Mfg date (optional)</Label>
                 <Input type="date" {...register(`items.${detailsIndex}.mfg_date`)} />
