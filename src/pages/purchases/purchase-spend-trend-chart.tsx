@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useGetData } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import {
   CHART_HEIGHT,
   chartAxisProps,
@@ -53,7 +53,7 @@ export function PurchaseSpendTrendChart({ days }: PurchaseSpendTrendChartProps) 
               <YAxis {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
-                formatter={(v: TooltipValueType | undefined) => formatMoney(typeof v === "number" ? v : Number(v))}
+                formatter={(v: TooltipValueType | undefined) => formatTk(typeof v === "number" ? v : Number(v))}
               />
               <Line type="monotone" dataKey="total" name="Total spend" stroke={SINGLE_SERIES_STROKE} strokeWidth={2} dot={false} />
             </LineChart>

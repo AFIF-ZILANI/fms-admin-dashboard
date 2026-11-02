@@ -3,7 +3,7 @@ import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft, MoreHorizontal, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,8 @@ import {
 import { NumericInput } from "@/components/utils/NumaricInput";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum, toCents } from "@/lib/utils";
+import { ItemCombobox } from "@/pages/purchases/item-combobox";
 import type { Item, Warehouse } from "@/pages/inventory/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 import type { Supplier } from "@/pages/suppliers/types";
@@ -98,7 +99,7 @@ function lineNet(line?: {
 }): number {
   const gross = lineGross(line);
   const value = line?.discount_value === undefined ? undefined : Number(line.discount_value);
-  return Math.max(0, gross - discountAmount(gross, line?.discount_type, value));
+  return toCents(Math.max(0, gross - discountAmount(gross, line?.discount_type, value)));
 }
 
 type Admin = { id: string; profile: { id: string; name: string } };
@@ -150,6 +151,8 @@ function blankCharge(): PendingCharge {
 export function PurchaseCreatePage() {
   usePageTitle("New purchase");
   const navigate = useNavigate();
+  // Set by the low-stock page's "Purchase" action: start the first line on that item.
+  const [searchParams] = useSearchParams();
   const [bindPromptPurchase, setBindPromptPurchase] = useState<Purchase | null>(null);
   const [payment, setPayment] = useState<PendingPayment>(() => blankPayment(farmToday()));
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -174,7 +177,14 @@ export function PurchaseCreatePage() {
       purchase_date: farmToday(),
       discount_type: undefined,
       discount_value: undefined,
-      items: [blankLine()],
+      items: [
+        {
+          ...blankLine(),
+          item_id: searchParams.get("item") ?? "",
+          ...(searchParams.get("unit") && { unit: searchParams.get("unit")! }),
+          quantity: searchParams.get("qty") ? Number(searchParams.get("qty")) : undefined,
+        },
+      ],
     },
   });
 
@@ -224,13 +234,17 @@ export function PurchaseCreatePage() {
 
   // Subtotal = sum of each line's own net total (gross minus that line's discount) -- this is what
   // the global discount below is then applied against, same order of operations as the backend.
-  const subtotalPreview = (watchedItems ?? []).reduce((sum, line) => sum + lineNet(line), 0);
-  const globalDiscountAmount = discountAmount(
-    subtotalPreview,
-    globalDiscountType,
-    globalDiscountValue === undefined ? undefined : Number(globalDiscountValue)
+  // Every step rounded to cents: the float sums otherwise drift (900.0000000000001), and a "paid in
+  // full" amount built from that reads as more than the total the server stores.
+  const subtotalPreview = toCents((watchedItems ?? []).reduce((sum, line) => sum + lineNet(line), 0));
+  const globalDiscountAmount = toCents(
+    discountAmount(
+      subtotalPreview,
+      globalDiscountType,
+      globalDiscountValue === undefined ? undefined : Number(globalDiscountValue)
+    )
   );
-  const netTotalPreview = Math.max(0, subtotalPreview - globalDiscountAmount);
+  const netTotalPreview = toCents(Math.max(0, subtotalPreview - globalDiscountAmount));
   const hasAnyDiscount =
     globalDiscountType !== undefined || (watchedItems ?? []).some((line) => line?.discount_type !== undefined);
 
@@ -315,7 +329,7 @@ export function PurchaseCreatePage() {
 
     return createPurchase.mutate(payload, {
       onSuccess: (purchase) => {
-        toast.success(paying ? `Purchase recorded and ${formatMoney(paymentAmount)} paid` : "Purchase recorded");
+        toast.success(paying ? `Purchase recorded and ${formatTk(paymentAmount)} paid` : "Purchase recorded");
         const hasCodedItems = purchase.items.some((line) => CODED_CATEGORIES.includes(line.item.category));
         if (hasCodedItems) setBindPromptPurchase(purchase);
         else navigate(`/purchases/${purchase.id}`);
@@ -424,7 +438,7 @@ export function PurchaseCreatePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-40">Item</TableHead>
+                  <TableHead className="min-w-56">Item</TableHead>
                   <TableHead className="w-24">Quantity</TableHead>
                   <TableHead className="w-28">Unit</TableHead>
                   <TableHead className="w-28">Unit price</TableHead>
@@ -444,27 +458,16 @@ export function PurchaseCreatePage() {
                           control={control}
                           name={`items.${index}.item_id`}
                           render={({ field: f }) => (
-                            <Select
+                            <ItemCombobox
+                              items={itemOptions}
                               value={f.value ?? ""}
-                              onValueChange={(v) => {
+                              invalid={!!lineErrors?.item_id}
+                              onChange={(v) => {
                                 f.onChange(v);
                                 // Item changed — the previously selected unit may no longer be valid for it.
                                 setValue(`items.${index}.unit`, undefined as unknown as string);
                               }}
-                            >
-                              <SelectTrigger className="w-full" aria-invalid={!!lineErrors?.item_id}>
-                                <SelectValue>
-                                  {(v: string) => itemOptions.find((i) => i.id === v)?.name ?? "Select item"}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                {itemOptions.map((i) => (
-                                  <SelectItem key={i.id} value={i.id}>
-                                    {i.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            />
                           )}
                         />
                       </TableCell>
@@ -511,7 +514,7 @@ export function PurchaseCreatePage() {
                         />
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatMoney(lineNet(watchedItems?.[index]))}
+                        {formatTk(lineNet(watchedItems?.[index]))}
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
@@ -577,14 +580,14 @@ export function PurchaseCreatePage() {
 
               {hasAnyDiscount ? (
                 <div className="text-sm tabular-nums">
-                  <div className="text-muted-foreground">Subtotal: {formatMoney(subtotalPreview)}</div>
+                  <div className="text-muted-foreground">Subtotal: {formatTk(subtotalPreview)}</div>
                   {globalDiscountAmount > 0 && (
-                    <div className="text-muted-foreground">Discount: −{formatMoney(globalDiscountAmount)}</div>
+                    <div className="text-muted-foreground">Discount: −{formatTk(globalDiscountAmount)}</div>
                   )}
-                  <div className="font-medium">Total: {formatMoney(netTotalPreview)}</div>
+                  <div className="font-medium">Total: {formatTk(netTotalPreview)}</div>
                 </div>
               ) : (
-                <div className="text-sm font-medium tabular-nums">Total: {formatMoney(netTotalPreview)}</div>
+                <div className="text-sm font-medium tabular-nums">Total: {formatTk(netTotalPreview)}</div>
               )}
             </div>
           </CardContent>
@@ -624,7 +627,7 @@ export function PurchaseCreatePage() {
                 />
                 {payment.status === "PARTIAL" && (
                   <p className="text-xs text-muted-foreground">
-                    Due after this payment: {formatMoney(Math.max(0, netTotalPreview - paymentAmount))}
+                    Due after this payment: {formatTk(Math.max(0, netTotalPreview - paymentAmount))}
                   </p>
                 )}
               </div>
@@ -753,8 +756,8 @@ export function PurchaseCreatePage() {
               ))}
               {chargesTotal > 0 && subtotalPreview > 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Goods {formatMoney(subtotalPreview)} + charges {formatMoney(chargesTotal)} ={" "}
-                  <span className="font-medium text-foreground">{formatMoney(subtotalPreview + chargesTotal)}</span> real
+                  Goods {formatTk(subtotalPreview)} + charges {formatTk(chargesTotal)} ={" "}
+                  <span className="font-medium text-foreground">{formatTk(subtotalPreview + chargesTotal)}</span> real
                   cost (+{((chargesTotal / subtotalPreview) * 100).toFixed(1)}% on each item)
                 </p>
               )}

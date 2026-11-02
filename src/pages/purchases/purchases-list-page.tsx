@@ -8,7 +8,7 @@ import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import { paymentStatus } from "@/pages/sales/types";
 import type { Purchase } from "@/pages/purchases/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
@@ -56,11 +56,11 @@ export function PurchasesListPage() {
     { key: "supplier", header: "Supplier", render: (p) => supplierName(p.supplier_id) },
     { key: "invoice", header: "Invoice", render: (p) => p.invoice_no ?? "—" },
     { key: "items", header: "Lines", render: (p) => p.items.length, numeric: true },
-    { key: "total", header: "Total", render: (p) => formatMoney(p.total_amount), numeric: true },
+    { key: "total", header: "Total", render: (p) => formatTk(p.total_amount), numeric: true },
     {
       key: "due",
       header: "Due",
-      render: (p) => formatMoney(trueAmounts(p.id, p.paid_amount, p.due_amount).due),
+      render: (p) => formatTk(trueAmounts(p.id, p.paid_amount, p.due_amount).due),
       numeric: true,
     },
     {
@@ -105,7 +105,7 @@ export function PurchasesListPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ReorderSuggestionsPanel onRecordPurchase={() => navigate("/purchases/new")} />
+      <ReorderSuggestionsPanel />
 
       <PurchasesAnalyticsSection />
 

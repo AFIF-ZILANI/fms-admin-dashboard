@@ -20,6 +20,7 @@ import { BatchCreatePage } from "@/pages/batches/batch-create-page";
 import { PurchasesListPage } from "@/pages/purchases/purchases-list-page";
 import { PurchaseCreatePage } from "@/pages/purchases/purchase-create-page";
 import { PurchaseDetailPage } from "@/pages/purchases/purchase-detail-page";
+import { LowStockPurchasePage } from "@/pages/purchases/low-stock-purchase-page";
 import { SalesPage } from "@/pages/sales/sales-page";
 import { SaleDetailPage } from "@/pages/sales/sale-detail-page";
 import { BirdSaleDetailPage } from "@/pages/sales/bird-sale-detail-page";
@@ -66,6 +67,7 @@ function App() {
             <Route path="sales/birds/:id" element={<BirdSaleDetailPage />} />
             <Route path="purchases" element={<PurchasesListPage />} />
             <Route path="purchases/new" element={<PurchaseCreatePage />} />
+            <Route path="purchases/low-stock" element={<LowStockPurchasePage />} />
             <Route path="purchases/:id" element={<PurchaseDetailPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="finance" element={<FinancePage />} />

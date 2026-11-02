@@ -24,6 +24,16 @@ export function formatMoney(value: string | number): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
+/** formatMoney with the taka sign, for pages that show money in BDT. */
+export function formatTk(value: string | number): string {
+  return `৳${formatMoney(value)}`
+}
+
+/** Round to the cents money columns store (Decimal(10,2)) -- float sums like 0.1 + 0.2 drift past them. */
+export function toCents(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
 /** Sale/purchase dates are stored as UTC midnight (a Zod `coerce.date()` of a
  * "YYYY-MM-DD" input), so rendering them in local time shows the previous day
  * for any negative UTC offset. Always read these back in UTC. */

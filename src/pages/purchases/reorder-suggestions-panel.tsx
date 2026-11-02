@@ -1,46 +1,27 @@
-import { AlertTriangle } from "lucide-react";
-import { TruncatedText } from "@/components/shared/truncated-text";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertTriangle, ArrowRight } from "lucide-react";
+import { Link } from "react-router";
 import { useGetData } from "@/lib/api";
 import type { LowStockItem } from "@/pages/inventory/types";
 
-type ReorderSuggestionsPanelProps = { onRecordPurchase: () => void };
-
-/** PRD §6.8: "A panel or banner on this page (not a separate page)... since
- * Purchases is where that signal gets acted on." Reuses the same
- * GET /items/low-stock endpoint the Inventory page's Low-Stock tab already
- * uses -- this is a compact, actionable summary of it, not a duplicate
- * table. Renders nothing when there's nothing below reorder level. */
-export function ReorderSuggestionsPanel({ onRecordPurchase }: ReorderSuggestionsPanelProps) {
+/** PRD §6.8: the reorder signal surfaces where it gets acted on. A one-line ribbon here; the full
+ * list (with a purchase action per item) lives at /purchases/low-stock. Renders nothing when
+ * there's nothing below reorder level. */
+export function ReorderSuggestionsPanel() {
   const { data } = useGetData<LowStockItem[]>("/items/low-stock", ["items", "low-stock"]);
-  const items = data ?? [];
+  const count = data?.length ?? 0;
 
-  if (items.length === 0) return null;
+  if (count === 0) return null;
 
   return (
-    <Card className="border-warning/30 bg-warning/5">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-1.5 text-base text-warning">
-          <AlertTriangle className="size-4" />
-          {items.length} item{items.length === 1 ? "" : "s"} below reorder level
-        </CardTitle>
-        <Button size="sm" onClick={onRecordPurchase}>
-          Record purchase
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <ul className="flex flex-col gap-1 text-sm">
-          {items.map((item) => (
-            <li key={item.id} className="flex items-center justify-between">
-              <TruncatedText text={item.name} className="max-w-48" />
-              <span className="tabular-nums text-muted-foreground">
-                {item.current_balance} / {item.reorder_level ?? "—"} reorder level
-              </span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+    <div className="flex items-center justify-between gap-2 rounded-md border-l-4 border-warning bg-warning/10 px-3 py-2 text-sm">
+      <span className="flex items-center gap-1.5 font-medium text-warning">
+        <AlertTriangle className="size-4" />
+        {count} item{count === 1 ? "" : "s"} below reorder level
+      </span>
+      <Link to="/purchases/low-stock" className="flex items-center gap-1 font-medium text-warning hover:underline">
+        View all
+        <ArrowRight className="size-4" />
+      </Link>
+    </div>
   );
 }

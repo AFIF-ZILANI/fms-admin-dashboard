@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useConfirm } from "@/components/shared/confirm-dialog";
 import { useDelete, useGetData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import { paymentStatus } from "@/pages/sales/types";
 import type { Purchase, PurchaseItemLine } from "@/pages/purchases/types";
 import type { Supplier } from "@/pages/suppliers/types";
@@ -53,14 +53,14 @@ export function PurchaseDetailPage() {
   const columns: Column<PurchaseItemLine>[] = [
     { key: "item", header: "Item", render: (l) => <TruncatedText text={l.item.name} className="max-w-48" /> },
     { key: "quantity", header: "Quantity", render: (l) => `${l.quantity} ${l.unit}`, numeric: true },
-    { key: "unit_price", header: "Unit price", render: (l) => formatMoney(l.unit_price), numeric: true },
-    { key: "total", header: "Total", render: (l) => formatMoney(l.total_price), numeric: true },
+    { key: "unit_price", header: "Unit price", render: (l) => formatTk(l.unit_price), numeric: true },
+    { key: "total", header: "Total", render: (l) => formatTk(l.total_price), numeric: true },
     ...(ratio > 0
       ? [
           {
             key: "landed",
             header: "Real unit cost",
-            render: (l: PurchaseItemLine) => formatMoney((Number(l.total_price) * (1 + ratio)) / Number(l.quantity)),
+            render: (l: PurchaseItemLine) => formatTk((Number(l.total_price) * (1 + ratio)) / Number(l.quantity)),
             numeric: true,
           },
         ]
@@ -148,9 +148,9 @@ export function PurchaseDetailPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Total" value={formatMoney(purchase.total_amount)} icon={Receipt} />
-        <KPICard label="Paid" value={formatMoney(amounts.paid)} icon={Receipt} />
-        <KPICard label="Due" value={formatMoney(amounts.due)} icon={Receipt} />
+        <KPICard label="Total" value={formatTk(purchase.total_amount)} icon={Receipt} />
+        <KPICard label="Paid" value={formatTk(amounts.paid)} icon={Receipt} />
+        <KPICard label="Due" value={formatTk(amounts.due)} icon={Receipt} />
       </div>
 
       <Card>
@@ -194,12 +194,12 @@ export function PurchaseDetailPage() {
                     {c.remarks && <span className="text-muted-foreground">· {c.remarks}</span>}
                     <span className="text-xs text-muted-foreground">{new Date(c.date).toLocaleDateString()}</span>
                   </span>
-                  <span className="tabular-nums">{formatMoney(c.amount)}</span>
+                  <span className="tabular-nums">{formatTk(c.amount)}</span>
                 </li>
               ))}
               <li className="flex items-center justify-between py-2 font-medium">
-                <span>Goods {formatMoney(linesTotal)} + charges</span>
-                <span className="tabular-nums">{formatMoney(linesTotal + chargesTotal)}</span>
+                <span>Goods {formatTk(linesTotal)} + charges</span>
+                <span className="tabular-nums">{formatTk(linesTotal + chargesTotal)}</span>
               </li>
             </ul>
           )}

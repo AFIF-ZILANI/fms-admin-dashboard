@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import type { Supplier } from "@/pages/suppliers/types";
 import type { Purchase } from "@/pages/purchases/types";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
@@ -62,7 +62,7 @@ export function TopOutstandingSuppliersCard() {
             {ranked.map((r) => (
               <li key={r.supplierId} className="flex items-center justify-between text-sm">
                 <span>{r.name}</span>
-                <span className="font-medium tabular-nums">{formatMoney(r.due)}</span>
+                <span className="font-medium tabular-nums">{formatTk(r.due)}</span>
               </li>
             ))}
           </ul>

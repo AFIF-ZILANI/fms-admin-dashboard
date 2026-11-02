@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Package, Receipt, Wallet } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Package, Receipt, Wallet } from "lucide-react";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import { DayRangeToggle } from "@/pages/analytics/day-range-toggle";
 import type { PurchasesByCategoryRow } from "@/pages/analytics/types";
 import type { Purchase } from "@/pages/purchases/types";
@@ -15,24 +14,20 @@ import { useOutstanding } from "@/pages/sales/use-outstanding";
 /**
  * Opens the page: how spending is trending, then the table you act on. One day-range
  * control drives everything below it -- the KPI row and both charts -- so a single
- * figure can't be read against a different window than the chart beside it. Collapsing
- * hides the whole block, leaving the page on the purchase list alone.
+ * figure can't be read against a different window than the chart beside it.
  */
 export function PurchasesAnalyticsSection() {
-  const [open, setOpen] = useState(true);
   const [days, setDays] = useState(30);
   // Captured once per mount: Date.now() during render is impure (each re-render would shift it).
   const [now] = useState(() => Date.now());
 
   const { data: byCategory, isLoading: byCategoryLoading } = useGetData<PurchasesByCategoryRow[]>(
     `/analytics/purchases/by-category?days=${days}`,
-    ["analytics", "purchases", "by-category", days],
-    { enabled: open }
+    ["analytics", "purchases", "by-category", days]
   );
   const { data: purchases, isLoading: purchasesLoading } = useGetData<Paginated<Purchase>>(
     "/purchases?limit=100",
-    ["purchases"],
-    { enabled: open }
+    ["purchases"]
   );
 
   const { trueAmounts, isLoading: outstandingLoading } = useOutstanding("PURCHASE");
@@ -51,35 +46,28 @@ export function PurchasesAnalyticsSection() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={() => setOpen((v) => !v)}>
-          {open ? <ChevronUp /> : <ChevronDown />}
-          Analytics
-        </Button>
-        {open && <DayRangeToggle value={days} onValueChange={setDays} />}
+        <h2 className="text-sm font-medium text-muted-foreground">Analytics</h2>
+        <DayRangeToggle value={days} onValueChange={setDays} />
       </div>
 
-      {open && (
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-            <KPICard label="Spend" value={formatMoney(totalSpend)} icon={Wallet} isLoading={kpiLoading} />
-            <KPICard label="Purchases" value={purchaseCount} icon={Package} isLoading={kpiLoading} />
-            <KPICard
-              label="Outstanding payable"
-              value={formatMoney(outstandingDue)}
-              icon={Receipt}
-              isLoading={kpiLoading}
-              hint="All time, not the selected range"
-            />
-          </div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <KPICard label="Spend" value={formatTk(totalSpend)} icon={Wallet} isLoading={kpiLoading} />
+        <KPICard label="Purchases" value={purchaseCount} icon={Package} isLoading={kpiLoading} />
+        <KPICard
+          label="Outstanding payable"
+          value={formatTk(outstandingDue)}
+          icon={Receipt}
+          isLoading={kpiLoading}
+          hint="All time, not the selected range"
+        />
+      </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <SpendByCategoryChart days={days} />
-            <PurchaseSpendTrendChart days={days} />
-          </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <SpendByCategoryChart days={days} />
+        <PurchaseSpendTrendChart days={days} />
+      </div>
 
-          <TopOutstandingSuppliersCard />
-        </div>
-      )}
+      <TopOutstandingSuppliersCard />
     </div>
   );
 }
