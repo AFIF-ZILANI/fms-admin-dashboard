@@ -438,11 +438,13 @@ export function PurchaseCreatePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-56">Item</TableHead>
-                  <TableHead className="w-24">Quantity</TableHead>
-                  <TableHead className="w-28">Unit</TableHead>
-                  <TableHead className="w-28">Unit price</TableHead>
-                  <TableHead className="w-24 text-right">Total</TableHead>
+                  {/* Shares, not "grow to fit": left to grow, Item took the whole row and squeezed the numbers.
+                      A long name truncates in the box; the full name is in the list and on hover. */}
+                  <TableHead className="w-[34%]">Item</TableHead>
+                  <TableHead className="w-[15%]">Quantity</TableHead>
+                  <TableHead className="w-[16%]">Unit</TableHead>
+                  <TableHead className="w-[17%]">Unit price</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>

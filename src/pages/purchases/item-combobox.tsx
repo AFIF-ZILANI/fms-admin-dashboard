@@ -36,8 +36,9 @@ export function ItemCombobox({ items, value, onChange, invalid }: ItemComboboxPr
       <div className="relative">
         <Combobox.Input
           placeholder="Search item"
+          title={selected?.name}
           aria-invalid={invalid}
-          className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent py-1 pr-8 pl-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-input/30"
+          className="h-8 w-full min-w-0 truncate rounded-lg border border-input bg-transparent py-1 pr-8 pl-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-input/30"
         />
         <Combobox.Trigger
           aria-label="Show items"
