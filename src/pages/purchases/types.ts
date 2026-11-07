@@ -16,7 +16,9 @@ export type PurchaseItemLine = {
   total_price: string;
   mfg_date: string | null;
   expiration_date: string | null;
-  item: { id: string; name: string; category: string; unit: string };
+  // QR-tracked lots only: bottles this line splits into, fixed by the first bind; null = not split yet.
+  unit_count?: number | null;
+  item: { id: string; name: string; category: string; unit: string; is_unit_tracked?: boolean };
 };
 
 export type Purchase = {

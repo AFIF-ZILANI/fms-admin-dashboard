@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TruncatedText } from "@/components/shared/truncated-text";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, CreditCard, Plus, Receipt, Trash2, Truck } from "lucide-react";
+import { ArrowLeft, CreditCard, Plus, QrCode, Receipt, Trash2, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import type { Supplier } from "@/pages/suppliers/types";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
 import { PurchaseChargeDialog } from "@/pages/purchases/purchase-charge-dialog";
+import { PurchaseLotSheet } from "@/pages/purchases/purchase-lot-sheet";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 
 export function PurchaseDetailPage() {
@@ -26,6 +27,7 @@ export function PurchaseDetailPage() {
   const navigate = useNavigate();
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [chargeOpen, setChargeOpen] = useState(false);
+  const [lotId, setLotId] = useState<string | null>(null);
 
   const { data: purchase, isLoading } = useGetData<Purchase>(`/purchases/${id}`, ["purchases", id]);
   // Removal touches stock, payments, payables and spend, so refetch everything (empty key = every query).
@@ -49,6 +51,9 @@ export function PurchaseDetailPage() {
   const chargesTotal = charges.reduce((sum, c) => sum + Number(c.amount), 0);
   const linesTotal = (purchase?.items ?? []).reduce((sum, l) => sum + Number(l.total_price), 0);
   const ratio = linesTotal > 0 ? chargesTotal / linesTotal : 0;
+  const landedUnitCost = (l: PurchaseItemLine) => (Number(l.total_price) * (1 + ratio)) / Number(l.quantity);
+  // Looked up by id so the open sheet follows a refetch (a first bind sets the lot's unit_count).
+  const openLot = purchase?.items.find((l) => l.id === lotId) ?? null;
 
   const columns: Column<PurchaseItemLine>[] = [
     { key: "item", header: "Item", render: (l) => <TruncatedText text={l.item.name} className="max-w-48" /> },
@@ -60,7 +65,7 @@ export function PurchaseDetailPage() {
           {
             key: "landed",
             header: "Real unit cost",
-            render: (l: PurchaseItemLine) => formatTk((Number(l.total_price) * (1 + ratio)) / Number(l.quantity)),
+            render: (l: PurchaseItemLine) => formatTk(landedUnitCost(l)),
             numeric: true,
           },
         ]
@@ -70,6 +75,19 @@ export function PurchaseDetailPage() {
       key: "exp",
       header: "Expires",
       render: (l) => (l.expiration_date ? new Date(l.expiration_date).toLocaleDateString() : "—"),
+    },
+    {
+      key: "codes",
+      header: "QR codes",
+      render: (l) =>
+        l.item.is_unit_tracked ? (
+          <span className="inline-flex items-center gap-1 text-primary underline-offset-4 group-hover:underline">
+            <QrCode className="size-3.5" />
+            View
+          </span>
+        ) : (
+          "—"
+        ),
     },
   ];
 
@@ -162,6 +180,8 @@ export function PurchaseDetailPage() {
             columns={columns}
             rows={purchase.items}
             rowKey={(l) => l.id}
+            // Only QR-tracked lines have codes to show; quantity lines have nothing beyond the row.
+            onRowClick={purchase.items.some((l) => l.item.is_unit_tracked) ? (l) => l.item.is_unit_tracked && setLotId(l.id) : undefined}
             empty={{ icon: Receipt, title: "No line items" }}
           />
         </CardContent>
@@ -206,6 +226,11 @@ export function PurchaseDetailPage() {
         </CardContent>
       </Card>
 
+      <PurchaseLotSheet
+        lot={openLot}
+        landedUnitCost={openLot && ratio > 0 ? landedUnitCost(openLot) : undefined}
+        onOpenChange={(open) => !open && setLotId(null)}
+      />
       <PurchaseChargeDialog purchaseId={purchase.id} open={chargeOpen} onOpenChange={setChargeOpen} />
       <PaymentCreateDialog
         open={paymentOpen}
