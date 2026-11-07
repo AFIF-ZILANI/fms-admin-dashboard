@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { TruncatedText } from "@/components/shared/truncated-text";
-import { CalendarDays, Coins, ListTree, Plus, Tags, Wheat } from "lucide-react";
+import { CalendarDays, ChevronDown, Coins, ListTree, Plus, QrCode, Tags, Wheat } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import type { Consumption, Item } from "@/pages/inventory/types";
 import type { Batch } from "@/pages/batches/types";
 import type { House } from "@/pages/houses/types";
 import { ConsumptionFormDialog } from "@/pages/inventory/consumption-form-dialog";
+import { CodedConsumptionDialog } from "@/pages/inventory/coded-consumption-dialog";
 
 export function ConsumptionLogTab() {
   const [batchFilter, setBatchFilter] = useState<string>("ALL");
@@ -21,6 +23,7 @@ export function ConsumptionLogTab() {
   const [occurredFrom, setOccurredFrom] = useState("");
   const [occurredTo, setOccurredTo] = useState("");
   const [recordOpen, setRecordOpen] = useState(false);
+  const [codedOpen, setCodedOpen] = useState(false);
 
   const query = new URLSearchParams({ limit: "100" });
   if (batchFilter !== "ALL") query.set("batch_id", batchFilter);
@@ -149,10 +152,27 @@ export function ConsumptionLogTab() {
           onChange={(e) => setOccurredTo(e.target.value)}
           aria-label="To date"
         />
-        <Button className="ml-auto" onClick={() => setRecordOpen(true)}>
-          <Plus />
-          Record consumption
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button className="ml-auto">
+                <Plus />
+                Record consumption
+                <ChevronDown />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => setRecordOpen(true)}>
+              <Wheat />
+              By quantity
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setCodedOpen(true)}>
+              <QrCode />
+              By code
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <DataTable
@@ -170,6 +190,7 @@ export function ConsumptionLogTab() {
       />
 
       <ConsumptionFormDialog open={recordOpen} onOpenChange={setRecordOpen} />
+      <CodedConsumptionDialog open={codedOpen} onOpenChange={setCodedOpen} />
     </div>
   );
 }
