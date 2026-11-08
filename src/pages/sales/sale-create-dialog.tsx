@@ -27,6 +27,7 @@ import type { Item } from "@/pages/inventory/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 import type { Customer } from "@/pages/customers/types";
 import type { Sale } from "@/pages/sales/types";
+import type { Batch } from "@/pages/batches/types";
 import { farmToday } from "@/lib/farm-day";
 
 const lineSchema = z.object({
@@ -38,6 +39,8 @@ const lineSchema = z.object({
 
 const saleSchema = z.object({
   customer_id: z.string().optional(),
+  // Optional: books the sale to a batch (litter after the flock is sold) -- its P&L counts it.
+  batch_id: z.string().optional(),
   sale_date: z.string().min(1, "Sale date is required"),
   warehouse_id: z.string().min(1, "Choose the warehouse the stock comes from"),
   paid_amount: optionalNumber(z.coerce.number().nonnegative("Must be 0 or more")),
@@ -64,6 +67,7 @@ function blankLine(): SaleFormInput["items"][number] {
 function blankSale(): SaleFormInput {
   return {
     customer_id: "",
+    batch_id: "",
     sale_date: farmToday(),
     warehouse_id: "",
     paid_amount: "",
@@ -96,6 +100,9 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
   const watchedPaid = useWatch({ control, name: "paid_amount" });
 
   const { data: customers } = useGetData<Paginated<Customer>>("/customers?limit=100", ["customers"]);
+  // A finalised batch takes no more income, so only running and sold ones are offered.
+  const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches", "sale-picker"]);
+  const openBatches = (batches?.results ?? []).filter((b) => b.status !== "CLOSED");
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
   const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
@@ -114,6 +121,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
     const payload = {
       ...values,
       customer_id: values.customer_id || undefined,
+      batch_id: values.batch_id || undefined,
       paid_to_instrument_id: values.paid_to_instrument_id || undefined,
     };
     return createSale.mutate(payload, {
@@ -186,6 +194,33 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
               />
               {errors.sale_date && <p className="text-xs text-destructive">{errors.sale_date.message}</p>}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="batch_id">Batch (optional)</Label>
+            <Controller
+              control={control}
+              name="batch_id"
+              render={({ field }) => (
+                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                  <SelectTrigger id="batch_id" className="w-full">
+                    <SelectValue>
+                      {(v: string) => openBatches.find((b) => b.id === v)?.batch_code ?? "Not for a batch"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Not for a batch</SelectItem>
+                    {openBatches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.batch_code}
+                        {b.status === "SOLD" ? " (sold)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            <p className="text-xs text-muted-foreground">Litter or anything else from a flock counts in that batch's profit.</p>
           </div>
 
           <div className="flex flex-col gap-1.5">

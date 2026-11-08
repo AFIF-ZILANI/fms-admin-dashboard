@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 import {
+  CalendarClock,
   Clock,
   UserRound,
   Layers,
@@ -20,6 +21,7 @@ import { AccountSection } from "@/pages/settings/account-section";
 import { RoleSalaryCard } from "@/pages/settings/role-salary-card";
 import { VaccineTemplatesTab } from "@/pages/settings/vaccine-templates-tab";
 import { FarmDayCard } from "@/pages/settings/farm-day-card";
+import { SettlementCard } from "@/pages/settings/settlement-card";
 
 type Section = { id: string; label: string; description: string; icon: LucideIcon; content: ReactNode };
 type Group = { label: string; sections: Section[] };
@@ -73,6 +75,13 @@ const GROUPS: Group[] = [
         description: "When the farm's day turns over.",
         icon: Clock,
         content: <FarmDayCard />,
+      },
+      {
+        id: "settlement",
+        label: "Settlement window",
+        description: "How long sold batches stay open.",
+        icon: CalendarClock,
+        content: <SettlementCard />,
       },
     ],
   },

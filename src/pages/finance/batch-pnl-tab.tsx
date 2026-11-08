@@ -213,6 +213,7 @@ function Statement({ s }: { s: BatchStatement }) {
               <tbody>
                 <Row label="Bird sales" amount={s.revenue.gross} />
                 {s.revenue.discounts > 0 && <Row label="Discounts given" amount={-s.revenue.discounts} muted />}
+                {s.revenue.other_sales > 0 && <Row label="Other sales (litter etc.)" amount={s.revenue.other_sales} />}
                 <Row label="Revenue" amount={s.revenue.net} share={s.revenue.net > 0 ? "100%" : ""} strong rule />
 
                 {sections.map(({ sec, lines }) => {

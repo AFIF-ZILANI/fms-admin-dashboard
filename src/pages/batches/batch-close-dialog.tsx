@@ -10,14 +10,17 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usePostData } from "@/lib/api";
+import { useGetData, usePostData } from "@/lib/api";
 import { liveBirdCount, type Batch, type BatchStatus } from "@/pages/batches/types";
 
 type BatchCloseDialogProps = { open: boolean; onOpenChange: (open: boolean) => void; batch: Batch };
 
 export function BatchCloseDialog({ open, onOpenChange, batch }: BatchCloseDialogProps) {
-  const [status, setStatus] = useState<Extract<BatchStatus, "CLOSED" | "SOLD">>("CLOSED");
+  // Sold is the usual end: the books stay open for late litter sales, bottles and bills.
+  const [status, setStatus] = useState<Extract<BatchStatus, "CLOSED" | "SOLD">>("SOLD");
   const remaining = liveBirdCount(batch);
+  const settings = useGetData<{ settlement_days: number }>("/farm-settings", ["farm-settings"]);
+  const days = settings.data?.settlement_days ?? 7;
 
   const close = usePostData<Batch, { status: string; force?: boolean }>(`/batches/${batch.id}/close`, ["batches"]);
 
@@ -45,13 +48,18 @@ export function BatchCloseDialog({ open, onOpenChange, batch }: BatchCloseDialog
         <div className="flex flex-col gap-4">
           <Select value={status} onValueChange={(v) => setStatus(v as "CLOSED" | "SOLD")}>
             <SelectTrigger className="w-full">
-              <SelectValue>{(v: string) => (v === "SOLD" ? "Sold" : "Closed")}</SelectValue>
+              <SelectValue>{(v: string) => (v === "SOLD" ? "Sold — open for late entries" : "Close now (final)")}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="CLOSED">Closed</SelectItem>
-              <SelectItem value="SOLD">Sold</SelectItem>
+              <SelectItem value="SOLD">Sold — open for late entries</SelectItem>
+              <SelectItem value="CLOSED">Close now (final)</SelectItem>
             </SelectContent>
           </Select>
+          <p className="text-sm text-muted-foreground">
+            {status === "SOLD"
+              ? `Late costs and income (litter sales, missed bottles, bills) can still be added for ${days} day${days === 1 ? "" : "s"}. Then the batch's books are final.`
+              : "The batch's books are final straight away. Nothing more can be added to it."}
+          </p>
 
           {remaining !== 0 && (
             <p className="rounded-md border border-warning/20 bg-warning/10 p-3 text-sm text-warning">

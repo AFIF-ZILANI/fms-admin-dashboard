@@ -1,4 +1,5 @@
 import {
+  CalendarClock,
   Clock,
   LayoutDashboard,
   Bird,
@@ -163,6 +164,7 @@ export const SYSTEM_NAV: NavItem[] = [
       { to: "/settings/categories-units", label: "Categories & units", icon: Tags },
       { to: "/settings/vaccine-templates", label: "Vaccine templates", icon: Syringe },
       { to: "/settings/farm-day", label: "Farm day", icon: Clock },
+      { to: "/settings/settlement", label: "Settlement window", icon: CalendarClock },
       { to: "/settings/roles", label: "Roles & salaries", icon: UserCog },
       { to: "/settings/devices", label: "Devices", icon: Smartphone },
       { to: "/settings/account", label: "Account", icon: UserRound },

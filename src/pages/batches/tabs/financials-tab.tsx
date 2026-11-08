@@ -69,7 +69,7 @@ export function FinancialsTab({ batch }: { batch: Batch }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KPICard label="Revenue" value={formatMoney(pnl.revenue)} hint="bird sales" />
+        <KPICard label="Revenue" value={formatMoney(pnl.revenue)} hint="bird + other sales" />
         <KPICard label="Profit" value={formatMoney(pnl.profit)} hint={margin !== null ? `${margin.toFixed(1)}% margin` : "no revenue yet"} />
         <KPICard label="Cost per live bird" value={costPerBird !== null ? formatMoney(costPerBird) : "—"} hint={`${live.toLocaleString()} live birds`} />
         <KPICard label="Unallocated shared costs" value={formatMoney(pnl.shared_period_expenses_unallocated)} hint="not in profit" />
@@ -79,9 +79,10 @@ export function FinancialsTab({ batch }: { batch: Batch }) {
         <SectionHeader title="Profit & loss" description="Everything this batch earned, minus everything it cost." />
         <Card>
           <CardContent className="divide-y divide-border py-0">
-            <Line label="Revenue" note="Bird sales attributed to this batch" amount={pnl.revenue} />
+            <Line label="Revenue" note="Bird sales, plus litter and other sales booked to this batch" amount={pnl.revenue} />
             <Line label="Purchase cost" note="Day-old chicks" amount={pnl.purchase_cost} sign={-1} />
-            <Line label="Direct expenses" note="Feed, medicine, labour booked to this batch" amount={pnl.direct_expenses} sign={-1} />
+            <Line label="Stock used" note="Feed, medicine and supplies used by this batch, at cost" amount={pnl.consumption_cost} sign={-1} />
+            <Line label="Direct expenses" note="Labour and other bills booked to this batch" amount={pnl.direct_expenses} sign={-1} />
             <Line label="Depreciation share" note="Asset depreciation allocated to this batch" amount={pnl.depreciation_share} sign={-1} />
             <Line label="Profit" amount={pnl.profit} emphasis />
           </CardContent>

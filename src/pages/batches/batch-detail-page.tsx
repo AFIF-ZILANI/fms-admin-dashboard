@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, type Tone } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData } from "@/lib/api";
+import { FinalizeBatch } from "@/pages/batches/finalize-batch";
 import { formatDate, humanizeEnum } from "@/lib/utils";
 import { BATCH_SECTIONS, type BatchSection } from "@/components/layout/nav-config";
 import { liveBirdCount, type Batch, type BatchStatus } from "@/pages/batches/types";
@@ -105,11 +106,13 @@ export function BatchDetailPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {/* Chicks are bought here, not on Purchases: available after closing too, for a missed bill. */}
-              <Button variant="outline" size="sm" onClick={() => setChicksOpen(true)}>
-                <Bird />
-                Add chick delivery
-              </Button>
+              {/* Chicks are bought here, not on Purchases: available while sold too, for a missed bill; not once finalised. */}
+              {batch.status !== "CLOSED" && (
+                <Button variant="outline" size="sm" onClick={() => setChicksOpen(true)}>
+                  <Bird />
+                  Add chick delivery
+                </Button>
+              )}
               {batch.status === "RUNNING" ? (
                 <Button variant="outline" size="sm" onClick={() => setCloseOpen(true)}>
                   <Lock />
@@ -120,6 +123,7 @@ export function BatchDetailPage() {
                   <span className="text-sm text-muted-foreground">Ended {formatDate(batch.actual_end_date)}</span>
                 )
               )}
+              {batch.status === "SOLD" && <FinalizeBatch batch={batch} />}
             </div>
           </div>
 

@@ -53,6 +53,7 @@ export type BatchPnl = {
   batch_id: string;
   revenue: string;
   purchase_cost: string;
+  consumption_cost: string;
   direct_expenses: string;
   depreciation_share: string;
   shared_period_expenses_unallocated: string;
@@ -113,7 +114,7 @@ export type BatchStatement = {
     actual_end_date: string | null;
     age_days: number;
   };
-  revenue: { gross: number; discounts: number; net: number };
+  revenue: { gross: number; discounts: number; other_sales: number; net: number };
   cost_lines: { section: StatementSection; label: string; amount: number }[];
   costs: number;
   /** what the batch earned before its share of farm-wide costs */
