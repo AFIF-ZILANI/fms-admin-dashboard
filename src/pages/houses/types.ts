@@ -26,6 +26,8 @@ export type House = {
   capacity: number | null;
   phase: HousePhase;
   is_active: boolean;
+  /** Houses with the same value share one drinking-water line. */
+  water_line: string | null;
   created_at: string;
   updated_at: string;
 };

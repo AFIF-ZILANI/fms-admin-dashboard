@@ -359,7 +359,9 @@ function HouseLines({ row }: { row: BatchVaccineSchedule }) {
           <li key={h.id}>
             <span className="font-medium text-foreground">{h.name}</span>
             {h.confirm
-              ? ` · ${h.confirm.confirmed_by.name} confirmed ${formatDate(h.confirm.confirmed_at)}${bottles.length ? ` · ${bottles.join(", ")}` : ""}`
+              ? h.confirm.via_house
+                ? ` · through ${h.confirm.via_house.name}'s water line, ${formatDate(h.confirm.confirmed_at)}`
+                : ` · ${h.confirm.confirmed_by.name} confirmed ${formatDate(h.confirm.confirmed_at)}${bottles.length ? ` · ${bottles.join(", ")}` : ""}`
               : " · waiting"}
           </li>
         );

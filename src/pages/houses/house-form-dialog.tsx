@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usePatchData, usePostData } from "@/lib/api";
+import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
+import { Checkbox } from "@/components/ui/checkbox";
 import { optionalNumber } from "@/lib/zod-helpers";
 import { HOUSE_TYPES, type House } from "@/pages/houses/types";
 
@@ -25,6 +26,7 @@ const houseSchema = z.object({
   type: z.enum(HOUSE_TYPES, "Select a house type"),
   number: z.coerce.number().int().positive("Must be a positive number"),
   capacity: optionalNumber(z.coerce.number().int().positive()),
+  shares_water_with: z.array(z.string()),
 });
 
 // z.coerce fields make the schema's input type (raw form values) differ from
@@ -50,25 +52,44 @@ export function HouseFormDialog({ open, onOpenChange, house }: HouseFormDialogPr
     formState: { errors, isSubmitting },
   } = useForm<HouseFormInput, unknown, HouseFormValues>({
     resolver: zodResolver(houseSchema),
-    defaultValues: { name: "", type: undefined, number: undefined, capacity: "" },
+    defaultValues: { name: "", type: undefined, number: undefined, capacity: "", shares_water_with: [] },
   });
+
+  // The other houses, for the water line picker; partners = houses already on this one's line.
+  const { data: allHouses } = useGetData<Paginated<House>>("/houses?is_active=true&limit=100", ["houses", "active"], {
+    enabled: open && isEdit,
+  });
+  const houseId = house?.id;
+  const waterLine = house?.water_line ?? null;
+  const otherHouses = (allHouses?.results ?? []).filter((h) => h.id !== houseId);
+  const partnerIds = (rows: House[]) => (waterLine ? rows.filter((h) => h.water_line === waterLine).map((h) => h.id) : []);
 
   useEffect(() => {
     if (open) {
       reset(
         house
-          ? { name: house.name, type: house.type, number: house.number, capacity: house.capacity ?? "" }
-          : { name: "", type: undefined, number: undefined, capacity: "" }
+          ? {
+              name: house.name,
+              type: house.type,
+              number: house.number,
+              capacity: house.capacity ?? "",
+              shares_water_with: partnerIds(otherHouses),
+            }
+          : { name: "", type: undefined, number: undefined, capacity: "", shares_water_with: [] }
       );
     }
-  }, [open, house, reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refill once the house list arrives
+  }, [open, house, reset, allHouses]);
 
-  const createHouse = usePostData<House, HouseFormValues>("/houses", ["houses"]);
-  const updateHouse = usePatchData<House, HouseFormValues>(`/houses/${house?.id}`, ["houses"]);
+  const createHouse = usePostData<House, object>("/houses", ["houses"]);
+  const updateHouse = usePatchData<House, object>(`/houses/${house?.id}`, ["houses"]);
   const mutation = isEdit ? updateHouse : createHouse;
 
-  const onSubmit = (values: HouseFormValues) => {
-    return mutation.mutate(values, {
+  const onSubmit = ({ shares_water_with, ...values }: HouseFormValues) => {
+    // Only send the line when it changed: re-sending the same partners would still rebuild the line.
+    const before = partnerIds(otherHouses).sort().join();
+    const changed = isEdit && shares_water_with.slice().sort().join() !== before;
+    return mutation.mutate(changed ? { ...values, shares_water_with } : values, {
       onSuccess: () => {
         toast.success(isEdit ? "House updated" : "House created");
         onOpenChange(false);
@@ -154,6 +175,34 @@ export function HouseFormDialog({ open, onOpenChange, house }: HouseFormDialogPr
             />
             {errors.capacity && <p className="text-xs text-destructive">{errors.capacity.message}</p>}
           </div>
+
+          {isEdit && otherHouses.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <Label>Shares drinking water with</Label>
+              <p className="text-xs text-muted-foreground">
+                Houses on one auto-drinker line. A vaccine given in the water here counts for these houses too.
+              </p>
+              <Controller
+                control={control}
+                name="shares_water_with"
+                render={({ field }) => (
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-border p-3">
+                    {otherHouses.map((h) => (
+                      <label key={h.id} className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={field.value.includes(h.id)}
+                          onCheckedChange={(on) =>
+                            field.onChange(on ? [...field.value, h.id] : field.value.filter((id) => id !== h.id))
+                          }
+                        />
+                        {h.name}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              />
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

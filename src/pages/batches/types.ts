@@ -163,7 +163,12 @@ export type BatchVaccineSchedule = {
   houses: {
     id: string;
     name: string;
-    confirm: { confirmed_at: string; confirmed_by: { id: string; name: string } } | null;
+    confirm: {
+      confirmed_at: string;
+      confirmed_by: { id: string; name: string };
+      /** Set when this house got the vaccine through another house's shared water line. */
+      via_house: { id: string; name: string } | null;
+    } | null;
   }[];
 };
 
