@@ -42,7 +42,8 @@ const saleSchema = z.object({
   // Optional: books the sale to a batch (litter after the flock is sold) -- its P&L counts it.
   batch_id: z.string().optional(),
   sale_date: z.string().min(1, "Sale date is required"),
-  warehouse_id: z.string().min(1, "Choose the warehouse the stock comes from"),
+  // Checked in onSubmit: not needed when every line is a Waste item (litter), which is sold without stock.
+  warehouse_id: z.string().optional(),
   paid_amount: optionalNumber(z.coerce.number().nonnegative("Must be 0 or more")),
   // Required when something was paid: which of the farm's accounts it went into.
   paid_to_instrument_id: z.string().optional(),
@@ -85,6 +86,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<SaleFormInput, unknown, SaleFormValues>({
     resolver: zodResolver(saleSchema),
@@ -117,9 +119,18 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
     return sum + qty * price;
   }, 0);
 
+  // Litter and other Waste items are farm by-products that were never stocked, so they need no warehouse.
+  const wasteIds = new Set(itemOptions.filter((i) => i.category === "WASTE").map((i) => i.id));
+  const needsWarehouse = (watchedItems ?? []).some((line) => !line?.item_id || !wasteIds.has(line.item_id));
+
   const onSubmit = (values: SaleFormValues) => {
+    if (needsWarehouse && !values.warehouse_id) {
+      setError("warehouse_id", { message: "Choose the warehouse the stock comes from" });
+      return;
+    }
     const payload = {
       ...values,
+      warehouse_id: needsWarehouse ? values.warehouse_id : undefined,
       customer_id: values.customer_id || undefined,
       batch_id: values.batch_id || undefined,
       paid_to_instrument_id: values.paid_to_instrument_id || undefined,
@@ -223,6 +234,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
             <p className="text-xs text-muted-foreground">Litter or anything else from a flock counts in that batch's profit.</p>
           </div>
 
+          {needsWarehouse ? (
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="warehouse_id">Take stock from</Label>
             <Controller
@@ -247,6 +259,9 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
             />
             {errors.warehouse_id && <p className="text-xs text-destructive">{errors.warehouse_id.message}</p>}
           </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Waste items like litter are sold without taking stock.</p>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
