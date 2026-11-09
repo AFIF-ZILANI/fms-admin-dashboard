@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Plus, Syringe, Trash2 } from "lucide-react";
+import { HeartPulse, Pencil, Plus, Syringe, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -251,6 +251,13 @@ export function VaccineTemplatesTab() {
         endpoint="/vaccine-purposes"
         queryKey="vaccine-purposes"
         icon={Syringe}
+      />
+      <LookupManagerCard
+        title="Diseases"
+        singular="Disease"
+        endpoint="/diseases"
+        queryKey="diseases"
+        icon={HeartPulse}
       />
       {editing && (
         <TemplateDialog

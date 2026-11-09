@@ -21,6 +21,7 @@ import { FeedingProgramTab } from "@/pages/batches/tabs/feeding-program-tab";
 import { EnvironmentTab } from "@/pages/batches/tabs/environment-tab";
 import { TreatmentsTab } from "@/pages/batches/tabs/treatments-tab";
 import { VaccineTab } from "@/pages/batches/tabs/vaccine-tab";
+import { DiseasesTab } from "@/pages/batches/tabs/diseases-tab";
 import { FinancialsTab } from "@/pages/batches/tabs/financials-tab";
 import { ConsumptionTab } from "@/pages/batches/tabs/consumption-tab";
 import { cycleDay } from "@/pages/batches/cycle-day";
@@ -36,6 +37,7 @@ const SECTION_PAGES: Record<BatchSection, ComponentType<{ batch: Batch }>> = {
   feeding: FeedingProgramTab,
   treatments: TreatmentsTab,
   vaccines: VaccineTab,
+  diseases: DiseasesTab,
   environment: EnvironmentTab,
   consumption: ConsumptionTab,
   financials: FinancialsTab,

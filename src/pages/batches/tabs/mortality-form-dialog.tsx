@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -19,12 +19,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PositiveIntegerInput } from "@/components/utils/NumaricInput";
 import { usePostData } from "@/lib/api";
+import { DiseaseCaseSelect } from "@/pages/batches/disease-case-select";
 import type { Batch, MortalityLog } from "@/pages/batches/types";
 
 const mortalitySchema = z.object({
   house_id: z.string().min(1, "Select a house"),
   count_died: z.coerce.number().int().positive("Must be a positive number"),
   cause_note: z.string().trim().optional(),
+  disease_case_id: z.string().optional(),
   date: z.string().min(1, "Date is required"),
 });
 
@@ -46,6 +48,7 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
     handleSubmit,
     reset,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<MortalityFormInput, unknown, MortalityFormValues>({
     resolver: zodResolver(mortalitySchema),
@@ -53,6 +56,7 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
       house_id: "",
       count_died: undefined,
       cause_note: "",
+      disease_case_id: "",
       date: nowLocal(),
     },
   });
@@ -65,11 +69,13 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
         house_id: "",
         count_died: undefined,
         cause_note: "",
+        disease_case_id: "",
         date: nowLocal(),
       });
     }
   }, [open, reset]);
 
+  const houseId = useWatch({ control, name: "house_id" });
   const occupiedHouses = batch.houseBalances.filter((b) => b.quantity > 0);
   const queryClient = useQueryClient();
 
@@ -80,12 +86,13 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
 
   const onSubmit = (values: MortalityFormValues) => {
     // datetime-local has no zone; send the instant so the log keeps its HH:MM.
-    const payload = { ...values, date: new Date(values.date).toISOString(), batch_id: batch.id, cause_note: values.cause_note || undefined };
+    const payload = { ...values, date: new Date(values.date).toISOString(), batch_id: batch.id, cause_note: values.cause_note || undefined, disease_case_id: values.disease_case_id || undefined };
     return createMortalityLog.mutate(payload, {
       onSuccess: () => {
         // Mortality decrements the batch's house balances — the detail page's own
         // ["batches", id] query (and the list's ["batches", ...]) need to refetch too.
         void queryClient.invalidateQueries({ queryKey: ["batches"] });
+        if (payload.disease_case_id) void queryClient.invalidateQueries({ queryKey: ["disease-cases"] });
         toast.success("Mortality logged");
         onOpenChange(false);
       },
@@ -119,7 +126,14 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
                 control={control}
                 name="house_id"
                 render={({ field }) => (
-                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(v) => {
+                      field.onChange(v);
+                      // The case list is per house; a case picked for another house no longer applies.
+                      setValue("disease_case_id", "");
+                    }}
+                  >
                     <SelectTrigger id="house_id" className="w-full" aria-invalid={!!errors.house_id}>
                       <SelectValue>
                         {(v: string) => occupiedHouses.find((b) => b.house_id === v)?.house.name ?? "Select house"}
@@ -143,6 +157,19 @@ export function MortalityFormDialog({ open, onOpenChange, batch }: MortalityForm
               {errors.count_died && <p className="text-xs text-destructive">{errors.count_died.message}</p>}
             </div>
           </div>
+
+          <Controller
+            control={control}
+            name="disease_case_id"
+            render={({ field }) => (
+              <DiseaseCaseSelect
+                batchId={batch.id}
+                houseId={houseId || undefined}
+                value={field.value ?? ""}
+                onChange={field.onChange}
+              />
+            )}
+          />
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="date">Date & time</Label>
