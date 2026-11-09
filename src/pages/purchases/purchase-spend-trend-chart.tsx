@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useGetData } from "@/lib/api";
-import { formatTk } from "@/lib/utils";
+import { formatTk, formatTkCompact } from "@/lib/utils";
 import {
   CHART_HEIGHT,
   chartAxisProps,
@@ -50,7 +50,7 @@ export function PurchaseSpendTrendChart({ days }: PurchaseSpendTrendChartProps) 
             <LineChart data={rows}>
               <CartesianGrid {...chartGridProps} />
               <XAxis dataKey="date" {...chartAxisProps} />
-              <YAxis {...chartAxisProps} />
+              <YAxis tickFormatter={formatTkCompact} {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
                 formatter={(v: TooltipValueType | undefined) => formatTk(typeof v === "number" ? v : Number(v))}

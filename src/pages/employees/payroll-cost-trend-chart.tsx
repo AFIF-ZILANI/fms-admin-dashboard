@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk, formatTkCompact } from "@/lib/utils";
 import { CHART_HEIGHT, chartAxisProps, chartGridProps, chartTooltipContentStyle, SINGLE_SERIES_STROKE } from "@/pages/analytics/chart-theme";
 import type { PayrollRecord } from "@/pages/employees/types";
 
@@ -51,10 +51,10 @@ export function PayrollCostTrendChart() {
             <BarChart data={rows}>
               <CartesianGrid {...chartGridProps} />
               <XAxis dataKey="month" {...chartAxisProps} />
-              <YAxis {...chartAxisProps} />
+              <YAxis tickFormatter={formatTkCompact} {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
-                formatter={(v: TooltipValueType | undefined) => formatMoney(typeof v === "number" ? v : Number(v))}
+                formatter={(v: TooltipValueType | undefined) => formatTk(typeof v === "number" ? v : Number(v))}
               />
               <Bar dataKey="total" name="Payroll cost" fill={SINGLE_SERIES_STROKE} radius={[4, 4, 0, 0]} />
             </BarChart>

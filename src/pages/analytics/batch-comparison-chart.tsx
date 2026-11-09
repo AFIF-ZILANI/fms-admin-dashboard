@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import { CHART_HEIGHT, chartAxisProps, chartGridProps, chartTooltipContentStyle, SINGLE_SERIES_STROKE } from "@/pages/analytics/chart-theme";
 import type { Batch } from "@/pages/batches/types";
 import type { BatchPerformance } from "@/pages/analytics/types";
@@ -33,7 +33,7 @@ const METRICS = {
   cost: {
     label: "Cost / kg",
     value: (p: BatchPerformance) => (p.cost_per_kg === null ? null : parseFloat(p.cost_per_kg)),
-    format: (v: number) => formatMoney(v),
+    format: (v: number) => formatTk(v),
     empty: "Needs a weighing and at least one batch cost.",
   },
 } as const;

@@ -9,7 +9,7 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatDate, formatTk, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Customer } from "@/pages/customers/types";
 import type { House } from "@/pages/houses/types";
@@ -112,9 +112,9 @@ export function BirdSaleDetailPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Final amount" value={formatMoney(Number(sale.total_amount) - Number(sale.discount_amount ?? 0))} icon={Bird} />
-        <KPICard label="Paid" value={formatMoney(amounts.paid)} icon={Bird} />
-        <KPICard label="Due" value={formatMoney(amounts.due)} icon={Bird} />
+        <KPICard label="Final amount" value={formatTk(Number(sale.total_amount) - Number(sale.discount_amount ?? 0))} icon={Bird} />
+        <KPICard label="Paid" value={formatTk(amounts.paid)} icon={Bird} />
+        <KPICard label="Due" value={formatTk(amounts.due)} icon={Bird} />
       </div>
 
       <Card>
@@ -169,15 +169,15 @@ export function BirdSaleDetailPage() {
             </div>
             <div>
               <dt className="text-muted-foreground">Price / kg</dt>
-              <dd className="font-medium tabular-nums">{formatMoney(sale.price_per_kg)}</dd>
+              <dd className="font-medium tabular-nums">{formatTk(sale.price_per_kg)}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Total amount</dt>
-              <dd className="font-medium tabular-nums">{formatMoney(sale.total_amount)}</dd>
+              <dd className="font-medium tabular-nums">{formatTk(sale.total_amount)}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Discount</dt>
-              <dd className="font-medium tabular-nums">{formatMoney(sale.discount_amount ?? 0)}</dd>
+              <dd className="font-medium tabular-nums">{formatTk(sale.discount_amount ?? 0)}</dd>
             </div>
           </dl>
         </CardContent>

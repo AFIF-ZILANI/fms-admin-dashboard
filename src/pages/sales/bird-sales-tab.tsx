@@ -9,7 +9,7 @@ import { DateRangeFilter } from "@/pages/sales/date-range-filter";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatDate, formatTk, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Customer } from "@/pages/customers/types";
 import type { House } from "@/pages/houses/types";
@@ -104,14 +104,14 @@ export function BirdSalesTab() {
     {
       key: "total",
       header: "Total",
-      render: (s) => formatMoney(s.total_amount),
+      render: (s) => formatTk(s.total_amount),
       numeric: true,
       sortValue: (s) => parseFloat(s.total_amount),
     },
     {
       key: "due",
       header: "Due",
-      render: (s) => formatMoney(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
+      render: (s) => formatTk(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
       numeric: true,
       sortValue: (s) => parseFloat(trueAmounts(s.id, s.paid_amount, s.due_amount).due),
     },
@@ -167,14 +167,14 @@ export function BirdSalesTab() {
         />
         <KPICard
           label="Total revenue"
-          value={formatMoney(summary?.total_revenue ?? 0)}
+          value={formatTk(summary?.total_revenue ?? 0)}
           icon={Wallet}
           isLoading={summaryLoading}
           isError={summaryError}
         />
         <KPICard
           label="Outstanding due"
-          value={formatMoney(summary?.total_due ?? 0)}
+          value={formatTk(summary?.total_due ?? 0)}
           icon={Receipt}
           isLoading={summaryLoading}
           isError={summaryError}

@@ -24,9 +24,16 @@ export function formatMoney(value: string | number): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
-/** formatMoney with the taka sign, for pages that show money in BDT. */
+/** formatMoney with the taka sign -- every amount of money on the dashboard. A loss reads "-৳1,200". */
 export function formatTk(value: string | number): string {
-  return `৳${formatMoney(value)}`
+  const n = typeof value === "string" ? parseFloat(value) : value
+  return n < 0 ? `-৳${formatMoney(-n)}` : `৳${formatMoney(n)}`
+}
+
+/** Short taka for chart axes: "৳12K", "৳1.5M". */
+export function formatTkCompact(value: number): string {
+  const short = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(Math.abs(value))
+  return value < 0 ? `-৳${short}` : `৳${short}`
 }
 
 /** Round to the cents money columns store (Decimal(10,2)) -- float sums like 0.1 + 0.2 drift past them. */

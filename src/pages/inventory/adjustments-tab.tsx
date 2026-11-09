@@ -8,6 +8,7 @@ import { useGetData, type Paginated } from "@/lib/api";
 import { cn, daysAgoMs } from "@/lib/utils";
 import type { InventoryAdjustment } from "@/pages/inventory/types";
 import { AdjustmentFormDialog } from "@/pages/inventory/adjustment-form-dialog";
+import { useFormatStock } from "@/pages/inventory/use-format-stock";
 
 export function AdjustmentsTab() {
   const [formOpen, setFormOpen] = useState(false);
@@ -30,6 +31,8 @@ export function AdjustmentsTab() {
   for (const a of recent) perItem.set(a.item_id, { name: a.item.name, n: (perItem.get(a.item_id)?.n ?? 0) + 1 });
   const topItem = [...perItem.values()].sort((x, y) => y.n - x.n)[0];
 
+  const fmt = useFormatStock();
+  const qty = (a: InventoryAdjustment, n: string) => fmt.stock(n, a.item_id, a.item.unit);
   const columns: Column<InventoryAdjustment>[] = [
     {
       key: "date",
@@ -41,7 +44,7 @@ export function AdjustmentsTab() {
     {
       key: "change",
       header: "Before → after",
-      render: (a) => `${a.quantity_before} → ${a.quantity_after}`,
+      render: (a) => `${qty(a, a.quantity_before)} → ${qty(a, a.quantity_after)}`,
     },
     {
       key: "delta",
@@ -51,7 +54,7 @@ export function AdjustmentsTab() {
         return (
           <span className={cn("font-medium tabular-nums", delta > 0 ? "text-success" : "text-destructive")}>
             {delta > 0 ? "+" : ""}
-            {a.adjustment_quantity}
+            {qty(a, a.adjustment_quantity)}
           </span>
         );
       },

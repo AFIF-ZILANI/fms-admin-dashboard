@@ -10,10 +10,10 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { SectionHeader } from "@/components/shared/section-header";
 import { TruncatedText } from "@/components/shared/truncated-text";
 import { useGetData } from "@/lib/api";
-import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatDate, formatTk, humanizeEnum, formatTkCompact } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Item } from "@/pages/inventory/types";
-import { formatStock } from "@/pages/inventory/stock-qty";
+import { bagSize, formatStock } from "@/pages/inventory/stock-qty";
 import { toWeeks, type DayRow, type WeekRow } from "@/pages/batches/tabs/weekly";
 import {
   CATEGORICAL_COLORS,
@@ -50,7 +50,7 @@ type BatchStock = {
 };
 
 /** Money on this page, in taka. */
-const tk = (n: number) => `৳${formatMoney(n)}`;
+const tk = formatTk;
 const qty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 const muted = <span className="text-muted-foreground">—</span>;
 
@@ -247,6 +247,9 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
   const items = data?.items ?? [];
   const daily = data?.daily ?? [];
   const feedKg = daily.reduce((s, d) => s + d.feed_kg, 0);
+  // Feed totals are kg across every feed item; they read in bags of this batch's feed (all 50 kg today).
+  const feedBag = items.find((i) => i.category === "FEED" && i.unit === "KG" && bagSize(i) > 0);
+  const feed = (kg: number) => (feedBag ? formatStock(Math.round(kg * 10) / 10, feedBag) : `${qty(Math.round(kg))} kg`);
   const placed = batch.initial_chick_count;
   const openValue = items.reduce(
     (s, i) => s + (i.cost !== null && i.unit_cost !== null && !i.non_depleting ? i.in_use * i.unit_cost : 0),
@@ -320,7 +323,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
         />
         <KPICard
           label="Feed used"
-          value={`${qty(Math.round(feedKg))} kg`}
+          value={feed(feedKg)}
           isLoading={isLoading}
           hint={placed > 0 ? `${((feedKg * 1000) / placed).toFixed(0)} g per bird placed` : undefined}
         />
@@ -367,7 +370,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
             <BarChart data={weeks}>
               <CartesianGrid {...chartGridProps} />
               <XAxis dataKey="week" tickFormatter={(w) => `W${w}`} {...chartAxisProps} />
-              <YAxis {...chartAxisProps} />
+              <YAxis tickFormatter={formatTkCompact} {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
                 labelFormatter={(w) => weekLabel(Number(w))}
@@ -393,7 +396,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
                 contentStyle={chartTooltipContentStyle}
                 labelFormatter={(w) => weekLabel(Number(w))}
                 formatter={(v: TooltipValueType | undefined, _name, entry) => [
-                  `${v} g per bird per day · ${qty((entry.payload as WeekRow).feed_kg)} kg that week`,
+                  `${v} g per bird per day · ${feed((entry.payload as WeekRow).feed_kg)} that week`,
                   "Feed",
                 ]}
               />
@@ -410,7 +413,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
           <ChartCard title="Stock cost by house" empty={byHouse.some((h) => h.cost > 0) ? null : "No costed stock used yet."}>
             <BarChart data={byHouse} layout="vertical" margin={{ left: 8 }}>
               <CartesianGrid {...chartGridProps} vertical horizontal={false} />
-              <XAxis type="number" {...chartAxisProps} />
+              <XAxis type="number" tickFormatter={formatTkCompact} {...chartAxisProps} />
               <YAxis type="category" dataKey="house" width={110} {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
@@ -432,7 +435,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
               margin={{ left: 8 }}
             >
               <CartesianGrid {...chartGridProps} vertical horizontal={false} />
-              <XAxis type="number" {...chartAxisProps} />
+              <XAxis type="number" tickFormatter={formatTkCompact} {...chartAxisProps} />
               <YAxis type="category" dataKey="name" width={130} {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}

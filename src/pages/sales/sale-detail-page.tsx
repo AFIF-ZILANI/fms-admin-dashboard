@@ -11,11 +11,12 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatDate, formatMoney } from "@/lib/utils";
+import { formatDate, formatTk } from "@/lib/utils";
 import { paymentStatus, type Sale, type SaleItemLine } from "@/pages/sales/types";
 import type { Customer } from "@/pages/customers/types";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
+import { useFormatStock } from "@/pages/inventory/use-format-stock";
 
 export function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,11 +31,12 @@ export function SaleDetailPage() {
   const customerName = customers?.results.find((c) => c.id === sale?.customer_id)?.profile.name;
   const { trueAmounts } = useOutstanding("SALE");
 
+  const fmt = useFormatStock();
   const columns: Column<SaleItemLine>[] = [
     { key: "item", header: "Item", render: (l) => <TruncatedText text={l.item.name} className="max-w-48" /> },
-    { key: "quantity", header: "Quantity", render: (l) => `${l.quantity} ${l.unit}`, numeric: true },
-    { key: "unit_price", header: "Unit price", render: (l) => formatMoney(l.unit_price), numeric: true },
-    { key: "total", header: "Total", render: (l) => formatMoney(l.total_price), numeric: true },
+    { key: "quantity", header: "Quantity", render: (l) => fmt.entered(l.quantity, l.unit, l.item.id), numeric: true },
+    { key: "unit_price", header: "Unit price", render: (l) => formatTk(l.unit_price), numeric: true },
+    { key: "total", header: "Total", render: (l) => formatTk(l.total_price), numeric: true },
   ];
 
   if (isLoading) {
@@ -100,9 +102,9 @@ export function SaleDetailPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Total" value={formatMoney(sale.total)} icon={Receipt} />
-        <KPICard label="Paid" value={formatMoney(amounts.paid)} icon={Receipt} />
-        <KPICard label="Due" value={formatMoney(amounts.due)} icon={Receipt} />
+        <KPICard label="Total" value={formatTk(sale.total)} icon={Receipt} />
+        <KPICard label="Paid" value={formatTk(amounts.paid)} icon={Receipt} />
+        <KPICard label="Due" value={formatTk(amounts.due)} icon={Receipt} />
       </div>
 
       <Card>

@@ -6,9 +6,11 @@ import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { LowStockItem } from "@/pages/inventory/types";
+import { useFormatStock } from "@/pages/inventory/use-format-stock";
 
 /** Every item below its reorder level, each one a click away from a purchase prefilled with it. */
 export function LowStockPurchasePage() {
+  const fmt = useFormatStock();
   usePageTitle("Below reorder level");
   const navigate = useNavigate();
   const { data, isLoading } = useGetData<LowStockItem[]>("/items/low-stock", ["items", "low-stock"]);
@@ -26,7 +28,7 @@ export function LowStockPurchasePage() {
     {
       key: "current_balance",
       header: "Current balance",
-      render: (i) => `${i.current_balance} ${humanizeEnum(i.unit)}`,
+      render: (i) => fmt.stock(i.current_balance, i.id, i.unit),
       numeric: true,
       sortValue: (i) => parseFloat(i.current_balance),
     },

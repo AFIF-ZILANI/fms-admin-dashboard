@@ -14,6 +14,7 @@ import type { Batch, BatchFeedingProgram, Consumption } from "@/pages/batches/ty
 import type { Item } from "@/pages/inventory/types";
 import { FeedingProgramFormDialog } from "@/pages/batches/tabs/feeding-program-form-dialog";
 import { dayStart } from "@/pages/batches/cycle-day";
+import { formatStock } from "@/pages/inventory/stock-qty";
 
 function EndProgramDialog({
   row,
@@ -95,7 +96,7 @@ export function FeedingProgramTab({ batch }: { batch: Batch }) {
         const d = new Date(c.date);
         return d >= windowStart && d < windowEnd;
       })
-      .reduce((sum, c) => sum + parseFloat(c.quantity), 0);
+      .reduce((sum, c) => sum + parseFloat(c.base_quantity), 0);
   };
 
   const columns: Column<BatchFeedingProgram>[] = [
@@ -118,7 +119,7 @@ export function FeedingProgramTab({ batch }: { batch: Batch }) {
       header: "Actual consumed",
       render: (p) => {
         const item = feedItems?.results.find((i) => i.id === p.item_id);
-        return `${actualConsumed(p).toLocaleString()} ${item ? humanizeEnum(item.unit) : ""}`.trim();
+        return item ? formatStock(actualConsumed(p), item) : actualConsumed(p).toLocaleString();
       },
       numeric: true,
       sortValue: (p) => actualConsumed(p),

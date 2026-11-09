@@ -8,13 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
-import { daysAgoMs, formatMoney, humanizeEnum } from "@/lib/utils";
+import { daysAgoMs, formatTk, humanizeEnum } from "@/lib/utils";
 import type { ConsumptionByCategoryRow } from "@/pages/analytics/types";
 import type { Consumption, Item } from "@/pages/inventory/types";
 import type { Batch } from "@/pages/batches/types";
 import type { House } from "@/pages/houses/types";
 import { ConsumptionFormDialog } from "@/pages/inventory/consumption-form-dialog";
 import { CodedConsumptionDialog } from "@/pages/inventory/coded-consumption-dialog";
+import { formatEntered } from "@/pages/inventory/stock-qty";
 
 export function ConsumptionLogTab() {
   const [batchFilter, setBatchFilter] = useState<string>("ALL");
@@ -70,7 +71,7 @@ export function ConsumptionLogTab() {
       sortValue: (c) => new Date(c.date).getTime(),
     },
     { key: "item", header: "Item", render: (c) => <TruncatedText text={c.item.name} className="max-w-48" />, sortValue: (c) => c.item.name },
-    { key: "quantity", header: "Quantity", render: (c) => c.quantity, numeric: true },
+    { key: "quantity", header: "Quantity", render: (c) => formatEntered(c.quantity, c.unit, c.item), numeric: true, sortValue: (c) => Number(c.base_quantity) },
     { key: "house", header: "House", render: (c) => c.house.name },
     { key: "batch", header: "Batch", render: (c) => c.batch?.batch_code ?? "—" },
     {
@@ -85,9 +86,9 @@ export function ConsumptionLogTab() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Total draws" value={allConsumptions?.total ?? 0} hint="all time" icon={ListTree} isLoading={allLoading} />
         <KPICard label="Draws (30 days)" value={monthConsumptions?.total ?? 0} icon={CalendarDays} isLoading={monthLoading} />
-        <KPICard label="Value consumed" value={formatMoney(monthValue)} hint="last 30 days, at avg purchase cost" icon={Coins} isLoading={categoryLoading} isError={categoryError} />
-        <KPICard label="Avg per day" value={formatMoney(monthValue / 30)} hint="consumption value" icon={Wheat} isLoading={categoryLoading} isError={categoryError} />
-        <KPICard label="Top category" value={topCategory ? humanizeEnum(topCategory.category) : "—"} hint={topCategory ? formatMoney(topCategory.total) + ", last 30 days" : "no consumption yet"} icon={Tags} isLoading={categoryLoading} isError={categoryError} />
+        <KPICard label="Value consumed" value={formatTk(monthValue)} hint="last 30 days, at avg purchase cost" icon={Coins} isLoading={categoryLoading} isError={categoryError} />
+        <KPICard label="Avg per day" value={formatTk(monthValue / 30)} hint="consumption value" icon={Wheat} isLoading={categoryLoading} isError={categoryError} />
+        <KPICard label="Top category" value={topCategory ? humanizeEnum(topCategory.category) : "—"} hint={topCategory ? formatTk(topCategory.total) + ", last 30 days" : "no consumption yet"} icon={Tags} isLoading={categoryLoading} isError={categoryError} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

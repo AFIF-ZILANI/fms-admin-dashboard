@@ -17,7 +17,7 @@ import { PhoneInput } from "@/components/shared/phone-input";
 import { toE164, toLocalDigits } from "@/lib/phone";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import { TempPasswordDialog, type TempCredentials } from "@/components/shared/temp-password-dialog";
 import {
   EDUCATION_LABELS,
@@ -538,7 +538,7 @@ export function EmployeeFormPage() {
               </Field>
               <Field
                 id="reference_salary"
-                label="Reference salary"
+                label="Reference salary (৳)"
                 hint="normal-month total"
                 error={errors.reference_salary?.message}
               >
@@ -583,16 +583,16 @@ export function EmployeeFormPage() {
                     >
                       {selectedRole
                         ? hadOverride
-                          ? `Saving will move them onto the role standard: ${formatMoney(selectedRole.reference_salary)} (currently ${formatMoney(employee?.reference_salary ?? 0)})`
-                          : `Uses role standard: ${formatMoney(selectedRole.reference_salary)}`
+                          ? `Saving will move them onto the role standard: ${formatTk(selectedRole.reference_salary)} (currently ${formatTk(employee?.reference_salary ?? 0)})`
+                          : `Uses role standard: ${formatTk(selectedRole.reference_salary)}`
                         : "Pick a role to see its standard salary"}
                     </p>
                   )}
                 </div>
                 {referenceSalary > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Guaranteed fixed wage {formatMoney(Math.round(referenceSalary * FIXED_WAGE_RATIO))} ·
-                    allowance {formatMoney(0)}–{formatMoney(Math.round(referenceSalary * 0.3))}
+                    Guaranteed fixed wage {formatTk(Math.round(referenceSalary * FIXED_WAGE_RATIO))} ·
+                    allowance {formatTk(0)}–{formatTk(Math.round(referenceSalary * 0.3))}
                   </p>
                 )}
               </Field>

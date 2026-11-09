@@ -9,7 +9,7 @@ import { StatusBadge, type Tone } from "@/components/shared/status-badge";
 import { TruncatedText } from "@/components/shared/truncated-text";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import { BATCH_STATUSES, BIRD_BREEDS, PHASES, liveBirdCount, type Batch, type BatchStatus, type BirdBreed, type Phase } from "@/pages/batches/types";
 import type { BatchPerformance } from "@/pages/analytics/types";
 import { cycleDay } from "@/pages/batches/cycle-day";
@@ -168,8 +168,8 @@ export function BatchesListPage() {
         />
         <KPICard label="Avg weight" value={kpis.weight === null ? "—" : `${Math.round(kpis.weight)} g`} hint="latest weighing per batch" icon={Scale} isLoading={runningLoading} isError={runningError} />
         <KPICard label="Avg FCR" value={kpis.fcr === null ? "—" : kpis.fcr.toFixed(2)} hint="feed kg per kg gained" icon={Wheat} isLoading={runningLoading} isError={runningError} />
-        <KPICard label="Avg cost / kg" value={kpis.costPerKg === null ? "—" : formatMoney(kpis.costPerKg)} hint="per kg of live weight" icon={Coins} isLoading={runningLoading} isError={runningError} />
-        <KPICard label="Spend to date" value={formatMoney(kpis.cost)} hint="running batches" icon={Wallet} isLoading={runningLoading} isError={runningError} />
+        <KPICard label="Avg cost / kg" value={kpis.costPerKg === null ? "—" : formatTk(kpis.costPerKg)} hint="per kg of live weight" icon={Coins} isLoading={runningLoading} isError={runningError} />
+        <KPICard label="Spend to date" value={formatTk(kpis.cost)} hint="running batches" icon={Wallet} isLoading={runningLoading} isError={runningError} />
       </div>
 
       <div className="flex items-center justify-between">

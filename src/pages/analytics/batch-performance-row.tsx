@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { BatchPerformance } from "@/pages/analytics/types";
 
@@ -34,7 +34,7 @@ export function BatchPerformanceRow({ batch, performance }: { batch: Batch; perf
       </TableCell>
       <TableCell className="text-right tabular-nums">{performance.fcr !== null ? performance.fcr.toFixed(2) : "—"}</TableCell>
       <TableCell className="text-right tabular-nums">
-        {performance.cost_per_kg !== null ? formatMoney(performance.cost_per_kg) : "—"}
+        {performance.cost_per_kg !== null ? formatTk(performance.cost_per_kg) : "—"}
       </TableCell>
       <TableCell>
         <span className="flex items-center gap-2">

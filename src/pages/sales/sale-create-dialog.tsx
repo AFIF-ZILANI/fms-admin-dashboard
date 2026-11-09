@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import { optionalNumber } from "@/lib/zod-helpers";
 import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import type { Warehouse } from "@/pages/inventory/types";
@@ -265,7 +265,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="paid_amount">Paid amount (optional, default 0)</Label>
+              <Label htmlFor="paid_amount">Paid amount (৳, optional, default 0)</Label>
               <Input id="paid_amount" type="number" step="0.01" {...register("paid_amount")} />
               {errors.paid_amount && <p className="text-xs text-destructive">{errors.paid_amount.message}</p>}
             </div>
@@ -359,13 +359,13 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
                   <Input
                     type="number"
                     step="0.01"
-                    placeholder="Unit price"
+                    placeholder="Unit price (৳)"
                     aria-invalid={!!errors.items?.[index]?.unit_price}
                     {...register(`items.${index}.unit_price`)}
                   />
                   <div className="flex items-center justify-end px-2 text-sm tabular-nums text-muted-foreground">
                     ={" "}
-                    {formatMoney(
+                    {formatTk(
                       (Number(watchedItems?.[index]?.quantity) || 0) *
                         (Number(watchedItems?.[index]?.unit_price) || 0)
                     )}
@@ -401,7 +401,7 @@ export function SaleCreateDialog({ open, onOpenChange }: SaleCreateDialogProps) 
           </div>
 
           <div className="flex justify-end text-sm font-medium tabular-nums">
-            Total: {formatMoney(totalPreview)}
+            Total: {formatTk(totalPreview)}
           </div>
 
           <DialogFooter>

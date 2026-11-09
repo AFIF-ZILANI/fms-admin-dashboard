@@ -139,7 +139,7 @@ export function AssetCreateDialog({ open, onOpenChange }: AssetCreateDialogProps
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="purchase_cost">Purchase cost</Label>
+              <Label htmlFor="purchase_cost">Purchase cost (৳)</Label>
               <Input
                 id="purchase_cost"
                 type="number"

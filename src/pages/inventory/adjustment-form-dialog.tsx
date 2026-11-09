@@ -17,10 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { cn, humanizeEnum } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { ADJUSTMENT_REASONS, type InventoryAdjustment, type Item, type LocationStockRow, type Warehouse } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
-import type { LookupRow } from "@/pages/settings/lookup-types";
+import { formatStock } from "@/pages/inventory/stock-qty";
 
 const adjustmentSchema = z
   .object({
@@ -76,8 +76,6 @@ export function AdjustmentFormDialog({ open, onOpenChange }: AdjustmentFormDialo
   const { data: items } = useGetData<Paginated<Item>>("/items?limit=100", ["items"]);
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
   const { data: houses } = useGetData<Paginated<House>>("/houses?limit=100", ["houses"]);
-  const { data: units } = useGetData<Paginated<LookupRow>>("/units?active=true&limit=100", ["units", "active"]);
-  const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
 
   const queryClient = useQueryClient();
   const createAdjustment = usePostData<InventoryAdjustment, Record<string, unknown>>("/inventory-adjustments", [
@@ -232,7 +230,7 @@ export function AdjustmentFormDialog({ open, onOpenChange }: AdjustmentFormDialo
           {errors.warehouse_id && <p className="-mt-2 text-xs text-destructive">{errors.warehouse_id.message}</p>}
           {currentBalance && (
             <p className="-mt-2 text-xs text-muted-foreground">
-              Current balance: {currentBalance.balance} {unitLabel(currentBalance.unit)}
+              Current balance: {formatStock(currentBalance.balance, items?.results.find((i) => i.id === currentBalance.item_id) ?? { unit: currentBalance.unit })}
             </p>
           )}
 

@@ -5,8 +5,10 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { LowStockItem } from "@/pages/inventory/types";
+import { useFormatStock } from "@/pages/inventory/use-format-stock";
 
 export function LowStockTab() {
+  const fmt = useFormatStock();
   const { data, isLoading } = useGetData<LowStockItem[]>("/items/low-stock", ["items", "low-stock"]);
   const items = data ?? [];
   const criticalItems = items.filter((i) => parseFloat(i.current_balance) <= 0);
@@ -27,7 +29,7 @@ export function LowStockTab() {
     {
       key: "current_balance",
       header: "Current balance",
-      render: (i) => `${i.current_balance} ${humanizeEnum(i.unit)}`,
+      render: (i) => fmt.stock(i.current_balance, i.id, i.unit),
       numeric: true,
     },
     { key: "reorder_level", header: "Reorder level", render: (i) => i.reorder_level ?? "—", numeric: true },

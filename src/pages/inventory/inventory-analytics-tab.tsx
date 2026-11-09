@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AlertCircle, AlertTriangle, ArrowLeftRight, Boxes, Trash2, Wallet, Wheat } from "lucide-react";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import { DayRangeToggle } from "@/pages/analytics/day-range-toggle";
 import type { ConsumptionByCategoryRow, StockMovementTrendPoint, StockValueByCategoryRow, WastageByCategoryRow } from "@/pages/analytics/types";
 import type { Asset, LowStockItem } from "@/pages/inventory/types";
@@ -51,13 +51,13 @@ export function InventoryAnalyticsTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KPICard label="Stock value on hand" value={formatMoney(stockValueTotal)} hint="at average purchase cost" icon={Boxes} isLoading={stockValueLoading} isError={stockValueError} />
+        <KPICard label="Stock value on hand" value={formatTk(stockValueTotal)} hint="at average purchase cost" icon={Boxes} isLoading={stockValueLoading} isError={stockValueError} />
         <KPICard label="Below reorder level" value={items.length} icon={AlertTriangle} isLoading={lowStockLoading} />
         <KPICard label="Out of stock" value={criticalCount} tone={criticalCount > 0 ? "critical" : undefined} icon={AlertCircle} isLoading={lowStockLoading} />
-        <KPICard label="Asset book value" value={formatMoney(totalBookValue)} hint="active assets" icon={Wallet} isLoading={assetsLoading} />
-        <KPICard label="Consumed" value={formatMoney(consumedTotal)} hint={`last ${days} days`} icon={Wheat} isLoading={consumedLoading} isError={consumedError} />
-        <KPICard label="Wastage / expired" value={formatMoney(wastedTotal)} hint={`last ${days} days`} tone={wastedTotal > 0 ? "warning" : undefined} icon={Trash2} isLoading={wastedLoading} isError={wastedError} />
-        <KPICard label="Net stock change" value={(netMovement >= 0 ? "+" : "-") + formatMoney(Math.abs(netMovement))} hint={`value in minus out, ${days} days`} icon={ArrowLeftRight} isLoading={movementLoading} isError={movementError} />
+        <KPICard label="Asset book value" value={formatTk(totalBookValue)} hint="active assets" icon={Wallet} isLoading={assetsLoading} />
+        <KPICard label="Consumed" value={formatTk(consumedTotal)} hint={`last ${days} days`} icon={Wheat} isLoading={consumedLoading} isError={consumedError} />
+        <KPICard label="Wastage / expired" value={formatTk(wastedTotal)} hint={`last ${days} days`} tone={wastedTotal > 0 ? "warning" : undefined} icon={Trash2} isLoading={wastedLoading} isError={wastedError} />
+        <KPICard label="Net stock change" value={(netMovement >= 0 ? "+" : "-") + formatTk(Math.abs(netMovement))} hint={`value in minus out, ${days} days`} icon={ArrowLeftRight} isLoading={movementLoading} isError={movementError} />
       </div>
 
       <div className="flex justify-end">

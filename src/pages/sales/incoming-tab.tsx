@@ -3,7 +3,7 @@ import { Inbox } from "lucide-react";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData } from "@/lib/api";
-import { formatDate, formatMoney } from "@/lib/utils";
+import { formatDate, formatTk } from "@/lib/utils";
 import { portionFigures, type IngestedSale } from "@/pages/sales/ingest-types";
 import { ConfirmIngestedDialog } from "@/pages/sales/confirm-ingested-dialog";
 
@@ -66,7 +66,7 @@ export function IncomingTab() {
     {
       key: "amount",
       header: "Amount",
-      render: (r) => formatMoney(portionFigures(r).amount),
+      render: (r) => formatTk(portionFigures(r).amount),
       numeric: true,
       sortValue: (r) => portionFigures(r).amount,
     },

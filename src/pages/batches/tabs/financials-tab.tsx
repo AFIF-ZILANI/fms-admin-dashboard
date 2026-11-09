@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { KPICard } from "@/components/shared/kpi-card";
 import { SectionHeader } from "@/components/shared/section-header";
 import { useGetData } from "@/lib/api";
-import { cn, formatMoney } from "@/lib/utils";
+import { cn, formatTk } from "@/lib/utils";
 import { liveBirdCount, type Batch } from "@/pages/batches/types";
 import type { BatchPnl } from "@/pages/finance/types";
 
@@ -39,7 +39,7 @@ function Line({
         )}
       >
         {sign === -1 && value !== 0 ? "−" : ""}
-        {formatMoney(Math.abs(value))}
+        {formatTk(Math.abs(value))}
       </p>
     </div>
   );
@@ -69,10 +69,10 @@ export function FinancialsTab({ batch }: { batch: Batch }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KPICard label="Revenue" value={formatMoney(pnl.revenue)} hint="bird + other sales" />
-        <KPICard label="Profit" value={formatMoney(pnl.profit)} hint={margin !== null ? `${margin.toFixed(1)}% margin` : "no revenue yet"} />
-        <KPICard label="Cost per live bird" value={costPerBird !== null ? formatMoney(costPerBird) : "—"} hint={`${live.toLocaleString()} live birds`} />
-        <KPICard label="Unallocated shared costs" value={formatMoney(pnl.shared_period_expenses_unallocated)} hint="not in profit" />
+        <KPICard label="Revenue" value={formatTk(pnl.revenue)} hint="bird + other sales" />
+        <KPICard label="Profit" value={formatTk(pnl.profit)} hint={margin !== null ? `${margin.toFixed(1)}% margin` : "no revenue yet"} />
+        <KPICard label="Cost per live bird" value={costPerBird !== null ? formatTk(costPerBird) : "—"} hint={`${live.toLocaleString()} live birds`} />
+        <KPICard label="Unallocated shared costs" value={formatTk(pnl.shared_period_expenses_unallocated)} hint="not in profit" />
       </div>
 
       <div className="flex flex-col gap-3">
@@ -91,7 +91,7 @@ export function FinancialsTab({ batch }: { batch: Batch }) {
 
       {parseFloat(pnl.shared_period_expenses_unallocated) > 0 && (
         <p className="text-xs text-muted-foreground">
-          Shared-period costs ({formatMoney(pnl.shared_period_expenses_unallocated)}) aren't factored into profit — the
+          Shared-period costs ({formatTk(pnl.shared_period_expenses_unallocated)}) aren't factored into profit — the
           bird-days allocation formula that would distribute them across concurrent batches is v2, not built yet.
         </p>
       )}

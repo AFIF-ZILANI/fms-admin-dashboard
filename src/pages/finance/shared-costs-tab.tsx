@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData } from "@/lib/api";
-import { formatDate, formatMoney } from "@/lib/utils";
+import { formatDate, formatTk } from "@/lib/utils";
 import type { SharedMonth } from "@/pages/finance/types";
 
 const longMonth = (m: string) =>
@@ -26,11 +26,11 @@ export function SharedCostsTab() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <KPICard label="Farm-wide costs" value={formatMoney(total)} icon={Layers} isLoading={isLoading} hint={`Over ${months.length} month${months.length === 1 ? "" : "s"}`} />
-        <KPICard label="Shared to batches" value={formatMoney(allocated)} icon={Split} isLoading={isLoading} hint="In each batch's net profit" />
+        <KPICard label="Farm-wide costs" value={formatTk(total)} icon={Layers} isLoading={isLoading} hint={`Over ${months.length} month${months.length === 1 ? "" : "s"}`} />
+        <KPICard label="Shared to batches" value={formatTk(allocated)} icon={Split} isLoading={isLoading} hint="In each batch's net profit" />
         <KPICard
           label="Farm overhead"
-          value={formatMoney(overhead)}
+          value={formatTk(overhead)}
           icon={Warehouse}
           isLoading={isLoading}
           hint="Months with no birds on the farm"
@@ -67,7 +67,7 @@ function MonthCard({ m }: { m: SharedMonth }) {
               : `${m.bird_days.toLocaleString()} bird-days across ${m.batches.length} batch${m.batches.length === 1 ? "" : "es"}`}
           </CardDescription>
         </div>
-        <span className="text-xl font-semibold tabular-nums">{formatMoney(m.total)}</span>
+        <span className="text-xl font-semibold tabular-nums">{formatTk(m.total)}</span>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {m.batches.length > 0 && (
@@ -99,7 +99,7 @@ function MonthCard({ m }: { m: SharedMonth }) {
                         <span className="w-12 text-right text-xs text-muted-foreground">{(share * 100).toFixed(1)}%</span>
                       </span>
                     </td>
-                    <td className="py-2 text-right font-medium">{formatMoney(b.share)}</td>
+                    <td className="py-2 text-right font-medium">{formatTk(b.share)}</td>
                   </tr>
                 );
               })}
@@ -108,14 +108,14 @@ function MonthCard({ m }: { m: SharedMonth }) {
                   <td className="py-2" colSpan={3}>
                     Farm overhead
                   </td>
-                  <td className="py-2 text-right">{formatMoney(m.overhead)}</td>
+                  <td className="py-2 text-right">{formatTk(m.overhead)}</td>
                 </tr>
               )}
             </tbody>
           </table>
         )}
         {m.batches.length === 0 && (
-          <p className="text-sm text-muted-foreground">All {formatMoney(m.total)} stays as farm overhead.</p>
+          <p className="text-sm text-muted-foreground">All {formatTk(m.total)} stays as farm overhead.</p>
         )}
 
         <details className="group rounded-lg border">
@@ -133,7 +133,7 @@ function MonthCard({ m }: { m: SharedMonth }) {
                     {e.remarks ? `, ${e.remarks}` : ""}
                   </span>
                 </span>
-                <span className="tabular-nums">{formatMoney(e.amount)}</span>
+                <span className="tabular-nums">{formatTk(e.amount)}</span>
               </li>
             ))}
           </ul>

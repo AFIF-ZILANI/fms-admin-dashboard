@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Customer } from "@/pages/customers/types";
 import { BIRD_GRADES, type BirdGrade } from "@/pages/sales/types";
@@ -165,8 +165,8 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
               {totalsDisagree && (
                 <p className="flex items-center gap-1.5">
                   <AlertTriangle className="size-3.5" />
-                  The phone recorded {formatMoney(deviceTotal)} for this portion; FMS computes{" "}
-                  {formatMoney(serverTotal)}.
+                  The phone recorded {formatTk(deviceTotal)} for this portion; FMS computes{" "}
+                  {formatTk(serverTotal)}.
                 </p>
               )}
               {clockSkewed && (
@@ -350,7 +350,7 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="ci_price">Price per kg</Label>
+              <Label htmlFor="ci_price">Price per kg (৳)</Label>
               <Input
                 id="ci_price"
                 type="number"
@@ -360,7 +360,7 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="ci_paid">Paid amount</Label>
+              <Label htmlFor="ci_paid">Paid amount (৳)</Label>
               <Input
                 id="ci_paid"
                 type="number"
@@ -402,8 +402,8 @@ function ConfirmForm({ row, onOpenChange }: { row: IngestedSale; onOpenChange: (
         </div>
 
         <div className="flex justify-end text-sm font-medium tabular-nums">
-          Total: {formatMoney(serverTotal)} · Due:{" "}
-          {formatMoney(Math.max(0, serverTotal - Number(discount || 0) - Number(paidAmount || 0)))}
+          Total: {formatTk(serverTotal)} · Due:{" "}
+          {formatTk(Math.max(0, serverTotal - Number(discount || 0) - Number(paidAmount || 0)))}
         </div>
 
         <DialogFooter>

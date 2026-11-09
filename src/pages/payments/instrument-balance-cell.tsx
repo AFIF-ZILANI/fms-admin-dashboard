@@ -1,5 +1,5 @@
 import { useGetData } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import type { InstrumentBalance } from "@/pages/payments/types";
 
 export function InstrumentBalanceCell({ instrumentId }: { instrumentId: string }) {
@@ -9,5 +9,5 @@ export function InstrumentBalanceCell({ instrumentId }: { instrumentId: string }
     "balance",
   ]);
   if (isLoading || !data) return <span className="text-muted-foreground">…</span>;
-  return <span>{formatMoney(data.balance)}</span>;
+  return <span>{formatTk(data.balance)}</span>;
 }

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePostData } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import {
   computePay,
   type PayrollRecord,
@@ -94,7 +94,7 @@ export function PayrollRunDialog({ open, onOpenChange, employeeId, referenceSala
           <div className="flex flex-col gap-2 rounded-lg border border-border p-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Fixed wage (guaranteed)</span>
-              <span className="tabular-nums">{formatMoney(fixedWage)}</span>
+              <span className="tabular-nums">{formatTk(fixedWage)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Score sum (this month)</span>
@@ -109,11 +109,11 @@ export function PayrollRunDialog({ open, onOpenChange, employeeId, referenceSala
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Performance allowance</span>
-              <span className="tabular-nums">{formatMoney(allowance)}</span>
+              <span className="tabular-nums">{formatTk(allowance)}</span>
             </div>
             <div className="flex justify-between font-medium">
               <span>Total pay</span>
-              <span className="tabular-nums">{formatMoney(totalPay)}</span>
+              <span className="tabular-nums">{formatTk(totalPay)}</span>
             </div>
           </div>
         </div>

@@ -13,7 +13,7 @@ import { usePageTitle } from "@/components/layout/use-page-title";
 import { useConfirm } from "@/components/shared/confirm-dialog";
 import { useGetData, usePatchData, usePostData, type Paginated } from "@/lib/api";
 import { toast } from "sonner";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import { EmployeeActivityTimeline } from "@/pages/employees/employee-activity-timeline";
 import { ScoreEntryDialog } from "@/pages/employees/score-entry-dialog";
 import { PayrollRunDialog } from "@/pages/employees/payroll-run-dialog";
@@ -185,11 +185,11 @@ export function EmployeeDetailPage() {
       header: "Month",
       render: (p) => new Date(p.month).toLocaleDateString(undefined, { year: "numeric", month: "long" }),
     },
-    { key: "fixed", header: "Fixed wage", render: (p) => formatMoney(p.fixed_wage), numeric: true },
+    { key: "fixed", header: "Fixed wage", render: (p) => formatTk(p.fixed_wage), numeric: true },
     { key: "score_sum", header: "Score sum", render: (p) => p.score_sum, numeric: true },
     { key: "adjustment", header: "P", render: (p) => `${p.adjustment_percent > 0 ? "+" : ""}${p.adjustment_percent}`, numeric: true },
-    { key: "allowance", header: "Allowance", render: (p) => formatMoney(p.allowance), numeric: true },
-    { key: "total", header: "Total pay", render: (p) => formatMoney(p.total_pay), numeric: true },
+    { key: "allowance", header: "Allowance", render: (p) => formatTk(p.allowance), numeric: true },
+    { key: "total", header: "Total pay", render: (p) => formatTk(p.total_pay), numeric: true },
     {
       key: "payout",
       header: "Payout",
@@ -340,15 +340,15 @@ export function EmployeeDetailPage() {
           label="Reference salary"
           value={
             employee.reference_salary
-              ? formatMoney(employee.reference_salary)
-              : formatMoney(role?.reference_salary ?? 0)
+              ? formatTk(employee.reference_salary)
+              : formatTk(role?.reference_salary ?? 0)
           }
           hint={employee.reference_salary ? "Override" : "Role standard"}
           icon={Wallet}
         />
         <KPICard
           label="Fixed wage (guaranteed)"
-          value={formatMoney(
+          value={formatTk(
             FIXED_WAGE_RATIO * Number(employee.reference_salary ?? role?.reference_salary ?? 0)
           )}
           icon={ShieldCheck}

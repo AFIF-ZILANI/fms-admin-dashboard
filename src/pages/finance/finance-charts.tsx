@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
-import { formatMoney } from "@/lib/utils";
+import { formatTk, formatTkCompact } from "@/lib/utils";
 import {
   CATEGORICAL_COLORS,
   CHART_HEIGHT,
@@ -36,14 +36,13 @@ const IN_COLOR = CATEGORICAL_COLORS[0];
 const OUT_COLOR = CATEGORICAL_COLORS[1];
 const RESULT_COLOR = CATEGORICAL_COLORS[2];
 
-const money = (v: TooltipValueType | undefined) => formatMoney(typeof v === "number" ? v : Number(v));
+const money = (v: TooltipValueType | undefined) => formatTk(typeof v === "number" ? v : Number(v));
 /** "2026-10" -> "Oct 26" for the axis; the tooltip shows the full month. */
 const shortMonth = (m: string) =>
   new Date(`${m}-01T00:00:00Z`).toLocaleDateString(undefined, { month: "short", year: "2-digit", timeZone: "UTC" });
 const longMonth = (m: string) =>
   new Date(`${m}-01T00:00:00Z`).toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
 /** Compact axis ticks: 2,500,000 -> 2.5M. Values elsewhere are always full figures. */
-const compact = (v: number) => new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(v);
 
 /** Every chart here can be read as a table too: exact figures, and a way around colour for anyone who needs it. */
 function ChartCard({
@@ -110,7 +109,7 @@ function MoneyTable({ head, rows }: { head: string[]; rows: (string | number)[][
           <TableRow key={String(r[0])}>
             {r.map((c, i) => (
               <TableCell key={i} className={i > 0 ? "text-right tabular-nums" : undefined}>
-                {typeof c === "number" ? formatMoney(c) : c}
+                {typeof c === "number" ? formatTk(c) : c}
               </TableCell>
             ))}
           </TableRow>
@@ -139,7 +138,7 @@ export function ProfitTrendChart({ rows, isLoading }: { rows: FinanceMonth[]; is
           <ComposedChart data={rows} barGap={2} margin={{ left: 4, right: 4 }}>
             <CartesianGrid {...chartGridProps} />
             <XAxis dataKey="month" tickFormatter={shortMonth} {...chartAxisProps} />
-            <YAxis tickFormatter={compact} width={48} {...chartAxisProps} />
+            <YAxis tickFormatter={formatTkCompact} width={48} {...chartAxisProps} />
             <Tooltip contentStyle={chartTooltipContentStyle} labelFormatter={(m) => longMonth(String(m))} formatter={money} />
             <Legend {...legendIn(["Revenue", "Costs", "Profit"])} />
             <Bar dataKey="revenue" name="Revenue" fill={IN_COLOR} radius={[4, 4, 0, 0]} maxBarSize={22} />
@@ -173,7 +172,7 @@ export function CashFlowChart({ rows, isLoading }: { rows: FinanceMonth[]; isLoa
           <ComposedChart data={rows} barGap={2} margin={{ left: 4, right: 4 }}>
             <CartesianGrid {...chartGridProps} />
             <XAxis dataKey="month" tickFormatter={shortMonth} {...chartAxisProps} />
-            <YAxis tickFormatter={compact} width={48} {...chartAxisProps} />
+            <YAxis tickFormatter={formatTkCompact} width={48} {...chartAxisProps} />
             <Tooltip contentStyle={chartTooltipContentStyle} labelFormatter={(m) => longMonth(String(m))} formatter={money} />
             <Legend {...legendIn(["Money in", "Money out", "Balance"])} />
             <Bar dataKey="cash_in" name="Money in" fill={IN_COLOR} radius={[4, 4, 0, 0]} maxBarSize={22} />
@@ -211,13 +210,13 @@ export function CostBreakdownChart({ lines, isLoading }: { lines: CostLine[]; is
         <ResponsiveContainer width="100%" height={Math.max(CHART_HEIGHT, shown.length * 34 + 20)}>
           <BarChart data={shown} layout="vertical" margin={{ left: 4, right: 56 }}>
             <CartesianGrid {...chartGridProps} vertical horizontal={false} />
-            <XAxis type="number" tickFormatter={compact} {...chartAxisProps} />
+            <XAxis type="number" tickFormatter={formatTkCompact} {...chartAxisProps} />
             <YAxis type="category" dataKey="label" width={130} {...chartAxisProps} />
             <Tooltip
               contentStyle={chartTooltipContentStyle}
               formatter={(v: TooltipValueType | undefined) => {
                 const n = typeof v === "number" ? v : Number(v);
-                return [`${formatMoney(n)} (${total ? Math.round((n / total) * 100) : 0}%)`, "Cost"];
+                return [`${formatTk(n)} (${total ? Math.round((n / total) * 100) : 0}%)`, "Cost"];
               }}
             />
             <Bar
@@ -234,7 +233,7 @@ export function CostBreakdownChart({ lines, isLoading }: { lines: CostLine[]; is
                 position: "right",
                 fontSize: 12,
                 fill: "var(--color-muted-foreground)",
-                formatter: (v: unknown) => compact(Number(v)),
+                formatter: (v: unknown) => formatTkCompact(Number(v)),
               }}
             />
           </BarChart>

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useGetData } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 
 type TopOutstandingRow = { customer_id: string; customer_name: string; due: string };
 
@@ -37,7 +37,7 @@ export function TopOutstandingCustomersCard() {
             {ranked.map((r) => (
               <li key={r.customer_id} className="flex items-center justify-between text-sm">
                 <span>{r.customer_name}</span>
-                <span className="font-medium tabular-nums">{formatMoney(r.due)}</span>
+                <span className="font-medium tabular-nums">{formatTk(r.due)}</span>
               </li>
             ))}
           </ul>

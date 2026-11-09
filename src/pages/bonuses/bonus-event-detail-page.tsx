@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { PAYOUT_STATUS_TONE } from "@/components/shared/status-tone";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, usePostData } from "@/lib/api";
-import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatDate, formatTk, humanizeEnum } from "@/lib/utils";
 import { RELIGION_LABELS } from "@/pages/employees/types";
 import { PayoutDialog, type PayoutBonus } from "@/pages/employees/payout-dialog";
 import type { Bonus, BonusEventDetail, Proposal, ProposalRow } from "@/pages/bonuses/types";
@@ -95,7 +95,7 @@ export function BonusEventDetailPage() {
   const bonusColumns: Column<Bonus>[] = [
     { key: "name", header: "Employee", render: (b) => <span className="font-medium">{b.employee.profile.name}</span> },
     { key: "service", header: "Service", numeric: true, render: (b) => `${b.service_months} mo` },
-    { key: "amount", header: "Amount", numeric: true, render: (b) => formatMoney(b.amount) },
+    { key: "amount", header: "Amount", numeric: true, render: (b) => formatTk(b.amount) },
     {
       key: "status",
       header: "Payout",
@@ -155,7 +155,7 @@ export function BonusEventDetailPage() {
             value={`${event.min_service_months} months`}
             hint={event.prorate ? "Prorated below that" : "Nothing below that"}
           />
-          <KPICard label="Granted" value={formatMoney(grantedTotal)} hint={`${granted.length} employee${granted.length === 1 ? "" : "s"}`} />
+          <KPICard label="Granted" value={formatTk(grantedTotal)} hint={`${granted.length} employee${granted.length === 1 ? "" : "s"}`} />
         </div>
       )}
 
@@ -167,7 +167,7 @@ export function BonusEventDetailPage() {
           </p>
           <CardAction>
             <Button onClick={onGrant} disabled={chosen.length === 0 || invalid || grant.isPending}>
-              Grant {chosen.length} · {formatMoney(total)}
+              Grant {chosen.length} · {formatTk(total)}
             </Button>
           </CardAction>
         </CardHeader>

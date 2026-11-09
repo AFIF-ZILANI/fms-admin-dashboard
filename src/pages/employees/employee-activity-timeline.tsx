@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import type { PayrollPayout, PayrollRecord, PerformanceScoreEntry } from "@/pages/employees/types";
 
 type TimelineRow = {
@@ -50,7 +50,7 @@ export function EmployeeActivityTimeline({
     date: p.month,
     icon: Banknote,
     label: "Payroll run",
-    amount: formatMoney(p.total_pay),
+    amount: formatTk(p.total_pay),
     amountClassName: "",
   }));
 
@@ -61,7 +61,7 @@ export function EmployeeActivityTimeline({
       date: p.paid_at!,
       icon: CreditCard,
       label: p.bonus ? `Bonus paid · ${p.bonus.event.name}` : "Wage paid",
-      amount: formatMoney(p.amount),
+      amount: formatTk(p.amount),
       amountClassName: "text-success",
     }));
 

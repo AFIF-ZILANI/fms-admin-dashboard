@@ -23,7 +23,7 @@ import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { NumericInput } from "@/components/utils/NumaricInput";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { cn, formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
+import { cn, formatDate, formatTk, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Customer } from "@/pages/customers/types";
 import type { Expense } from "@/pages/finance/types";
@@ -214,7 +214,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
 
   const onSubmit = (values: PaymentFormValues) => {
     if (selected && values.amount > selected.due + 0.005) {
-      setError("amount", { message: `Only ${formatMoney(selected.due)} is due` });
+      setError("amount", { message: `Only ${formatTk(selected.due)} is due` });
       return;
     }
     const { account_id, ...rest } = values;
@@ -236,8 +236,8 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
         const left = selected ? selected.due - values.amount : 0;
         toast.success(
           left <= 0.005
-            ? `${formatMoney(values.amount)} recorded -- fully paid`
-            : `${formatMoney(values.amount)} recorded -- ${formatMoney(left)} still due`,
+            ? `${formatTk(values.amount)} recorded -- fully paid`
+            : `${formatTk(values.amount)} recorded -- ${formatTk(left)} still due`,
         );
         onOpenChange(false);
       },
@@ -312,7 +312,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
                       <SelectContent>
                         {refOptions.map((r) => (
                           <SelectItem key={r.id} value={r.id}>
-                            {r.label} — due {formatMoney(r.due)}
+                            {r.label} — due {formatTk(r.due)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -338,16 +338,16 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
               <dl className="mt-3 grid grid-cols-3 gap-2 text-sm tabular-nums">
                 <div>
                   <dt className="text-xs text-muted-foreground">Total</dt>
-                  <dd className="font-medium">{formatMoney(selected.total)}</dd>
+                  <dd className="font-medium">{formatTk(selected.total)}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Paid so far</dt>
-                  <dd className="font-medium">{formatMoney(selected.paid)}</dd>
+                  <dd className="font-medium">{formatTk(selected.paid)}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Due now</dt>
                   <dd className={cn("text-lg font-semibold leading-tight", fullyPaid && "text-success")}>
-                    {formatMoney(selected.due)}
+                    {formatTk(selected.due)}
                   </dd>
                 </div>
               </dl>
@@ -375,12 +375,12 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
                     <span className="flex items-center gap-3">
                       <span className="flex items-center gap-1">
                         <span className="size-2 rounded-full bg-primary" aria-hidden />
-                        Paid {formatMoney(selected.paid)}
+                        Paid {formatTk(selected.paid)}
                       </span>
                       {thisPayment > 0 && (
                         <span className="flex items-center gap-1">
                           <span className="size-2 rounded-full bg-success" aria-hidden />
-                          This payment {formatMoney(thisPayment)}
+                          This payment {formatTk(thisPayment)}
                         </span>
                       )}
                     </span>
@@ -405,7 +405,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
                         {p.note ? `, ${p.note}` : ""}
                       </div>
                     </div>
-                    <span className="font-medium tabular-nums">{formatMoney(p.amount)}</span>
+                    <span className="font-medium tabular-nums">{formatTk(p.amount)}</span>
                   </li>
                 ))}
               </ul>
@@ -421,7 +421,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="amount">Amount</Label>
+                    <Label htmlFor="amount">Amount (৳)</Label>
                     {selected && (
                       <button
                         type="button"
@@ -442,10 +442,10 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
                   {errors.amount ? (
                     <p className="text-xs text-destructive">{errors.amount.message}</p>
                   ) : overpay ? (
-                    <p className="text-xs text-destructive">Only {formatMoney(selected!.due)} is due</p>
+                    <p className="text-xs text-destructive">Only {formatTk(selected!.due)} is due</p>
                   ) : selected && amount > 0 ? (
                     <p className="text-xs text-muted-foreground tabular-nums">
-                      {dueAfter <= 0.005 ? "This settles it in full" : `Still due after this: ${formatMoney(dueAfter)}`}
+                      {dueAfter <= 0.005 ? "This settles it in full" : `Still due after this: ${formatTk(dueAfter)}`}
                     </p>
                   ) : null}
                 </div>
@@ -499,7 +499,7 @@ export function PaymentCreateDialog({ open, onOpenChange, defaultRefType, defaul
             {!fullyPaid && (
               <Button type="submit" disabled={isSubmitting || overpay || (!!refId && !selected)}>
                 {isSubmitting && <Loader2 className="animate-spin" />}
-                {selected && amount > 0 ? `Record ${formatMoney(amount)}` : "Record payment"}
+                {selected && amount > 0 ? `Record ${formatTk(amount)}` : "Record payment"}
               </Button>
             )}
           </DialogFooter>

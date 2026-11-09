@@ -10,6 +10,7 @@ import {
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { useGetData } from "@/lib/api";
 import type { LocationStockRow } from "@/pages/inventory/types";
+import { useFormatStock } from "@/pages/inventory/use-format-stock";
 
 type HouseStockDialogProps = {
   houseId: string;
@@ -25,9 +26,10 @@ export function HouseStockDialog({ houseId, houseName, open, onOpenChange }: Hou
     { enabled: open }
   );
 
+  const fmt = useFormatStock();
   const columns: Column<LocationStockRow>[] = [
     { key: "item", header: "Item", render: (row) => <TruncatedText text={row.item_name} className="max-w-48" /> },
-    { key: "balance", header: "On hand", render: (row) => `${row.balance} ${row.unit}`, numeric: true },
+    { key: "balance", header: "On hand", render: (row) => fmt.stock(row.balance, row.item_id, row.unit), numeric: true },
   ];
 
   return (
