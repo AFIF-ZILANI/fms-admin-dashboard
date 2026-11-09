@@ -88,6 +88,7 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
     itemName: string;
     unit: string;
     kind: "WAREHOUSE" | "HOUSE";
+    item: Item;
   } | null>(null);
   const breakdownRows = breakdown ? (stockByItem.get(breakdown.itemId)?.[breakdown.kind] ?? []) : [];
 
@@ -124,7 +125,7 @@ export function ItemCatalogTab({ onViewLowStock }: { onViewLowStock: () => void 
     return (
       <button
         type="button"
-        onClick={() => setBreakdown({ itemId: item.id, itemName: item.name, unit: item.unit, kind })}
+        onClick={() => setBreakdown({ itemId: item.id, itemName: item.name, unit: item.unit, kind, item })}
         className="tabular-nums text-primary underline-offset-2 hover:underline"
       >
         {formatStock(total, item)}

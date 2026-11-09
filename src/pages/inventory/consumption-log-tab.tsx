@@ -15,6 +15,7 @@ import type { Batch } from "@/pages/batches/types";
 import type { House } from "@/pages/houses/types";
 import { ConsumptionFormDialog } from "@/pages/inventory/consumption-form-dialog";
 import { CodedConsumptionDialog } from "@/pages/inventory/coded-consumption-dialog";
+import { formatEntered } from "@/pages/inventory/stock-qty";
 
 export function ConsumptionLogTab() {
   const [batchFilter, setBatchFilter] = useState<string>("ALL");
@@ -70,7 +71,7 @@ export function ConsumptionLogTab() {
       sortValue: (c) => new Date(c.date).getTime(),
     },
     { key: "item", header: "Item", render: (c) => <TruncatedText text={c.item.name} className="max-w-48" />, sortValue: (c) => c.item.name },
-    { key: "quantity", header: "Quantity", render: (c) => c.quantity, numeric: true },
+    { key: "quantity", header: "Quantity", render: (c) => formatEntered(c.quantity, c.unit, c.item), numeric: true, sortValue: (c) => Number(c.base_quantity) },
     { key: "house", header: "House", render: (c) => c.house.name },
     { key: "batch", header: "Batch", render: (c) => c.batch?.batch_code ?? "—" },
     {

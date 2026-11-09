@@ -20,6 +20,7 @@ import { NumericInput } from "@/components/utils/NumaricInput";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
 import { humanizeEnum } from "@/lib/utils";
 import type { Item, LocationStockRow } from "@/pages/inventory/types";
+import { useFormatStock } from "@/pages/inventory/use-format-stock";
 import type { House } from "@/pages/houses/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
 
@@ -89,6 +90,7 @@ export function ConsumptionFormDialog({ open, onOpenChange }: ConsumptionFormDia
   const batch = balances?.results.find((b) => b.quantity > 0);
 
   const coded = new Set((codedItems?.results ?? []).map((i) => i.id));
+  const fmt = useFormatStock();
   const onHand = (houseStock ?? []).filter((s) => Number(s.balance) > 0 && !coded.has(s.item_id));
   const selectedStock = onHand.find((s) => s.item_id === itemId);
   // Fetched on its own for its usable unit conversions.
@@ -208,7 +210,7 @@ export function ConsumptionFormDialog({ open, onOpenChange }: ConsumptionFormDia
                   <SelectContent>
                     {onHand.map((s) => (
                       <SelectItem key={s.item_id} value={s.item_id}>
-                        {s.item_name} · {Number(s.balance)} {unitLabel(s.unit).toLowerCase()} on hand
+                        {s.item_name} · {fmt.stock(s.balance, s.item_id, s.unit)} on hand
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -237,7 +239,7 @@ export function ConsumptionFormDialog({ open, onOpenChange }: ConsumptionFormDia
               {errors.quantity && <p className="text-xs text-destructive">{errors.quantity.message}</p>}
               {selectedStock && (
                 <p className="text-xs text-muted-foreground">
-                  {Number(selectedStock.balance)} {unitLabel(selectedStock.unit).toLowerCase()} in this house
+                  {fmt.stock(selectedStock.balance, selectedStock.item_id, selectedStock.unit)} in this house
                 </p>
               )}
             </div>

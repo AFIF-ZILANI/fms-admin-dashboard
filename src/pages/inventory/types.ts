@@ -226,6 +226,10 @@ export type Consumption = {
   item_id: string;
   stock_unit_id: string | null;
   quantity: string;
+  /** What `quantity` is in, as entered (BAG, KG, ML...). */
+  unit: string;
+  /** `quantity` converted to the item's base unit. */
+  base_quantity: string;
   date: string;
   note: string | null;
   recorded_by_id: string;

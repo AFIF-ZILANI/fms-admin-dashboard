@@ -22,6 +22,7 @@ import { humanizeEnum } from "@/lib/utils";
 import type { Item, Warehouse, LocationStockRow } from "@/pages/inventory/types";
 import type { House } from "@/pages/houses/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
+import { formatStock } from "@/pages/inventory/stock-qty";
 
 type LocationOption = { value: string; type: "WAREHOUSE" | "HOUSE"; id: string; label: string };
 
@@ -265,7 +266,7 @@ export function TransferFormDialog({ open, onOpenChange }: TransferFormDialogPro
               )}
               {availableAtSource && (
                 <p className="text-xs text-muted-foreground">
-                  Available: {availableAtSource.balance} {availableAtSource.unit}
+                  Available: {formatStock(availableAtSource.balance, allItems?.results.find((i) => i.id === itemId) ?? { unit: availableAtSource.unit })}
                 </p>
               )}
             </div>

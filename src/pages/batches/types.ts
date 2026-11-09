@@ -122,6 +122,8 @@ export type Consumption = {
   house_id: string;
   item_id: string;
   quantity: string;
+  /** quantity in the item's base unit -- what sums across draws entered in different units. */
+  base_quantity: string;
   date: string;
 };
 

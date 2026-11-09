@@ -16,6 +16,7 @@ import { paymentStatus, type Sale, type SaleItemLine } from "@/pages/sales/types
 import type { Customer } from "@/pages/customers/types";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
+import { useFormatStock } from "@/pages/inventory/use-format-stock";
 
 export function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,9 +31,10 @@ export function SaleDetailPage() {
   const customerName = customers?.results.find((c) => c.id === sale?.customer_id)?.profile.name;
   const { trueAmounts } = useOutstanding("SALE");
 
+  const fmt = useFormatStock();
   const columns: Column<SaleItemLine>[] = [
     { key: "item", header: "Item", render: (l) => <TruncatedText text={l.item.name} className="max-w-48" /> },
-    { key: "quantity", header: "Quantity", render: (l) => `${l.quantity} ${l.unit}`, numeric: true },
+    { key: "quantity", header: "Quantity", render: (l) => fmt.entered(l.quantity, l.unit, l.item.id), numeric: true },
     { key: "unit_price", header: "Unit price", render: (l) => formatMoney(l.unit_price), numeric: true },
     { key: "total", header: "Total", render: (l) => formatMoney(l.total_price), numeric: true },
   ];

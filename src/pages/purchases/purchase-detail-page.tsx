@@ -21,6 +21,7 @@ import { useOutstanding } from "@/pages/sales/use-outstanding";
 import { PurchaseChargeDialog } from "@/pages/purchases/purchase-charge-dialog";
 import { PurchaseLotSheet } from "@/pages/purchases/purchase-lot-sheet";
 import type { LookupRow } from "@/pages/settings/lookup-types";
+import { useFormatStock } from "@/pages/inventory/use-format-stock";
 
 export function PurchaseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,9 +56,10 @@ export function PurchaseDetailPage() {
   // Looked up by id so the open sheet follows a refetch (a first bind sets the lot's unit_count).
   const openLot = purchase?.items.find((l) => l.id === lotId) ?? null;
 
+  const fmt = useFormatStock();
   const columns: Column<PurchaseItemLine>[] = [
     { key: "item", header: "Item", render: (l) => <TruncatedText text={l.item.name} className="max-w-48" /> },
-    { key: "quantity", header: "Quantity", render: (l) => `${l.quantity} ${l.unit}`, numeric: true },
+    { key: "quantity", header: "Quantity", render: (l) => fmt.entered(l.quantity, l.unit, l.item.id), numeric: true },
     { key: "unit_price", header: "Unit price", render: (l) => formatTk(l.unit_price), numeric: true },
     { key: "total", header: "Total", render: (l) => formatTk(l.total_price), numeric: true },
     ...(ratio > 0

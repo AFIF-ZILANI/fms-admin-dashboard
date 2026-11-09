@@ -11,6 +11,7 @@ import { useGetData, type Paginated } from "@/lib/api";
 import { formatMoney, humanizeEnum } from "@/lib/utils";
 import { STOCK_DIRECTIONS, STOCK_REASONS, type Item, type StockDirection, type StockLedgerEntry, type StockReason } from "@/pages/inventory/types";
 import { TransferFormDialog } from "@/pages/inventory/transfer-form-dialog";
+import { formatStock } from "@/pages/inventory/stock-qty";
 
 type LedgerSummary = {
   total: number;
@@ -79,11 +80,11 @@ export function StockLedgerTab() {
       render: (e) => (
         <span className={e.direction === "IN" ? "text-success" : "text-critical"}>
           {e.direction === "IN" ? "+" : "-"}
-          {e.quantity} {e.item.unit}
+          {formatStock(e.quantity, e.item)}
         </span>
       ),
     },
-    { key: "quantity", header: "Quantity", render: (e) => e.quantity, numeric: true },
+    { key: "quantity", header: "Quantity", render: (e) => formatStock(e.quantity, e.item), numeric: true, sortValue: (e) => Number(e.quantity) },
     { key: "unit_cost", header: "Unit cost", render: (e) => e.unit_cost ?? "—", numeric: true },
     { key: "ref_type", header: "Ref type", render: (e) => humanizeEnum(e.ref_type) },
   ];

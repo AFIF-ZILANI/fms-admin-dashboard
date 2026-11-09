@@ -8,11 +8,12 @@ import {
 } from "@/components/ui/sheet";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { humanizeEnum } from "@/lib/utils";
-import type { ItemStockByLocation } from "@/pages/inventory/types";
+import type { Item, ItemStockByLocation } from "@/pages/inventory/types";
+import { formatStock } from "@/pages/inventory/stock-qty";
 
 type StockBreakdownSheetProps = {
   /** null = closed. Set to open, carrying which item + which location kind to break down. */
-  target: { itemName: string; unit: string; kind: "WAREHOUSE" | "HOUSE" } | null;
+  target: { itemName: string; unit: string; kind: "WAREHOUSE" | "HOUSE"; item: Pick<Item, "unit" | "itemUnits"> } | null;
   rows: ItemStockByLocation[];
   onOpenChange: (open: boolean) => void;
 };
@@ -24,7 +25,7 @@ export function StockBreakdownSheet({ target, rows, onOpenChange }: StockBreakdo
 
   const columns: Column<ItemStockByLocation>[] = [
     { key: "location", header: locationLabel, render: (r) => r.location_name },
-    { key: "balance", header: "Balance", render: (r) => r.balance, numeric: true, sortValue: (r) => Number(r.balance) },
+    { key: "balance", header: "Balance", render: (r) => (target ? formatStock(r.balance, target.item) : r.balance), numeric: true, sortValue: (r) => Number(r.balance) },
   ];
 
   return (
