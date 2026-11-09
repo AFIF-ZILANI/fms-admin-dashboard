@@ -18,7 +18,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { useConfirm } from "@/components/shared/confirm-dialog";
 import { activeStatus } from "@/components/shared/status-tone";
 import { useGetData, usePostData, usePatchData, useDelete, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import { FIXED_WAGE_RATIO, type EmployeeRoleConfig } from "@/pages/employees/types";
 
 export function RoleSalaryCard() {
@@ -119,7 +119,7 @@ export function RoleSalaryCard() {
     {
       key: "reference_salary",
       header: "Reference salary",
-      render: (r) => formatMoney(r.reference_salary),
+      render: (r) => formatTk(r.reference_salary),
       numeric: true,
     },
     {
@@ -127,7 +127,7 @@ export function RoleSalaryCard() {
       header: "Fixed wage",
       render: (r) => (
         <span className="text-muted-foreground">
-          {formatMoney(Number(r.reference_salary) * FIXED_WAGE_RATIO)}
+          {formatTk(Number(r.reference_salary) * FIXED_WAGE_RATIO)}
         </span>
       ),
       numeric: true,
@@ -218,7 +218,7 @@ export function RoleSalaryCard() {
               )}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="role-salary">Reference salary</Label>
+              <Label htmlFor="role-salary">Reference salary (৳)</Label>
               <NumericInput
                 id="role-salary"
                 allowDecimal

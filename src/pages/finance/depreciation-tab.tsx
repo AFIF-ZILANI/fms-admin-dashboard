@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { useGetData, type Paginated } from "@/lib/api";
-import { cn, formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
+import { cn, formatDate, formatTk, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { AssetDepreciation, FinanceAsset } from "@/pages/finance/types";
 
@@ -39,9 +39,9 @@ export function DepreciationTab() {
     { key: "date", header: "Computed", render: (d) => new Date(d.computed_at).toLocaleDateString() },
     { key: "asset", header: "Asset", render: (d) => d.asset.name },
     { key: "batch", header: "Batch", render: (d) => batchCode(d.batch_id) },
-    { key: "purchase_cost", header: "Purchase cost", render: (d) => formatMoney(d.asset.purchase_cost), numeric: true },
+    { key: "purchase_cost", header: "Purchase cost", render: (d) => formatTk(d.asset.purchase_cost), numeric: true },
     { key: "useful_life", header: "Useful life (batches)", render: (d) => d.asset.useful_life_batches, numeric: true },
-    { key: "amount", header: "Amount", render: (d) => formatMoney(d.amount), numeric: true },
+    { key: "amount", header: "Amount", render: (d) => formatTk(d.amount), numeric: true },
   ];
 
   return (
@@ -146,7 +146,7 @@ function AssetRegister() {
       sortValue: (a) => a.name,
     },
     { key: "status", header: "Status", render: (a) => <StatusBadge tone={ASSET_TONE[a.status]} label={humanizeEnum(a.status)} /> },
-    { key: "cost", header: "Cost", render: (a) => formatMoney(a.cost), numeric: true, sortValue: (a) => a.cost },
+    { key: "cost", header: "Cost", render: (a) => formatTk(a.cost), numeric: true, sortValue: (a) => a.cost },
     {
       key: "life",
       header: "Batches used",
@@ -163,18 +163,18 @@ function AssetRegister() {
       numeric: true,
       sortValue: (a) => a.batches / a.useful_life_batches,
     },
-    { key: "used", header: "Charged to batches", render: (a) => formatMoney(a.used), numeric: true, sortValue: (a) => a.used },
+    { key: "used", header: "Charged to batches", render: (a) => formatTk(a.used), numeric: true, sortValue: (a) => a.used },
     {
       key: "left",
       header: "Value left",
-      render: (a) => <span className={cn("font-medium", a.status !== "ACTIVE" && "text-muted-foreground")}>{formatMoney(a.left)}</span>,
+      render: (a) => <span className={cn("font-medium", a.status !== "ACTIVE" && "text-muted-foreground")}>{formatTk(a.left)}</span>,
       numeric: true,
       sortValue: (a) => a.left,
     },
     {
       key: "per_batch",
       header: "Per batch",
-      render: (a) => formatMoney(a.cost / a.useful_life_batches),
+      render: (a) => formatTk(a.cost / a.useful_life_batches),
       numeric: true,
     },
   ];
@@ -182,9 +182,9 @@ function AssetRegister() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-3">
-        <KPICard label="Equipment cost" value={formatMoney(totals.cost)} icon={Wrench} isLoading={isLoading} hint={`${rows.length} asset${rows.length === 1 ? "" : "s"}`} />
-        <KPICard label="Charged to batches" value={formatMoney(totals.used)} icon={TrendingDown} isLoading={isLoading} hint="Through depreciation at batch close" />
-        <KPICard label="Value left in use" value={formatMoney(totals.left)} icon={Wrench} isLoading={isLoading} hint="Active assets only" />
+        <KPICard label="Equipment cost" value={formatTk(totals.cost)} icon={Wrench} isLoading={isLoading} hint={`${rows.length} asset${rows.length === 1 ? "" : "s"}`} />
+        <KPICard label="Charged to batches" value={formatTk(totals.used)} icon={TrendingDown} isLoading={isLoading} hint="Through depreciation at batch close" />
+        <KPICard label="Value left in use" value={formatTk(totals.left)} icon={Wrench} isLoading={isLoading} hint="Active assets only" />
       </div>
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-3">

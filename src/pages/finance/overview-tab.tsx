@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmptyState } from "@/components/shared/empty-state";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
-import { cn, daysAgoMs, formatDate, formatMoney } from "@/lib/utils";
+import { cn, daysAgoMs, formatDate, formatTk } from "@/lib/utils";
 import type { Payment, PaymentInstrument } from "@/pages/payments/types";
 import type { FinanceMonth, FinanceOwed, FinancePeriod, FinanceSummary, FinancialDashboard, OwedSide } from "@/pages/finance/types";
 import { CashFlowChart, CostBreakdownChart, ProfitTrendChart } from "@/pages/finance/finance-charts";
@@ -106,7 +106,7 @@ export function OverviewTab() {
   const cur = summary.data?.current;
   const prev = summary.data?.previous;
   const loading = summary.isLoading || !validCustom;
-  const tile = (pick: (p: FinancePeriod) => number) => (cur ? formatMoney(pick(cur)) : "—");
+  const tile = (pick: (p: FinancePeriod) => number) => (cur ? formatTk(pick(cur)) : "—");
   const hint = (pick: (p: FinancePeriod) => number) => (cur && prev ? change(pick(cur), pick(prev), period.compareLabel) : undefined);
 
   return (
@@ -243,13 +243,13 @@ function AccountsCard() {
                     <Landmark className="size-4 text-muted-foreground" aria-hidden />
                     {a.label}
                   </span>
-                  <span className={cn("font-medium tabular-nums", balance < 0 && "text-critical")}>{formatMoney(balance)}</span>
+                  <span className={cn("font-medium tabular-nums", balance < 0 && "text-critical")}>{formatTk(balance)}</span>
                 </li>
               );
             })}
             <li className="flex items-center justify-between gap-3 pt-2.5 text-sm font-semibold">
               <span>Total</span>
-              <span className={cn("tabular-nums", total < 0 && "text-critical")}>{formatMoney(total)}</span>
+              <span className={cn("tabular-nums", total < 0 && "text-critical")}>{formatTk(total)}</span>
             </li>
           </ul>
         )}
@@ -290,7 +290,7 @@ function OwedCard({
           <CardTitle className="text-base">{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
         </div>
-        {side && <span className="text-xl font-semibold tabular-nums">{formatMoney(side.total)}</span>}
+        {side && <span className="text-xl font-semibold tabular-nums">{formatTk(side.total)}</span>}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {isLoading ? (
@@ -316,7 +316,7 @@ function OwedCard({
                       {b.label}
                     </dt>
                     <dd className={cn("mt-0.5 text-sm font-medium tabular-nums", b.key === "d60_plus" && side.buckets.d60_plus > 0 && "text-critical")}>
-                      {formatMoney(side.buckets[b.key])}
+                      {formatTk(side.buckets[b.key])}
                     </dd>
                   </div>
                 ))}
@@ -335,7 +335,7 @@ function OwedCard({
                         {row.records} unpaid, oldest {days} day{days === 1 ? "" : "s"}
                       </span>
                     </span>
-                    <span className="font-semibold tabular-nums">{formatMoney(row.due)}</span>
+                    <span className="font-semibold tabular-nums">{formatTk(row.due)}</span>
                   </>
                 );
                 return (
@@ -427,7 +427,7 @@ function RecentMovementsCard() {
                   </span>
                   <span className="font-semibold tabular-nums">
                     {incoming ? "+" : "−"}
-                    {formatMoney(p.amount)}
+                    {formatTk(p.amount)}
                   </span>
                 </li>
               );

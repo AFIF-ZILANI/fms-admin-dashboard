@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useGetData } from "@/lib/api";
-import { formatTk, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum, formatTkCompact } from "@/lib/utils";
 import {
   CATEGORICAL_COLORS,
   CHART_HEIGHT,
@@ -46,7 +46,7 @@ export function SpendByCategoryChart({ days }: SpendByCategoryChartProps) {
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <BarChart data={rows} layout="vertical">
               <CartesianGrid {...chartGridProps} vertical horizontal={false} />
-              <XAxis type="number" {...chartAxisProps} />
+              <XAxis type="number" tickFormatter={formatTkCompact} {...chartAxisProps} />
               <YAxis type="category" dataKey="category" width={90} tickFormatter={humanizeEnum} {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}

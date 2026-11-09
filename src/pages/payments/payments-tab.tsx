@@ -5,7 +5,7 @@ import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Purchase } from "@/pages/purchases/types";
 import type { Sale, BirdSale } from "@/pages/sales/types";
@@ -64,7 +64,7 @@ export function PaymentsTab() {
     },
     { key: "ref_type", header: "Pays for", render: (p) => humanizeEnum(p.ref_type) },
     { key: "ref", header: "Record", render: (p) => refLabel(p) },
-    { key: "amount", header: "Amount", render: (p) => formatMoney(p.amount), numeric: true },
+    { key: "amount", header: "Amount", render: (p) => formatTk(p.amount), numeric: true },
     { key: "from", header: "From", render: (p) => instrumentLabel(p.from_instrument_id) },
     { key: "to", header: "To", render: (p) => instrumentLabel(p.to_instrument_id) },
   ];
@@ -73,8 +73,8 @@ export function PaymentsTab() {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Total payments" value={data?.total ?? payments.length} icon={Receipt} isLoading={isLoading} />
-        <KPICard label="Total incoming" value={formatMoney(totalIncoming)} icon={ArrowDownLeft} isLoading={isLoading} />
-        <KPICard label="Total outgoing" value={formatMoney(totalOutgoing)} icon={ArrowUpRight} isLoading={isLoading} />
+        <KPICard label="Total incoming" value={formatTk(totalIncoming)} icon={ArrowDownLeft} isLoading={isLoading} />
+        <KPICard label="Total outgoing" value={formatTk(totalOutgoing)} icon={ArrowUpRight} isLoading={isLoading} />
       </div>
 
       <div className="flex justify-end">

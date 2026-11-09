@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useGetData } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum, formatTkCompact } from "@/lib/utils";
 import {
   CATEGORICAL_COLORS,
   CHART_HEIGHT,
@@ -45,11 +45,11 @@ export function StockValueByCategoryChart() {
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <BarChart data={rows} layout="vertical">
               <CartesianGrid {...chartGridProps} vertical horizontal={false} />
-              <XAxis type="number" {...chartAxisProps} />
+              <XAxis type="number" tickFormatter={formatTkCompact} {...chartAxisProps} />
               <YAxis type="category" dataKey="category" width={90} tickFormatter={humanizeEnum} {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
-                formatter={(v: TooltipValueType | undefined) => formatMoney(typeof v === "number" ? v : Number(v))}
+                formatter={(v: TooltipValueType | undefined) => formatTk(typeof v === "number" ? v : Number(v))}
                 labelFormatter={(label) => humanizeEnum(String(label))}
               />
               <Bar dataKey="total" radius={[0, 4, 4, 0]}>

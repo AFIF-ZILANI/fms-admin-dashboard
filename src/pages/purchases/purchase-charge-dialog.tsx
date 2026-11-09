@@ -115,7 +115,7 @@ export function PurchaseChargeDialog({ purchaseId, open, onOpenChange }: Purchas
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="charge-amount">Amount</Label>
+              <Label htmlFor="charge-amount">Amount (৳)</Label>
               <NumericInput
                 id="charge-amount"
                 allowDecimal

@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ASSET_STATUS_TONE } from "@/components/shared/status-tone";
 import { Button } from "@/components/ui/button";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import { AssetCreateDialog } from "@/pages/inventory/asset-create-dialog";
 import { AssetDetailSheet } from "@/pages/inventory/asset-detail-sheet";
 import { bookValue } from "@/pages/inventory/asset-utils";
@@ -30,14 +30,14 @@ export function AssetsTab() {
 
   const columns: Column<Asset>[] = [
     { key: "name", header: "Name", render: (a) => <span className="font-medium">{a.name}</span> },
-    { key: "cost", header: "Purchase cost", render: (a) => formatMoney(a.purchase_cost), numeric: true },
+    { key: "cost", header: "Purchase cost", render: (a) => formatTk(a.purchase_cost), numeric: true },
     { key: "useful_life", header: "Useful life", render: (a) => `${a.useful_life_batches} batches`, numeric: true },
     {
       key: "status",
       header: "Status",
       render: (a) => <StatusBadge tone={ASSET_STATUS_TONE[a.status]} label={humanizeEnum(a.status)} />,
     },
-    { key: "book_value", header: "Book value", render: (a) => formatMoney(bookValue(a)), numeric: true },
+    { key: "book_value", header: "Book value", render: (a) => formatTk(bookValue(a)), numeric: true },
   ];
 
   return (
@@ -51,8 +51,8 @@ export function AssetsTab() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Active assets" value={activeCount} icon={CheckCircle2} isLoading={isLoading} />
-        <KPICard label="Purchase cost" value={formatMoney(totalCost)} hint="active assets" icon={Receipt} isLoading={isLoading} />
-        <KPICard label="Book value" value={formatMoney(totalBookValue)} hint="what they're worth now" icon={Wallet} isLoading={isLoading} />
+        <KPICard label="Purchase cost" value={formatTk(totalCost)} hint="active assets" icon={Receipt} isLoading={isLoading} />
+        <KPICard label="Book value" value={formatTk(totalBookValue)} hint="what they're worth now" icon={Wallet} isLoading={isLoading} />
         <KPICard label="Depreciated" value={depreciatedPct === null ? "—" : `${depreciatedPct.toFixed(0)}%`} hint="of purchase cost written off" icon={Percent} isLoading={isLoading} />
         <KPICard label="Nearing end of life" value={nearingEnd} hint="one batch or less left" tone={nearingEnd > 0 ? "warning" : undefined} icon={Hourglass} isLoading={isLoading} />
         <KPICard label="Avg batches left" value={avgLeft === null ? "—" : avgLeft.toFixed(1)} hint="of useful life" icon={Boxes} isLoading={isLoading} />

@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData } from "@/lib/api";
-import { cn, formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
+import { cn, formatDate, formatTk, humanizeEnum, formatTkCompact } from "@/lib/utils";
 import { CHART_HEIGHT, chartAxisProps, chartGridProps, chartTooltipContentStyle, OTHER_COLOR, SINGLE_SERIES_STROKE } from "@/pages/analytics/chart-theme";
 import type { BatchStatement, StatementSection } from "@/pages/finance/types";
 
@@ -27,7 +27,7 @@ const STATUS_TONE = { RUNNING: "info", SOLD: "success", CLOSED: "neutral" } as c
 
 const totalCost = (s: BatchStatement) => s.costs + s.shared_costs.total;
 const pct = (v: number | null) => (v === null ? "—" : `${(v * 100).toFixed(1)}%`);
-const maybe = (v: number | null, suffix = "") => (v === null ? "—" : `${formatMoney(v)}${suffix}`);
+const maybe = (v: number | null, suffix = "") => (v === null ? "—" : `${formatTk(v)}${suffix}`);
 /** Per bird sold only means something once the batch is sold: mid-batch, costs for every bird sit against the
  * few sold so far. */
 const profitPerBird = (s: BatchStatement) => (s.batch.status === "RUNNING" ? null : s.per_unit.profit_per_bird);
@@ -66,12 +66,12 @@ export function BatchPnlTab() {
     { key: "status", header: "Status", render: (s) => <StatusBadge tone={STATUS_TONE[s.batch.status]} label={humanizeEnum(s.batch.status)} /> },
     { key: "birds", header: "Birds sold / placed", render: (s) => `${s.birds.sold.toLocaleString()} / ${s.birds.placed.toLocaleString()}`, numeric: true, sortValue: (s) => s.birds.sold },
     { key: "mortality", header: "Mortality", render: (s) => pct(s.birds.mortality_rate), numeric: true, sortValue: (s) => s.birds.mortality_rate },
-    { key: "revenue", header: "Revenue", render: (s) => formatMoney(s.revenue.net), numeric: true, sortValue: (s) => s.revenue.net },
-    { key: "cost", header: "Total cost", render: (s) => formatMoney(totalCost(s)), numeric: true, sortValue: totalCost },
+    { key: "revenue", header: "Revenue", render: (s) => formatTk(s.revenue.net), numeric: true, sortValue: (s) => s.revenue.net },
+    { key: "cost", header: "Total cost", render: (s) => formatTk(totalCost(s)), numeric: true, sortValue: totalCost },
     {
       key: "profit",
       header: "Net profit",
-      render: (s) => <span className={cn("font-medium", s.net_profit < 0 && "text-critical")}>{formatMoney(s.net_profit)}</span>,
+      render: (s) => <span className={cn("font-medium", s.net_profit < 0 && "text-critical")}>{formatTk(s.net_profit)}</span>,
       numeric: true,
       sortValue: (s) => s.net_profit,
     },
@@ -140,10 +140,10 @@ function CompareChart({ title, description, rows, selectedId }: { title: string;
           <ResponsiveContainer width="100%" height={Math.max(CHART_HEIGHT / 1.5, rows.length * 40 + 30)}>
             <BarChart data={rows} layout="vertical" margin={{ left: 4, right: 56 }}>
               <CartesianGrid {...chartGridProps} vertical horizontal={false} />
-              <XAxis type="number" {...chartAxisProps} />
+              <XAxis type="number" tickFormatter={formatTkCompact} {...chartAxisProps} />
               <YAxis type="category" dataKey="label" width={130} {...chartAxisProps} />
-              <Tooltip contentStyle={chartTooltipContentStyle} formatter={(v: TooltipValueType | undefined) => [formatMoney(typeof v === "number" ? v : Number(v)), title]} />
-              <Bar dataKey="value" radius={4} maxBarSize={18} label={{ position: "right", fontSize: 12, fill: "var(--color-muted-foreground)", formatter: (v: unknown) => formatMoney(Number(v)) }}>
+              <Tooltip contentStyle={chartTooltipContentStyle} formatter={(v: TooltipValueType | undefined) => [formatTk(typeof v === "number" ? v : Number(v)), title]} />
+              <Bar dataKey="value" radius={4} maxBarSize={18} label={{ position: "right", fontSize: 12, fill: "var(--color-muted-foreground)", formatter: (v: unknown) => formatTk(Number(v)) }}>
                 {rows.map((r) => (
                   <Cell key={r.id} fill={r.id === selectedId ? SINGLE_SERIES_STROKE : OTHER_COLOR} />
                 ))}
@@ -185,13 +185,13 @@ function Statement({ s }: { s: BatchStatement }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPICard label={running ? "Net profit so far" : "Net profit"} value={formatMoney(s.net_profit)} tone={s.net_profit < 0 ? "critical" : undefined} hint={s.margin === null ? "No sales yet" : `${pct(s.margin)} of revenue`} />
+        <KPICard label={running ? "Net profit so far" : "Net profit"} value={formatTk(s.net_profit)} tone={s.net_profit < 0 ? "critical" : undefined} hint={s.margin === null ? "No sales yet" : `${pct(s.margin)} of revenue`} />
         <KPICard
           label="Profit per bird"
           value={maybe(profitPerBird(s))}
           hint={running ? "Shown once the batch is sold" : `${s.birds.sold.toLocaleString()} birds sold`}
         />
-        <KPICard label="Cost per kg" value={maybe(s.per_unit.cost_per_kg)} hint={s.per_unit.avg_price_per_kg === null ? undefined : `Sold at ${formatMoney(s.per_unit.avg_price_per_kg)} / kg`} />
+        <KPICard label="Cost per kg" value={maybe(s.per_unit.cost_per_kg)} hint={s.per_unit.avg_price_per_kg === null ? undefined : `Sold at ${formatTk(s.per_unit.avg_price_per_kg)} / kg`} />
         <KPICard label="FCR" value={s.per_unit.fcr === null ? "—" : s.per_unit.fcr.toFixed(2)} hint={s.kg.feed === null ? undefined : `${s.kg.feed.toLocaleString()} kg feed`} />
       </div>
 
@@ -235,7 +235,7 @@ function Statement({ s }: { s: BatchStatement }) {
                 ))}
                 <tr className="border-t-2">
                   <td className="pt-3 text-base font-semibold">{running ? "Net profit so far" : "Net profit"}</td>
-                  <td className={cn("pt-3 text-right text-base font-semibold", s.net_profit < 0 && "text-critical")}>{formatMoney(s.net_profit)}</td>
+                  <td className={cn("pt-3 text-right text-base font-semibold", s.net_profit < 0 && "text-critical")}>{formatTk(s.net_profit)}</td>
                   <td className="pt-3 text-right text-xs text-muted-foreground">{s.margin === null ? "" : pct(s.margin)}</td>
                 </tr>
               </tbody>
@@ -259,7 +259,7 @@ function Statement({ s }: { s: BatchStatement }) {
                       <div className="flex justify-between gap-2">
                         <span>{x.label}</span>
                         <span className="tabular-nums">
-                          {formatMoney(x.amount)} <span className="text-xs text-muted-foreground">{(of * 100).toFixed(0)}%</span>
+                          {formatTk(x.amount)} <span className="text-xs text-muted-foreground">{(of * 100).toFixed(0)}%</span>
                         </span>
                       </div>
                       <div className="mt-1 h-1.5 rounded-full bg-muted">
@@ -283,8 +283,8 @@ function Statement({ s }: { s: BatchStatement }) {
                 <Fact label="Still on the farm" value={s.birds.live.toLocaleString()} />
                 <Fact label="Kg sold" value={s.kg.sold.toLocaleString()} />
                 <Fact label="Cost per bird placed" value={maybe(s.per_unit.cost_per_bird)} />
-                <Fact label="Received from buyers" value={formatMoney(s.money.received)} />
-                <Fact label="Buyers still owe" value={formatMoney(s.money.due)} warn={s.money.due > 0} />
+                <Fact label="Received from buyers" value={formatTk(s.money.received)} />
+                <Fact label="Buyers still owe" value={formatTk(s.money.due)} warn={s.money.due > 0} />
               </dl>
             </CardContent>
           </Card>
@@ -320,7 +320,7 @@ function Row({
         {hint && <span className="ml-1.5 text-xs font-normal text-muted-foreground">({hint})</span>}
       </td>
       <td className={cn("py-1.5 text-right", strong && "font-semibold", indent && "text-xs", amount < 0 && !muted && !strong && "text-foreground")}>
-        {amount < 0 ? `−${formatMoney(-amount)}` : formatMoney(amount)}
+        {amount < 0 ? `−${formatTk(-amount)}` : formatTk(amount)}
       </td>
       <td className="py-1.5 text-right text-xs text-muted-foreground">{share ?? ""}</td>
     </tr>

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import {
   EMPLOYEE_ROLE_LABELS,
   PAYOUT_METHOD_LABELS,
@@ -111,13 +111,13 @@ export function PayslipPage() {
         </section>
 
         <section className="flex flex-col gap-2 border-b border-border py-4 text-sm">
-          <Line label="Fixed wage (guaranteed)" value={formatMoney(slip.fixed_wage)} />
+          <Line label="Fixed wage (guaranteed)" value={formatTk(slip.fixed_wage)} />
           <Line
             label={`Performance allowance (P ${slip.adjustment_percent > 0 ? "+" : ""}${slip.adjustment_percent})`}
-            value={formatMoney(slip.allowance)}
+            value={formatTk(slip.allowance)}
           />
           <div className="mt-1 border-t border-border pt-2">
-            <Line label="Total pay" value={formatMoney(slip.total_pay)} strong />
+            <Line label="Total pay" value={formatTk(slip.total_pay)} strong />
           </div>
         </section>
 
@@ -160,12 +160,12 @@ export function PayslipPage() {
             <div className="flex flex-col gap-1.5">
               <Line
                 label={`${PAYOUT_METHOD_LABELS[slip.payout.method]} · ····${slip.payout.account_last4}`}
-                value={formatMoney(slip.payout.amount)}
+                value={formatTk(slip.payout.amount)}
               />
               {parseFloat(slip.payout.fee_paid_by_farm) > 0 && (
                 <Line
                   label="Cash-out fee covered by the farm"
-                  value={formatMoney(slip.payout.fee_paid_by_farm)}
+                  value={formatTk(slip.payout.fee_paid_by_farm)}
                 />
               )}
               <p className="text-xs text-muted-foreground">

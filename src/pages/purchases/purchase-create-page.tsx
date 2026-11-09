@@ -426,7 +426,7 @@ export function PurchaseCreatePage() {
                   <TableHead className="w-[34%]">Item</TableHead>
                   <TableHead className="w-[15%]">Quantity</TableHead>
                   <TableHead className="w-[16%]">Unit</TableHead>
-                  <TableHead className="w-[17%]">Unit price</TableHead>
+                  <TableHead className="w-[17%]">Unit price (৳)</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
@@ -602,7 +602,7 @@ export function PurchaseCreatePage() {
           {payment.status !== "UNPAID" && (
             <CardContent className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label>Amount</Label>
+                <Label>Amount (৳)</Label>
                 <NumericInput
                   allowDecimal
                   decimalPlaces={2}

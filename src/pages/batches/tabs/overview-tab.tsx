@@ -4,7 +4,7 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { SectionHeader } from "@/components/shared/section-header";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatDate, formatTk, humanizeEnum } from "@/lib/utils";
 import { liveBirdCount, type Batch, type HouseBalance, type MortalityLog, type WeightRecord } from "@/pages/batches/types";
 import { cycleDay } from "@/pages/batches/cycle-day";
 
@@ -65,7 +65,7 @@ export function OverviewTab({ batch }: { batch: Batch }) {
         />
         <KPICard
           label="Latest avg weight"
-          value={latestWeight ? `${formatMoney(latestWeight.average_wt_grams)} g` : "—"}
+          value={latestWeight ? `${formatTk(latestWeight.average_wt_grams)} g` : "—"}
           icon={TrendingUp}
           isLoading={weightLoading}
           hint={latestWeight ? `sampled ${formatDate(latestWeight.date)}` : "no samples yet"}

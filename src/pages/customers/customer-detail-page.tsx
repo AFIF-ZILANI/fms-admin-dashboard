@@ -11,7 +11,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus } from "@/components/shared/status-tone";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import type { Customer } from "@/pages/customers/types";
 import { CustomerFormDialog } from "@/pages/customers/customer-form-dialog";
 
@@ -75,9 +75,9 @@ export function CustomerDetailPage() {
   const saleColumns: Column<SaleRow>[] = [
     { key: "date", header: "Date", render: (r) => new Date(r.date).toLocaleDateString() },
     { key: "type", header: "Type", render: (r) => r.type },
-    { key: "total", header: "Total", render: (r) => formatMoney(r.total), numeric: true },
-    { key: "paid", header: "Paid", render: (r) => formatMoney(r.paid), numeric: true },
-    { key: "due", header: "Due", render: (r) => formatMoney(r.due), numeric: true },
+    { key: "total", header: "Total", render: (r) => formatTk(r.total), numeric: true },
+    { key: "paid", header: "Paid", render: (r) => formatTk(r.paid), numeric: true },
+    { key: "due", header: "Due", render: (r) => formatTk(r.due), numeric: true },
   ];
 
   if (isLoading || !customer) {
@@ -152,8 +152,8 @@ export function CustomerDetailPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Sales" value={saleRows.length} icon={Receipt} />
-        <KPICard label="Total sold" value={formatMoney(totalSold)} icon={Receipt} />
-        <KPICard label="Outstanding receivable" value={formatMoney(totalReceivable)} icon={Receipt} />
+        <KPICard label="Total sold" value={formatTk(totalSold)} icon={Receipt} />
+        <KPICard label="Outstanding receivable" value={formatTk(totalReceivable)} icon={Receipt} />
       </div>
 
       <Card>

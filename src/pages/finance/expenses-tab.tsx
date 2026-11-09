@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatDate, formatTk, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import { ExpenseCreateDialog } from "@/pages/finance/expense-create-dialog";
 import { EXPENSE_COST_TYPES, type Expense, type ExpenseSummary } from "@/pages/finance/types";
@@ -89,7 +89,7 @@ export function ExpensesTab() {
           <span className="text-muted-foreground">{COST_TYPE_LABEL[e.cost_type] ?? humanizeEnum(e.cost_type)}</span>
         ),
     },
-    { key: "amount", header: "Amount", render: (e) => formatMoney(e.amount), numeric: true, sortValue: (e) => parseFloat(e.amount) },
+    { key: "amount", header: "Amount", render: (e) => formatTk(e.amount), numeric: true, sortValue: (e) => parseFloat(e.amount) },
     {
       key: "payment",
       header: "Payment",
@@ -100,7 +100,7 @@ export function ExpensesTab() {
         return due <= 0 ? (
           <StatusBadge tone="success" label="Paid" />
         ) : due < amount ? (
-          <StatusBadge tone="warning" label={`${formatMoney(due)} due`} />
+          <StatusBadge tone="warning" label={`${formatTk(due)} due`} />
         ) : (
           <StatusBadge tone="neutral" label="Unpaid" />
         );
@@ -218,29 +218,29 @@ export function ExpensesTab() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
           label="Total spent"
-          value={summary ? formatMoney(summary.total) : "—"}
+          value={summary ? formatTk(summary.total) : "—"}
           icon={Wallet}
           isLoading={summaryLoading}
           isError={summaryError}
           hint={
             summary
               ? `${summary.count.toLocaleString()} expense${summary.count === 1 ? "" : "s"}` +
-                (summary.stock > 0 ? ` · ${formatMoney(summary.stock)} purchase charges (in stock cost)` : "")
+                (summary.stock > 0 ? ` · ${formatTk(summary.stock)} purchase charges (in stock cost)` : "")
               : undefined
           }
         />
         <KPICard
           label="Still to pay"
-          value={summary ? formatMoney(summary.unpaid) : "—"}
+          value={summary ? formatTk(summary.unpaid) : "—"}
           icon={CreditCard}
           isLoading={summaryLoading}
           isError={summaryError}
           tone={summary && summary.unpaid > 0 ? "warning" : undefined}
-          hint={summary ? `${formatMoney(summary.paid)} paid` : undefined}
+          hint={summary ? `${formatTk(summary.paid)} paid` : undefined}
         />
         <KPICard
           label="Charged to batches"
-          value={summary ? formatMoney(summary.direct) : "—"}
+          value={summary ? formatTk(summary.direct) : "—"}
           icon={Receipt}
           isLoading={summaryLoading}
           isError={summaryError}
@@ -248,11 +248,11 @@ export function ExpensesTab() {
         />
         <KPICard
           label="Farm-wide"
-          value={summary ? formatMoney(summary.shared + summary.capital) : "—"}
+          value={summary ? formatTk(summary.shared + summary.capital) : "—"}
           icon={Layers}
           isLoading={summaryLoading}
           isError={summaryError}
-          hint={summary && summary.capital > 0 ? `${formatMoney(summary.capital)} of it capital` : "Shared across batches by bird-days"}
+          hint={summary && summary.capital > 0 ? `${formatTk(summary.capital)} of it capital` : "Shared across batches by bird-days"}
         />
       </div>
 
@@ -325,7 +325,7 @@ function ByCategoryChart({ summary, isLoading }: { summary?: ExpenseSummary; isL
                 contentStyle={chartTooltipContentStyle}
                 formatter={(v: TooltipValueType | undefined) => {
                   const n = typeof v === "number" ? v : Number(v);
-                  return [`${formatMoney(n)} (${summary && summary.total ? ((n / summary.total) * 100).toFixed(0) : 0}%)`, "Spent"];
+                  return [`${formatTk(n)} (${summary && summary.total ? ((n / summary.total) * 100).toFixed(0) : 0}%)`, "Spent"];
                 }}
               />
               <Bar
@@ -336,7 +336,7 @@ function ByCategoryChart({ summary, isLoading }: { summary?: ExpenseSummary; isL
                   const p = props as { x: number; y: number; width: number; height: number; payload: { other: boolean } };
                   return <rect x={p.x} y={p.y} width={Math.max(0, p.width)} height={p.height} rx={4} fill={p.payload.other ? OTHER_COLOR : SINGLE_SERIES_STROKE} />;
                 }}
-                label={{ position: "right", fontSize: 12, fill: "var(--color-muted-foreground)", formatter: (v: unknown) => formatMoney(Number(v)) }}
+                label={{ position: "right", fontSize: 12, fill: "var(--color-muted-foreground)", formatter: (v: unknown) => formatTk(Number(v)) }}
               />
             </BarChart>
           </ResponsiveContainer>

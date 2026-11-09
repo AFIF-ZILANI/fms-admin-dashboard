@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NumericInput, PositiveIntegerInput } from "@/components/utils/NumaricInput";
 import { FarmAccountSelect } from "@/components/shared/farm-account-select";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import type { Supplier } from "@/pages/suppliers/types";
 import {
   CHICK_ITEM_NAME,
@@ -54,7 +54,7 @@ export function ChickPurchaseFields({
         <Input id="invoice_no" value={chicks.invoice_no} onChange={(e) => setChick({ invoice_no: e.target.value })} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="unit_price">Price per chick</Label>
+        <Label htmlFor="unit_price">Price per chick (৳)</Label>
         <NumericInput
           id="unit_price"
           allowDecimal
@@ -78,9 +78,9 @@ export function ChickPurchaseFields({
       </div>
       <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2 text-sm sm:col-span-2">
         <span className="text-muted-foreground">
-          {billed || 0} × {formatMoney(Number.isFinite(unitPrice) ? unitPrice : 0)}
+          {billed || 0} × {formatTk(Number.isFinite(unitPrice) ? unitPrice : 0)}
         </span>
-        <span className="font-medium tabular-nums">{formatMoney(total)}</span>
+        <span className="font-medium tabular-nums">{formatTk(total)}</span>
       </div>
       {showNewItemNote && (
         <p className="text-xs text-muted-foreground sm:col-span-2">
@@ -103,14 +103,14 @@ export function ChickPaymentFields({
 }) {
   if (chicks.status === "UNPAID") {
     return (
-      <p className="text-xs text-muted-foreground">{formatMoney(total)} stays due to the supplier — pay it later from Payments.</p>
+      <p className="text-xs text-muted-foreground">{formatTk(total)} stays due to the supplier — pay it later from Payments.</p>
     );
   }
   const paid = chicks.status === "PAID" ? total : Number(chicks.amount);
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="flex flex-col gap-1.5">
-        <Label>Amount</Label>
+        <Label>Amount (৳)</Label>
         <NumericInput
           allowDecimal
           decimalPlaces={2}
@@ -119,7 +119,7 @@ export function ChickPaymentFields({
           onChange={(e) => setChick({ amount: e.target.value })}
         />
         {chicks.status === "PARTIAL" && (
-          <p className="text-xs text-muted-foreground">Due after this payment: {formatMoney(Math.max(0, total - (paid || 0)))}</p>
+          <p className="text-xs text-muted-foreground">Due after this payment: {formatTk(Math.max(0, total - (paid || 0)))}</p>
         )}
       </div>
       <div className="flex flex-col gap-1.5">

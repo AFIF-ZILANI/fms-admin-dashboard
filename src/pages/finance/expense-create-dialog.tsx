@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import type { Batch } from "@/pages/batches/types";
 import { COST_TYPES, type Expense } from "@/pages/finance/types";
@@ -126,7 +126,7 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
         for (const key of ["payments", "payment-instruments", "analytics"]) {
           void queryClient.invalidateQueries({ queryKey: [key] });
         }
-        toast.success(paid > 0 ? `Expense recorded and ${formatMoney(paid)} paid` : "Expense recorded as unpaid");
+        toast.success(paid > 0 ? `Expense recorded and ${formatTk(paid)} paid` : "Expense recorded as unpaid");
         onOpenChange(false);
       },
       onError: (error) => {
@@ -200,7 +200,7 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="amount">Amount</Label>
+              <Label htmlFor="amount">Amount (৳)</Label>
               <Input id="amount" type="number" step="0.01" {...register("amount")} aria-invalid={!!errors.amount} />
               {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
             </div>
@@ -273,7 +273,7 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
                   <div className="grid grid-cols-2 gap-4">
                     {payment === "PARTIAL" ? (
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="partial_amount">Amount paid</Label>
+                        <Label htmlFor="partial_amount">Amount paid (৳)</Label>
                         <Input
                           id="partial_amount"
                           type="number"
@@ -285,14 +285,14 @@ export function ExpenseCreateDialog({ open, onOpenChange }: ExpenseCreateDialogP
                           <p className="text-xs text-destructive">{errors.partial_amount.message}</p>
                         ) : (
                           <p className="text-xs text-muted-foreground tabular-nums">
-                            Still to pay: {formatMoney(Math.max(0, amount - partial))}
+                            Still to pay: {formatTk(Math.max(0, amount - partial))}
                           </p>
                         )}
                       </div>
                     ) : (
                       <div className="flex flex-col gap-1.5">
                         <Label>Amount paid</Label>
-                        <p className="flex h-8 items-center text-sm font-medium tabular-nums">{formatMoney(amount)}</p>
+                        <p className="flex h-8 items-center text-sm font-medium tabular-nums">{formatTk(amount)}</p>
                       </div>
                     )}
                     <div className="flex flex-col gap-1.5">

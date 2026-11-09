@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Bird, Receipt, TrendingUp, Wallet } from "lucide-react";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import { DayRangeToggle } from "@/pages/analytics/day-range-toggle";
 import { SalesPriceTrendChart } from "@/pages/analytics/sales-price-trend-chart";
 import type { GradeDistributionRow, SalesByProductLineRow } from "@/pages/analytics/types";
@@ -74,7 +74,7 @@ export function OverviewTab() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPICard
           label="Total revenue"
-          value={formatMoney(totalRevenue)}
+          value={formatTk(totalRevenue)}
           icon={Wallet}
           isLoading={periodLoading}
           isError={periodError}
@@ -88,7 +88,7 @@ export function OverviewTab() {
         />
         <KPICard
           label="Outstanding due"
-          value={formatMoney(outstandingDue)}
+          value={formatTk(outstandingDue)}
           icon={Receipt}
           isLoading={outstandingLoading}
           isError={outstandingError}
@@ -96,7 +96,7 @@ export function OverviewTab() {
         />
         <KPICard
           label="Avg price/kg"
-          value={formatMoney(avgPricePerKg)}
+          value={formatTk(avgPricePerKg)}
           icon={TrendingUp}
           isLoading={periodLoading}
           isError={periodError}

@@ -8,7 +8,7 @@ import { DataTable, type Column } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus, EMPLOYMENT_STATUS_TONE } from "@/components/shared/status-tone";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatMoney } from "@/lib/utils";
+import { formatTk } from "@/lib/utils";
 import {
   EMPLOYEE_ROLE_LABELS,
   EMPLOYMENT_STATUS_LABELS,
@@ -107,7 +107,7 @@ export function EmployeesTableSection() {
     {
       key: "salary",
       header: "Reference salary",
-      render: (e) => (e.reference_salary ? formatMoney(e.reference_salary) : "Standard"),
+      render: (e) => (e.reference_salary ? formatTk(e.reference_salary) : "Standard"),
       numeric: true,
     },
     { key: "rating", header: "Rating", render: (e) => (e.rating ? `★ ${e.rating.toFixed(1)}` : "—"), numeric: true },

@@ -10,7 +10,7 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { SectionHeader } from "@/components/shared/section-header";
 import { TruncatedText } from "@/components/shared/truncated-text";
 import { useGetData } from "@/lib/api";
-import { formatDate, formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatDate, formatTk, humanizeEnum, formatTkCompact } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Item } from "@/pages/inventory/types";
 import { bagSize, formatStock } from "@/pages/inventory/stock-qty";
@@ -50,7 +50,7 @@ type BatchStock = {
 };
 
 /** Money on this page, in taka. */
-const tk = (n: number) => `৳${formatMoney(n)}`;
+const tk = formatTk;
 const qty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 const muted = <span className="text-muted-foreground">—</span>;
 
@@ -370,7 +370,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
             <BarChart data={weeks}>
               <CartesianGrid {...chartGridProps} />
               <XAxis dataKey="week" tickFormatter={(w) => `W${w}`} {...chartAxisProps} />
-              <YAxis {...chartAxisProps} />
+              <YAxis tickFormatter={formatTkCompact} {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
                 labelFormatter={(w) => weekLabel(Number(w))}
@@ -413,7 +413,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
           <ChartCard title="Stock cost by house" empty={byHouse.some((h) => h.cost > 0) ? null : "No costed stock used yet."}>
             <BarChart data={byHouse} layout="vertical" margin={{ left: 8 }}>
               <CartesianGrid {...chartGridProps} vertical horizontal={false} />
-              <XAxis type="number" {...chartAxisProps} />
+              <XAxis type="number" tickFormatter={formatTkCompact} {...chartAxisProps} />
               <YAxis type="category" dataKey="house" width={110} {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
@@ -435,7 +435,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
               margin={{ left: 8 }}
             >
               <CartesianGrid {...chartGridProps} vertical horizontal={false} />
-              <XAxis type="number" {...chartAxisProps} />
+              <XAxis type="number" tickFormatter={formatTkCompact} {...chartAxisProps} />
               <YAxis type="category" dataKey="name" width={130} {...chartAxisProps} />
               <Tooltip
                 contentStyle={chartTooltipContentStyle}

@@ -6,7 +6,7 @@ import { ASSET_STATUS_TONE } from "@/components/shared/status-tone";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { useGetData, usePatchData, useDelete } from "@/lib/api";
 import { useConfirm } from "@/components/shared/confirm-dialog";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import type { Asset, AssetDepreciation, AssetStatus } from "@/pages/inventory/types";
 import { History, Trash2 } from "lucide-react";
 
@@ -61,7 +61,7 @@ export function AssetDetailSheet({ assetId, onOpenChange }: AssetDetailSheetProp
 
   const depreciationColumns: Column<AssetDepreciation>[] = [
     { key: "batch", header: "Batch", render: (d) => d.batch?.batch_code ?? "—" },
-    { key: "amount", header: "Amount", render: (d) => formatMoney(d.amount), numeric: true },
+    { key: "amount", header: "Amount", render: (d) => formatTk(d.amount), numeric: true },
     { key: "computed_at", header: "Computed", render: (d) => new Date(d.computed_at).toLocaleDateString() },
   ];
 
@@ -81,7 +81,7 @@ export function AssetDetailSheet({ assetId, onOpenChange }: AssetDetailSheetProp
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <p className="text-xs text-muted-foreground">Purchase cost</p>
-              <p>{formatMoney(asset.purchase_cost)}</p>
+              <p>{formatTk(asset.purchase_cost)}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Purchase date</p>

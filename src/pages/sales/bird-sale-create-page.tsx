@@ -15,7 +15,7 @@ import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import { StatusBadge, type Tone } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { cn, formatMoney, humanizeEnum } from "@/lib/utils";
+import { cn, formatTk, humanizeEnum } from "@/lib/utils";
 import type { Batch } from "@/pages/batches/types";
 import type { Customer } from "@/pages/customers/types";
 import { BIRD_GRADES, type BirdGrade, type BirdSale } from "@/pages/sales/types";
@@ -257,7 +257,7 @@ export function BirdSaleCreatePage() {
         for (const key of ["analytics", "batches", "expenses", "payments", "outstanding"]) {
           void queryClient.invalidateQueries({ queryKey: [key] });
         }
-        toast.success(`Bird sale recorded: ${num(f.birds)} birds, ${formatMoney(s.final)}`);
+        toast.success(`Bird sale recorded: ${num(f.birds)} birds, ${formatTk(s.final)}`);
         if (another) {
           // Next truck from the same shed: keep where, when and the price; clear the load itself.
           setF(blankForm({ batch_id: f.batch_id, houses: f.houses.map((h) => ({ house_id: h.house_id, birds: "" })), sale_date: f.sale_date, price: f.price, crate_size: f.crate_size, round_crates: f.round_crates, deduction_g: f.deduction_g }));
@@ -565,7 +565,7 @@ export function BirdSaleCreatePage() {
               <CardDescription>Enter either the discount or the final amount; the other is worked out.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <Field label="Price per kg" htmlFor="price" error={err("price")}>
+              <Field label="Price per kg (৳)" htmlFor="price" error={err("price")}>
                 <NumericInput
                   id="price"
                   allowDecimal
@@ -575,7 +575,7 @@ export function BirdSaleCreatePage() {
                   aria-invalid={!!err("price")}
                 />
               </Field>
-              <Readout label="Total amount" value={formatMoney(s.total)} hint={`${kg(s.netKg)} × ${formatMoney(num(f.price))}`} />
+              <Readout label="Total amount" value={formatTk(s.total)} hint={`${kg(s.netKg)} × ${formatTk(num(f.price))}`} />
               <Field label="Discount" htmlFor="discount" error={err("discount")}>
                 <NumericInput
                   id="discount"
@@ -590,7 +590,7 @@ export function BirdSaleCreatePage() {
                   aria-invalid={!!err("discount")}
                 />
               </Field>
-              <Field label="Final amount" htmlFor="final" hint="What the buyer pays after the discount">
+              <Field label="Final amount (৳)" htmlFor="final" hint="What the buyer pays after the discount">
                 <NumericInput
                   id="final"
                   allowDecimal
@@ -614,7 +614,7 @@ export function BirdSaleCreatePage() {
               </div>
               {f.payment === "PARTIAL" && (
                 <>
-                  <Field label="Amount paid" htmlFor="received" error={err("received")} hint="Received now">
+                  <Field label="Amount paid (৳)" htmlFor="received" error={err("received")} hint="Received now">
                     <NumericInput
                       id="received"
                       allowDecimal
@@ -627,7 +627,7 @@ export function BirdSaleCreatePage() {
                       aria-invalid={!!err("received")}
                     />
                   </Field>
-                  <Field label="Amount due" htmlFor="due" hint="Still owed by the buyer">
+                  <Field label="Amount due (৳)" htmlFor="due" hint="Still owed by the buyer">
                     <NumericInput
                       id="due"
                       allowDecimal
@@ -669,7 +669,7 @@ export function BirdSaleCreatePage() {
               </label>
               {f.labour_on && (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Labour cost" htmlFor="labour_cost" error={err("labour_cost")}>
+                  <Field label="Labour cost (৳)" htmlFor="labour_cost" error={err("labour_cost")}>
                     <NumericInput
                       id="labour_cost"
                       allowDecimal
@@ -752,26 +752,26 @@ function SaleSlip({
               muted
             />
             <SlipRow label="Net weight" value={kg(s.netKg)} strong />
-            <SlipRow label="Price per kg" value={`× ${formatMoney(num(f.price))}`} muted />
+            <SlipRow label="Price per kg" value={`× ${formatTk(num(f.price))}`} muted />
             <Separator className="my-1" />
-            <SlipRow label="Total amount" value={formatMoney(s.total)} />
-            {s.discount > 0 && <SlipRow label="Discount" value={`− ${formatMoney(s.discount)}`} muted />}
+            <SlipRow label="Total amount" value={formatTk(s.total)} />
+            {s.discount > 0 && <SlipRow label="Discount" value={`− ${formatTk(s.discount)}`} muted />}
           </dl>
 
           <div className="rounded-lg bg-muted/60 p-3">
             <div className="text-xs text-muted-foreground">Final amount</div>
-            <div className="text-3xl font-semibold tabular-nums">{formatMoney(s.final)}</div>
+            <div className="text-3xl font-semibold tabular-nums">{formatTk(s.final)}</div>
             <div className="mt-1">
               <StatusBadge tone={PAYMENT_TONE[f.payment]} label={PAYMENT_LABELS[f.payment]} />
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-2 text-sm tabular-nums">
               <div>
                 <dt className="text-xs text-muted-foreground">Paid</dt>
-                <dd className="font-medium">{formatMoney(s.received)}</dd>
+                <dd className="font-medium">{formatTk(s.received)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Due</dt>
-                <dd className="font-medium">{formatMoney(s.due)}</dd>
+                <dd className="font-medium">{formatTk(s.due)}</dd>
               </div>
             </dl>
           </div>
@@ -796,7 +796,7 @@ function SaleSlip({
               <div className="col-span-2">
                 <dt className="text-xs text-muted-foreground">Loading labour (batch expense)</dt>
                 <dd className="font-medium">
-                  {formatMoney(num(f.labour_cost))}
+                  {formatTk(num(f.labour_cost))}
                   <span className="font-normal text-muted-foreground">{f.labour_paid ? ", paid" : ", unpaid"}</span>
                 </dd>
               </div>

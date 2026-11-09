@@ -11,7 +11,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { activeStatus } from "@/components/shared/status-tone";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, usePostData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import type { Supplier } from "@/pages/suppliers/types";
 import { SupplierFormDialog } from "@/pages/suppliers/supplier-form-dialog";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
@@ -61,17 +61,17 @@ export function SupplierDetailPage() {
   const purchaseColumns: Column<Purchase>[] = [
     { key: "date", header: "Date", render: (p) => new Date(p.purchase_date).toLocaleDateString() },
     { key: "invoice", header: "Invoice", render: (p) => p.invoice_no ?? "—" },
-    { key: "total", header: "Total", render: (p) => formatMoney(p.total_amount), numeric: true },
+    { key: "total", header: "Total", render: (p) => formatTk(p.total_amount), numeric: true },
     {
       key: "paid",
       header: "Paid",
-      render: (p) => formatMoney(trueAmounts(p.id, p.paid_amount, p.due_amount).paid),
+      render: (p) => formatTk(trueAmounts(p.id, p.paid_amount, p.due_amount).paid),
       numeric: true,
     },
     {
       key: "due",
       header: "Due",
-      render: (p) => formatMoney(trueAmounts(p.id, p.paid_amount, p.due_amount).due),
+      render: (p) => formatTk(trueAmounts(p.id, p.paid_amount, p.due_amount).due),
       numeric: true,
     },
   ];
@@ -150,8 +150,8 @@ export function SupplierDetailPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Purchases" value={purchaseRows.length} icon={Package} />
-        <KPICard label="Total purchased" value={formatMoney(totalPurchased)} icon={Receipt} />
-        <KPICard label="Outstanding due" value={formatMoney(totalDue)} icon={Receipt} />
+        <KPICard label="Total purchased" value={formatTk(totalPurchased)} icon={Receipt} />
+        <KPICard label="Outstanding due" value={formatTk(totalDue)} icon={Receipt} />
       </div>
 
       <Card>

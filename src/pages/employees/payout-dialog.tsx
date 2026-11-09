@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiFetch, useGetData, type Paginated } from "@/lib/api";
-import { formatMoney, humanizeEnum } from "@/lib/utils";
+import { formatTk, humanizeEnum } from "@/lib/utils";
 import type { PaymentInstrument } from "@/pages/payments/types";
 import {
   PAYOUT_METHOD_LABELS,
@@ -153,9 +153,9 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record = null, bo
           <DialogTitle>Record payout</DialogTitle>
           <DialogDescription>
             {record
-              ? `${formatMoney(record.total_pay)} for ${new Date(record.month).toLocaleDateString(undefined, { year: "numeric", month: "long" })}.`
+              ? `${formatTk(record.total_pay)} for ${new Date(record.month).toLocaleDateString(undefined, { year: "numeric", month: "long" })}.`
               : bonus
-                ? `${formatMoney(bonus.amount)} festival bonus, ${bonus.event_name}.`
+                ? `${formatTk(bonus.amount)} festival bonus, ${bonus.event_name}.`
                 : ""}{" "}
             A payout can't be confirmed without proof of transfer.
           </DialogDescription>
@@ -229,21 +229,21 @@ export function PayoutDialog({ open, onOpenChange, employeeId, record = null, bo
             <div className="rounded-md border bg-muted/40 p-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">To the employee</span>
-                <span className="tabular-nums">{formatMoney(wage)}</span>
+                <span className="tabular-nums">{formatTk(wage)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
                   Transfer fee · {PAYOUT_METHOD_LABELS[account.method]}
                   {rate ? ` (${rate.percent ? `${rate.percent}%` : "flat"})` : ""}
                 </span>
-                <span className="tabular-nums">{fee === null ? "—" : formatMoney(fee)}</span>
+                <span className="tabular-nums">{fee === null ? "—" : formatTk(fee)}</span>
               </div>
               <div className="mt-2 flex justify-between border-t pt-2 font-medium">
                 <span>Farm pays</span>
-                <span className="tabular-nums">{formatMoney(wage + (fee ?? 0))}</span>
+                <span className="tabular-nums">{formatTk(wage + (fee ?? 0))}</span>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                The employee receives the full {formatMoney(wage)} — the fee is on top, and is
+                The employee receives the full {formatTk(wage)} — the fee is on top, and is
                 recorded as a Salary transfer fee expense when you confirm.
               </p>
             </div>
