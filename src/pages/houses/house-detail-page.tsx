@@ -52,6 +52,14 @@ export function HouseDetailPage() {
     ["environment-records", id],
     { enabled: !!id }
   );
+  const waterLine = house?.water_line ?? null;
+  const houseId = house?.id;
+  const { data: activeHouses } = useGetData<Paginated<House>>("/houses?is_active=true&limit=100", ["houses", "active"], {
+    enabled: !!waterLine,
+  });
+  const waterPartners = waterLine
+    ? (activeHouses?.results ?? []).filter((h) => h.id !== houseId && h.water_line === waterLine)
+    : [];
 
   const deactivate = usePostData<House, void>(`/houses/${id}/deactivate`, ["houses"]);
   const reactivate = usePostData<House, void>(`/houses/${id}/reactivate`, ["houses"]);
@@ -113,6 +121,7 @@ export function HouseDetailPage() {
             <p className="text-sm text-muted-foreground">
               {TYPE_LABEL[house.type]} · House #{house.number}
               {house.capacity != null && ` · Capacity ${house.capacity} birds`}
+              {waterPartners.length > 0 && ` · Shares water with ${waterPartners.map((h) => h.name).join(", ")}`}
             </p>
           </div>
           <div className="flex gap-2">
