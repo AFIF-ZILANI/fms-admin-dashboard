@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { AlertCircle, AlertTriangle, Check, FlaskConical, Info, Loader2, Microscope, Eye, type LucideIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,16 +21,51 @@ import { PositiveIntegerInput } from "@/components/utils/NumaricInput";
 import { DoctorSelect } from "@/components/shared/doctor-select";
 import { usePatchData, usePostData } from "@/lib/api";
 import { farmToday } from "@/lib/farm-day";
-import { humanizeEnum } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { COMMON_SYMPTOMS, useDiseases } from "@/pages/batches/disease-cases";
 import type { Batch, DiagnosisMethod, DiseaseCase, DiseaseSeverity } from "@/pages/batches/types";
 
-const SEVERITIES: DiseaseSeverity[] = ["LOW", "MEDIUM", "HIGH"];
-const METHODS: Record<DiagnosisMethod, string> = {
-  FIELD: "Seen on the farm",
-  POST_MORTEM: "Post-mortem",
-  LAB: "Lab test",
-};
+// Selected severity takes its status tone (with icon + label, never color alone -- docs/design.md §6).
+const SEVERITIES: { value: DiseaseSeverity; label: string; hint: string; icon: LucideIcon; selected: string }[] = [
+  { value: "LOW", label: "Low", hint: "A few birds", icon: Info, selected: "border-info bg-info/10 text-info" },
+  { value: "MEDIUM", label: "Medium", hint: "Spreading", icon: AlertTriangle, selected: "border-warning bg-warning/10 text-warning" },
+  { value: "HIGH", label: "High", hint: "Many sick or dying", icon: AlertCircle, selected: "border-critical bg-critical/10 text-critical" },
+];
+const METHODS: { value: DiagnosisMethod; label: string; icon: LucideIcon }[] = [
+  { value: "FIELD", label: "Seen on the farm", icon: Eye },
+  { value: "POST_MORTEM", label: "Post-mortem", icon: Microscope },
+  { value: "LAB", label: "Lab test", icon: FlaskConical },
+];
+
+/** A pill that toggles on and off -- for picking houses and symptoms at a glance. */
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors",
+        on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted"
+      )}
+    >
+      {on && <Check className="size-3.5" />}
+      {children}
+    </button>
+  );
+}
+
+/** One titled group of fields in the dialog body. */
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
 const caseSchema = z.object({
   disease_id: z.string().min(1, "Pick a disease"),
@@ -155,168 +189,175 @@ export function DiseaseCaseFormDialog({ batch, existing, open, onOpenChange }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-2xl">
+        <DialogHeader className="border-b p-4">
           <DialogTitle>{existing ? "Edit disease case" : "Record disease case"}</DialogTitle>
-          <DialogDescription>{batch.batch_code}</DialogDescription>
+          <DialogDescription>
+            {batch.batch_code} · treatments and deaths are linked to the case from their own forms.
+          </DialogDescription>
         </DialogHeader>
 
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="disease_id">Disease</Label>
-              <Controller
-                control={control}
-                name="disease_id"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={(v) => field.onChange(v ?? "")}>
-                    <SelectTrigger id="disease_id" className="w-full" aria-invalid={!!errors.disease_id}>
-                      <SelectValue>
-                        {(v: string) => diseaseOptions.find((d) => d.id === v)?.label ?? "Select disease"}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {diseaseOptions.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.disease_id && <p className="text-xs text-destructive">{errors.disease_id.message}</p>}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="noticed_on">First noticed</Label>
-              <Input id="noticed_on" type="date" {...register("noticed_on")} aria-invalid={!!errors.noticed_on} />
-              {errors.noticed_on && <p className="text-xs text-destructive">{errors.noticed_on.message}</p>}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label>Houses affected</Label>
-            <Controller
-              control={control}
-              name="house_ids"
-              render={({ field }) => (
-                <div className="grid grid-cols-2 gap-2 rounded-lg border border-border p-3">
-                  {houses.map((b) => (
-                    <label key={b.house_id} className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={field.value.includes(b.house_id)}
-                        onCheckedChange={(on) =>
-                          field.onChange(
-                            on ? [...field.value, b.house_id] : field.value.filter((id) => id !== b.house_id)
-                          )
-                        }
-                      />
-                      {b.house.name}
-                      <span className="text-muted-foreground tabular-nums">({b.quantity.toLocaleString()} live)</span>
-                    </label>
-                  ))}
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit(onSubmit)}>
+          <div className="flex flex-col gap-6 overflow-y-auto p-4">
+            <Section title="What and where">
+              <div className="grid gap-4 sm:grid-cols-[1fr_11rem]">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="disease_id">Disease</Label>
+                  <Controller
+                    control={control}
+                    name="disease_id"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={(v) => field.onChange(v ?? "")}>
+                        <SelectTrigger id="disease_id" className="w-full" aria-invalid={!!errors.disease_id}>
+                          <SelectValue>
+                            {(v: string) => diseaseOptions.find((d) => d.id === v)?.label ?? "Select disease"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {diseaseOptions.map((d) => (
+                            <SelectItem key={d.id} value={d.id}>
+                              {d.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.disease_id && <p className="text-xs text-destructive">{errors.disease_id.message}</p>}
                 </div>
-              )}
-            />
-            {errors.house_ids && <p className="text-xs text-destructive">{errors.house_ids.message}</p>}
-          </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="noticed_on">First noticed</Label>
+                  <Input id="noticed_on" type="date" {...register("noticed_on")} aria-invalid={!!errors.noticed_on} />
+                  {errors.noticed_on && <p className="text-xs text-destructive">{errors.noticed_on.message}</p>}
+                </div>
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="severity">Severity</Label>
+              <div className="flex flex-col gap-1.5">
+                <Label>Houses affected</Label>
+                <Controller
+                  control={control}
+                  name="house_ids"
+                  render={({ field }) => (
+                    <div className="flex flex-wrap gap-2">
+                      {houses.map((b) => (
+                        <Chip
+                          key={b.house_id}
+                          on={field.value.includes(b.house_id)}
+                          onClick={() => field.onChange(toggle(field.value, b.house_id))}
+                        >
+                          {b.house.name}
+                          <span className="tabular-nums opacity-70">{b.quantity.toLocaleString()}</span>
+                        </Chip>
+                      ))}
+                    </div>
+                  )}
+                />
+                {errors.house_ids && <p className="text-xs text-destructive">{errors.house_ids.message}</p>}
+              </div>
+            </Section>
+
+            <Section title="How bad">
               <Controller
                 control={control}
                 name="severity"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={(v) => v && field.onChange(v)}>
-                    <SelectTrigger id="severity" className="w-full">
-                      <SelectValue>{(v: string) => humanizeEnum(v)}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SEVERITIES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {humanizeEnum(s)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div role="radiogroup" aria-label="Severity" className="grid grid-cols-3 gap-2">
+                    {SEVERITIES.map((s) => (
+                      <button
+                        key={s.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={field.value === s.value}
+                        onClick={() => field.onChange(s.value)}
+                        className={cn(
+                          "flex flex-col items-start gap-0.5 rounded-lg border p-3 text-left transition-colors",
+                          field.value === s.value ? s.selected : "border-border hover:bg-muted"
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5 text-sm font-medium">
+                          <s.icon className="size-4" />
+                          {s.label}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{s.hint}</span>
+                      </button>
+                    ))}
+                  </div>
                 )}
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="affected_count">Birds sick (optional)</Label>
-              <PositiveIntegerInput id="affected_count" placeholder="Estimate" {...register("affected_count")} />
-            </div>
-          </div>
+              <div className="flex max-w-56 flex-col gap-1.5">
+                <Label htmlFor="affected_count">Birds sick (optional)</Label>
+                <PositiveIntegerInput id="affected_count" placeholder="Estimate" {...register("affected_count")} />
+              </div>
+            </Section>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="diagnosis_method">Diagnosed by</Label>
+            <Section title="Diagnosis">
               <Controller
                 control={control}
                 name="diagnosis_method"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={(v) => v && field.onChange(v)}>
-                    <SelectTrigger id="diagnosis_method" className="w-full">
-                      <SelectValue>{(v: DiagnosisMethod) => METHODS[v]}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(METHODS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div role="radiogroup" aria-label="Diagnosed by" className="inline-flex w-fit rounded-lg border p-0.5">
+                    {METHODS.map((m) => (
+                      <button
+                        key={m.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={field.value === m.value}
+                        onClick={() => field.onChange(m.value)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
+                          field.value === m.value ? "bg-muted font-medium" : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <m.icon className="size-4" />
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
                 )}
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="doctor_id">Doctor (optional)</Label>
+              <div className="flex max-w-xs flex-col gap-1.5">
+                <Label htmlFor="doctor_id">Doctor (optional)</Label>
+                <Controller
+                  control={control}
+                  name="doctor_id"
+                  render={({ field }) => <DoctorSelect id="doctor_id" value={field.value ?? ""} onChange={field.onChange} />}
+                />
+              </div>
+            </Section>
+
+            <Section title="Symptoms and notes">
               <Controller
                 control={control}
-                name="doctor_id"
-                render={({ field }) => <DoctorSelect id="doctor_id" value={field.value ?? ""} onChange={field.onChange} />}
+                name="symptoms"
+                render={({ field }) => (
+                  <div className="flex flex-wrap gap-2">
+                    {COMMON_SYMPTOMS.map((s) => (
+                      <Chip key={s} on={field.value.includes(s)} onClick={() => field.onChange(toggle(field.value, s))}>
+                        {s}
+                      </Chip>
+                    ))}
+                  </div>
+                )}
               />
-            </div>
+              <Input placeholder="Other symptoms, comma separated" {...register("other_symptoms")} />
+              <textarea
+                id="notes"
+                aria-label="Notes"
+                rows={3}
+                placeholder="Notes (optional): what you saw, what the doctor said"
+                className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                {...register("notes")}
+              />
+            </Section>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label>Symptoms</Label>
-            <Controller
-              control={control}
-              name="symptoms"
-              render={({ field }) => (
-                <div className="grid grid-cols-2 gap-2 rounded-lg border border-border p-3">
-                  {COMMON_SYMPTOMS.map((s) => (
-                    <label key={s} className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={field.value.includes(s)}
-                        onCheckedChange={(on) =>
-                          field.onChange(on ? [...field.value, s] : field.value.filter((x) => x !== s))
-                        }
-                      />
-                      {s}
-                    </label>
-                  ))}
-                </div>
-              )}
-            />
-            <Input placeholder="Other symptoms, comma separated" {...register("other_symptoms")} />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Input id="notes" {...register("notes")} />
-          </div>
-
-          <DialogFooter>
+          <DialogFooter className="m-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="animate-spin" />}
-              {existing ? "Save" : "Record case"}
+              {existing ? "Save changes" : "Record case"}
             </Button>
           </DialogFooter>
         </form>
