@@ -58,6 +58,7 @@ export type MortalityLog = {
   house_id: string;
   count_died: number;
   cause_note: string | null;
+  disease_case_id: string | null;
   date: string;
   recorded_by_id: string;
 };
@@ -107,6 +108,7 @@ export type Medication = {
   medicine_name: string;
   dosage: string;
   cause: string | null;
+  disease_case_id: string | null;
   period: string | null;
   administered_by_id: string;
   doctor_id: string | null;
@@ -179,4 +181,35 @@ export type VaccineTemplate = {
   name: string;
   is_active: boolean;
   entries: VaccineTemplateEntry[];
+};
+
+export type DiseaseSeverity = "LOW" | "MEDIUM" | "HIGH";
+export type DiagnosisMethod = "FIELD" | "POST_MORTEM" | "LAB";
+export type DiseaseOutcome = "RECOVERED" | "CULLED" | "SOLD_EARLY";
+
+/** One outbreak of one disease in a batch (GET /disease-cases). deaths/treatments are the linked rows' totals. */
+export type DiseaseCase = {
+  id: string;
+  batch_id: string;
+  disease: { id: string; code: string; label: string };
+  houses: { id: string; name: string }[];
+  status: "ACTIVE" | "RESOLVED";
+  severity: DiseaseSeverity;
+  symptoms: string[];
+  affected_count: number | null;
+  diagnosis_method: DiagnosisMethod;
+  doctor: { id: string; profile: { id: string; name: string } } | null;
+  noticed_on: string;
+  resolved_on: string | null;
+  outcome: DiseaseOutcome | null;
+  notes: string | null;
+  recorded_by: { id: string; name: string };
+  deaths: number;
+  treatments: number;
+};
+
+/** GET /disease-cases/:id -- the case plus what's linked to it, for the timeline. */
+export type DiseaseCaseDetail = DiseaseCase & {
+  medications: Medication[];
+  mortalityLogs: (MortalityLog & { house: { id: string; name: string } })[];
 };

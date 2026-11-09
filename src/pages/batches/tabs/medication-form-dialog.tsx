@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DoctorSelect } from "@/components/shared/doctor-select";
+import { DiseaseCaseSelect } from "@/pages/batches/disease-case-select";
 import { usePostData } from "@/lib/api";
 import type { Batch, Medication } from "@/pages/batches/types";
 import { farmToday } from "@/lib/farm-day";
@@ -27,6 +28,7 @@ const medicationSchema = z.object({
   cause: z.string().trim().optional(),
   period: z.string().trim().optional(),
   doctor_id: z.string().optional(),
+  disease_case_id: z.string().optional(),
   remarks: z.string().trim().optional(),
   date: z.string().min(1, "Date is required"),
 });
@@ -41,6 +43,7 @@ function blankMedication(): MedicationFormInput {
     cause: "",
     period: "",
     doctor_id: "",
+    disease_case_id: "",
     remarks: "",
     date: farmToday(),
   };
@@ -78,11 +81,13 @@ export function MedicationFormDialog({ open, onOpenChange, batch }: MedicationFo
       cause: values.cause || undefined,
       period: values.period || undefined,
       doctor_id: values.doctor_id || undefined,
+      disease_case_id: values.disease_case_id || undefined,
       remarks: values.remarks || undefined,
     };
     return createMedication.mutate(payload, {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: ["medications", batch.id] });
+        if (payload.disease_case_id) void queryClient.invalidateQueries({ queryKey: ["disease-cases"] });
         toast.success("Medication logged");
         onOpenChange(false);
       },
@@ -149,6 +154,12 @@ export function MedicationFormDialog({ open, onOpenChange, batch }: MedicationFo
               )}
             />
           </div>
+
+          <Controller
+            control={control}
+            name="disease_case_id"
+            render={({ field }) => <DiseaseCaseSelect batchId={batch.id} value={field.value ?? ""} onChange={field.onChange} />}
+          />
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="remarks">Remarks (optional)</Label>
