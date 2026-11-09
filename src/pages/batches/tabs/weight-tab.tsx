@@ -40,7 +40,8 @@ export function WeightTab({ batch }: { batch: Batch }) {
   }, [data]);
 
   // Gain since the sample before, by batch day; the first sample counts from the chicks' start weight on day 0.
-  // Samples aren't evenly spaced, so each bar also carries how many days it covers.
+  // Bars are g/day (average daily gain): samples aren't evenly spaced, so a total over 12 days would
+  // tower over one over 7 days at the same growth rate. The total stays as the bar's label.
   const gainSeries = useMemo(() => {
     const points = [
       { day: 0, weight: batch.init_chicks_avg_wt },
@@ -50,7 +51,7 @@ export function WeightTab({ batch }: { batch: Batch }) {
       const prev = points[i]!;
       const gain = weight - prev.weight;
       const days = Math.max(day - prev.day, 1);
-      return { day: `Day ${day}`, gain: Math.round(gain), days, perDay: gain / days };
+      return { day: `Day ${day}`, gain: Math.round(gain), days, perDay: Math.round((gain / days) * 10) / 10 };
     });
   }, [growthSeries, batch.starting_date, batch.init_chicks_avg_wt]);
 
@@ -91,7 +92,7 @@ export function WeightTab({ batch }: { batch: Batch }) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {chart === "curve" ? "Growth curve" : "Weight gain between samples"}
+              {chart === "curve" ? "Growth curve" : "Daily weight gain between samples"}
             </CardTitle>
             <Tabs value={chart} onValueChange={(v) => setChart(v as typeof chart)}>
               <TabsList>
@@ -126,15 +127,15 @@ export function WeightTab({ batch }: { batch: Batch }) {
                 <BarChart data={gainSeries} margin={{ top: 20 }}>
                   <CartesianGrid {...chartGridProps} />
                   <XAxis dataKey="day" {...chartAxisProps} />
-                  <YAxis {...chartAxisProps} allowDecimals={false} />
+                  <YAxis {...chartAxisProps} unit=" g/d" />
                   <Tooltip
                     contentStyle={chartTooltipContentStyle}
                     formatter={(v: TooltipValueType | undefined, _name, item) => {
-                      const { days, perDay } = item.payload as (typeof gainSeries)[number];
-                      return [`${Number(v) >= 0 ? "+" : ""}${v} g over ${days} day${days === 1 ? "" : "s"} (${perDay.toFixed(1)} g/day)`, "Gain"];
+                      const { days, gain } = item.payload as (typeof gainSeries)[number];
+                      return [`${v} g/day · ${gain >= 0 ? "+" : ""}${gain} g over ${days} day${days === 1 ? "" : "s"}`, "Daily gain"];
                     }}
                   />
-                  <Bar dataKey="gain" name="Gain (g)" fill={SINGLE_SERIES_STROKE} radius={[2, 2, 0, 0]}>
+                  <Bar dataKey="perDay" name="Daily gain (g/day)" fill={SINGLE_SERIES_STROKE} radius={[2, 2, 0, 0]}>
                     <LabelList
                       dataKey="gain"
                       position="top"
