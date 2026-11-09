@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { AlertCircle, AlertTriangle, FlaskConical, Info, Loader2, Microscope, Eye, type LucideIcon } from "lucide-react";
+import { AlertCircle, AlertTriangle, Check, FlaskConical, Info, Loader2, Microscope, Eye, type LucideIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,7 +23,6 @@ import { usePatchData, usePostData } from "@/lib/api";
 import { farmToday } from "@/lib/farm-day";
 import { cn } from "@/lib/utils";
 import { COMMON_SYMPTOMS, useDiseases } from "@/pages/batches/disease-cases";
-import { Chip, Section } from "@/pages/batches/form-parts";
 import type { Batch, DiagnosisMethod, DiseaseCase, DiseaseSeverity } from "@/pages/batches/types";
 
 // Selected severity takes its status tone (with icon + label, never color alone -- docs/design.md §6).
@@ -37,6 +36,34 @@ const METHODS: { value: DiagnosisMethod; label: string; icon: LucideIcon }[] = [
   { value: "POST_MORTEM", label: "Post-mortem", icon: Microscope },
   { value: "LAB", label: "Lab test", icon: FlaskConical },
 ];
+
+/** A pill that toggles on and off -- for picking houses and symptoms at a glance. */
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors",
+        on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted"
+      )}
+    >
+      {on && <Check className="size-3.5" />}
+      {children}
+    </button>
+  );
+}
+
+/** One titled group of fields in the dialog body. */
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</h3>
+      {children}
+    </section>
+  );
+}
 
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
