@@ -13,13 +13,11 @@ import { formatDate, formatTk, humanizeEnum } from "@/lib/utils";
 import { paymentStatus, type Sale, type SalesSummary } from "@/pages/sales/types";
 import type { Customer } from "@/pages/customers/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
-import { SaleCreateDialog } from "@/pages/sales/sale-create-dialog";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
 
 export function RegularSalesTab() {
   const navigate = useNavigate();
-  const [createOpen, setCreateOpen] = useState(false);
   const [paymentSaleId, setPaymentSaleId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [dateFrom, setDateFrom] = useState("");
@@ -186,7 +184,7 @@ export function RegularSalesTab() {
           </div>
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => navigate("/sales/new")}>
           <Plus />
           Record sale
         </Button>
@@ -208,11 +206,10 @@ export function RegularSalesTab() {
           icon: Receipt,
           title: "No sales recorded yet",
           description: "Record your first sale to a customer.",
-          action: { label: "Record sale", onClick: () => setCreateOpen(true) },
+          action: { label: "Record sale", onClick: () => navigate("/sales/new") },
         }}
       />
 
-      <SaleCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
       <PaymentCreateDialog
         open={paymentSaleId !== null}
         onOpenChange={(open) => !open && setPaymentSaleId(null)}

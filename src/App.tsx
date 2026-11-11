@@ -23,6 +23,7 @@ import { PurchaseDetailPage } from "@/pages/purchases/purchase-detail-page";
 import { LowStockPurchasePage } from "@/pages/purchases/low-stock-purchase-page";
 import { SalesPage } from "@/pages/sales/sales-page";
 import { SaleDetailPage } from "@/pages/sales/sale-detail-page";
+import { SaleCreatePage } from "@/pages/sales/sale-create-page";
 import { BirdSaleDetailPage } from "@/pages/sales/bird-sale-detail-page";
 import { BirdSaleCreatePage } from "@/pages/sales/bird-sale-create-page";
 import { PaymentsPage } from "@/pages/payments/payments-page";
@@ -62,6 +63,7 @@ function App() {
             <Route path="customers/:id" element={<CustomerDetailPage />} />
             <Route path="doctors" element={<DoctorsListPage />} />
             <Route path="sales" element={<SalesPage />} />
+            <Route path="sales/new" element={<SaleCreatePage />} />
             <Route path="sales/:id" element={<SaleDetailPage />} />
             <Route path="sales/birds/new" element={<BirdSaleCreatePage />} />
             <Route path="sales/birds/:id" element={<BirdSaleDetailPage />} />
