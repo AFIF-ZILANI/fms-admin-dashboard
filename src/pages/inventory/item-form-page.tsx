@@ -29,6 +29,7 @@ const itemSchema = z.object({
   lead_time_days: optionalNumber(z.coerce.number().int().nonnegative("Must be 0 or more")),
   organization_id: z.string().optional(),
   is_unit_tracked: z.boolean(),
+  is_farm_made: z.boolean(),
 });
 
 // z.coerce fields make the schema's input type (raw form values) differ from
@@ -68,6 +69,7 @@ export function ItemFormPage() {
       lead_time_days: "",
       organization_id: "",
       is_unit_tracked: false,
+      is_farm_made: false,
     },
   });
 
@@ -96,6 +98,7 @@ export function ItemFormPage() {
         lead_time_days: item.lead_time_days ?? "",
         organization_id: currentManufacturerId,
         is_unit_tracked: item.is_unit_tracked,
+        is_farm_made: item.is_farm_made,
       });
       setPendingUnits(
         (item.itemUnits ?? []).map((u) => ({
@@ -116,6 +119,7 @@ export function ItemFormPage() {
         lead_time_days: "",
         organization_id: "",
         is_unit_tracked: false,
+      is_farm_made: false,
       });
       setPendingUnits([]);
       setReorderUnit("");
@@ -148,6 +152,9 @@ export function ItemFormPage() {
   const unlinkOrganization = useDelete<null, string>((linkId) => `/item-organizations/${linkId}`, ["organizations"]);
 
   const baseUnit = useWatch({ control, name: "unit" });
+  // An item is QR-tracked or made on the farm, never both: each switch turns the other off.
+  const unitTracked = useWatch({ control, name: "is_unit_tracked" });
+  const farmMade = useWatch({ control, name: "is_farm_made" });
   const usedUnitCodes = new Set([baseUnit, ...pendingUnits.map((u) => u.unit)]);
   // A unit belongs to this item's base-unit family if it's tied to that specific base (LITER -> ML)
   // or generic across every family (Container, null base_unit) -- never one of the 6 bases itself,
@@ -399,7 +406,11 @@ export function ItemFormPage() {
               name="is_unit_tracked"
               render={({ field }) => (
                 <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={field.value} onCheckedChange={(c) => field.onChange(Boolean(c))} />
+                  <Checkbox
+                    checked={field.value}
+                    disabled={farmMade}
+                    onCheckedChange={(c) => field.onChange(Boolean(c))}
+                  />
                   Tracked by QR code (medicine, vaccine, equipment)
                 </label>
               )}
@@ -408,6 +419,25 @@ export function ItemFormPage() {
               Checked: this item is bound to individual QR-coded units (Bind Code, Stock
               Allocation). Unchecked: tracked only as an aggregate quantity (Move Stock). An item
               can only use one of the two.
+            </p>
+
+            <Controller
+              control={control}
+              name="is_farm_made"
+              render={({ field }) => (
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={field.value}
+                    disabled={unitTracked}
+                    onCheckedChange={(c) => field.onChange(Boolean(c))}
+                  />
+                  Made on the farm (not bought)
+                </label>
+              )}
+            />
+            <p className="text-xs text-muted-foreground">
+              Litter and other things the farm makes. They are sold as Farm-made sales without taking stock, and
+              never appear on purchases. Can't be changed once the item has been bought or sold.
             </p>
           </CardContent>
         </Card>

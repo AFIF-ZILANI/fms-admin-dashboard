@@ -15,6 +15,7 @@ export const STOCK_UNIT_STATUS_TONE: Record<StockUnitStatus, Tone> = {
   IN_USE: "info",
   CONSUMED: "neutral",
   DISPOSED: "neutral",
+  SOLD: "neutral",
 };
 
 /** Shared across assets-tab.tsx and asset-detail-sheet.tsx. */

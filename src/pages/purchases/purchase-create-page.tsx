@@ -205,7 +205,8 @@ export function PurchaseCreatePage() {
   const createPurchase = usePostData<Purchase, Record<string, unknown>>("/purchases", ["purchases"]);
 
   // Chicks are bought from their batch ("Add chick delivery"), so they're not offered here.
-  const itemOptions = (items?.results ?? []).filter((i) => i.category !== "CHICKS");
+  // Farm-made items (litter) are never bought.
+  const itemOptions = (items?.results ?? []).filter((i) => i.category !== "CHICKS" && !i.is_farm_made);
   const unitLabel = (code: string) => units?.results.find((u) => u.code === code)?.label ?? humanizeEnum(code);
 
   /** A line's allowed units are the item's own base unit (always purchasable -- see

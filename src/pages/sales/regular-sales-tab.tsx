@@ -10,27 +10,29 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatDate, formatTk, humanizeEnum } from "@/lib/utils";
-import { paymentStatus, type Sale, type SalesSummary } from "@/pages/sales/types";
+import { paymentStatus, type Sale, type SaleKind, type SalesSummary } from "@/pages/sales/types";
+import { SALE_KIND_LABEL, scanLabel } from "@/pages/sales/sale-kinds";
 import type { Customer } from "@/pages/customers/types";
 import type { LookupRow } from "@/pages/settings/lookup-types";
-import { SaleCreateDialog } from "@/pages/sales/sale-create-dialog";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
 
 export function RegularSalesTab() {
   const navigate = useNavigate();
-  const [createOpen, setCreateOpen] = useState(false);
   const [paymentSaleId, setPaymentSaleId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [kindFilter, setKindFilter] = useState<SaleKind | "ALL">("ALL");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
   const query = new URLSearchParams({ limit: "100" });
   if (categoryFilter !== "ALL") query.set("item_category", categoryFilter);
+  if (kindFilter !== "ALL") query.set("kind", kindFilter);
   if (dateFrom) query.set("date_from", dateFrom);
   if (dateTo) query.set("date_to", dateTo + "T23:59:59.999Z");
   const { data, isLoading } = useGetData<Paginated<Sale>>(`/sales?${query}`, [
     "sales",
+    kindFilter,
     categoryFilter,
     dateFrom,
     dateTo,
@@ -72,6 +74,12 @@ export function RegularSalesTab() {
       sortValue: (s) => customerName(s.customer_id),
     },
     {
+      key: "kind",
+      header: "Type",
+      render: (s) => SALE_KIND_LABEL[s.kind],
+      sortValue: (s) => SALE_KIND_LABEL[s.kind],
+    },
+    {
       key: "items",
       header: "Lines",
       render: (s) => s.items.length,
@@ -99,6 +107,14 @@ export function RegularSalesTab() {
         const amounts = trueAmounts(s.id, s.paid_amount, s.due_amount);
         const status = paymentStatus(amounts.paid, amounts.due);
         return <StatusBadge tone={status.tone} label={status.label} />;
+      },
+    },
+    {
+      key: "scan",
+      header: "Bottles",
+      render: (s) => {
+        const scan = scanLabel(s.scan ?? null);
+        return scan ? <StatusBadge tone={scan.tone} label={scan.label} /> : null;
       },
     },
     {
@@ -161,6 +177,24 @@ export function RegularSalesTab() {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div className="flex flex-wrap items-end gap-2">
           <div className="flex flex-col gap-1">
+            <Label htmlFor="kind_filter" className="text-xs text-muted-foreground">
+              Type
+            </Label>
+            <Select value={kindFilter} onValueChange={(v) => setKindFilter((v as SaleKind | "ALL") ?? "ALL")}>
+              <SelectTrigger id="kind_filter" className="w-36">
+                <SelectValue>{(v: string) => (v && v !== "ALL" ? SALE_KIND_LABEL[v as SaleKind] : "All types")}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All types</SelectItem>
+                {(Object.keys(SALE_KIND_LABEL) as SaleKind[]).map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {SALE_KIND_LABEL[k]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1">
             <Label htmlFor="category_filter" className="text-xs text-muted-foreground">
               Category
             </Label>
@@ -186,7 +220,7 @@ export function RegularSalesTab() {
           </div>
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => navigate("/sales/new")}>
           <Plus />
           Record sale
         </Button>
@@ -208,11 +242,10 @@ export function RegularSalesTab() {
           icon: Receipt,
           title: "No sales recorded yet",
           description: "Record your first sale to a customer.",
-          action: { label: "Record sale", onClick: () => setCreateOpen(true) },
+          action: { label: "Record sale", onClick: () => navigate("/sales/new") },
         }}
       />
 
-      <SaleCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
       <PaymentCreateDialog
         open={paymentSaleId !== null}
         onOpenChange={(open) => !open && setPaymentSaleId(null)}
