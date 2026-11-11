@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Skull } from "lucide-react";
+import { Pencil, Plus, Skull } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TooltipValueType } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { useGetData, type Paginated } from "@/lib/api";
 import type { Batch, MortalityLog } from "@/pages/batches/types";
 import { MortalityFormDialog } from "@/pages/batches/tabs/mortality-form-dialog";
+import { MortalityDiseaseDialog } from "@/pages/batches/tabs/mortality-disease-dialog";
+import { casesForLog, useDiseaseCases } from "@/pages/batches/disease-cases";
 import { cycleDay } from "@/pages/batches/cycle-day";
 import { farmToday } from "@/lib/farm-day";
 import { CHART_HEIGHT, chartAxisProps, chartGridProps, chartTooltipContentStyle, SINGLE_SERIES_STROKE } from "@/pages/analytics/chart-theme";
@@ -22,12 +24,17 @@ const formatDateTime = (iso: string) =>
 
 export function MortalityTab({ batch }: { batch: Batch }) {
   const [formOpen, setFormOpen] = useState(false);
+  const [fixing, setFixing] = useState<MortalityLog | null>(null);
   const [chart, setChart] = useState<"cumulative" | "age">("cumulative");
 
   const { data, isLoading } = useGetData<Paginated<MortalityLog>>(
     `/mortality-logs?batch_id=${batch.id}&limit=100`,
     ["mortality-logs", batch.id]
   );
+
+  const { data: casesData } = useDiseaseCases(batch.id);
+  const cases = casesData?.results ?? [];
+  const caseLabel = (id: string) => cases.find((c) => c.id === id)?.disease.label ?? "Disease case";
 
   const houseName = (id: string) => batch.houseBalances.find((b) => b.house_id === id)?.house.name ?? id;
 
@@ -41,6 +48,27 @@ export function MortalityTab({ batch }: { batch: Batch }) {
     { key: "house", header: "House", render: (m) => houseName(m.house_id), sortValue: (m) => houseName(m.house_id) },
     { key: "count", header: "Died", render: (m) => m.count_died.toLocaleString(), numeric: true, sortValue: (m) => m.count_died },
     { key: "cause", header: "Cause", render: (m) => m.cause_note ?? <span className="text-muted-foreground">—</span> },
+    {
+      key: "disease",
+      header: "Disease",
+      sortValue: (m) => (m.disease_case_id ? caseLabel(m.disease_case_id) : ""),
+      render: (m) =>
+        m.disease_case_id ? (
+          <span className="inline-flex items-center gap-1">
+            {caseLabel(m.disease_case_id)}
+            <Button variant="ghost" size="icon" aria-label="Change disease" onClick={() => setFixing(m)}>
+              <Pencil />
+            </Button>
+          </span>
+        ) : casesForLog(cases, m).length ? (
+          <Button variant="outline" size="sm" onClick={() => setFixing(m)}>
+            <Plus />
+            Add disease
+          </Button>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
   ];
 
   const cumulativeSeries = useMemo(() => {
@@ -157,6 +185,7 @@ export function MortalityTab({ batch }: { batch: Batch }) {
       />
 
       <MortalityFormDialog open={formOpen} onOpenChange={setFormOpen} batch={batch} />
+      <MortalityDiseaseDialog key={fixing?.id} log={fixing} cases={cases} onOpenChange={(open) => !open && setFixing(null)} />
     </div>
   );
 }
