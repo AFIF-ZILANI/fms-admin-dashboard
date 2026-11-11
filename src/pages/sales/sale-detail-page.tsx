@@ -11,7 +11,7 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatDate, formatTk } from "@/lib/utils";
+import { formatDate, formatTk, humanizeEnum } from "@/lib/utils";
 import { paymentStatus, type SaleDetail, type SoldBottle } from "@/pages/sales/types";
 import { SALE_KIND_LABEL } from "@/pages/sales/sale-kinds";
 import type { Customer } from "@/pages/customers/types";
@@ -39,8 +39,11 @@ export function SaleDetailPage() {
     {
       key: "quantity",
       header: "Quantity",
-      // QR lines have no unit: their quantity is a count of bottles.
-      render: (l) => (l.unit ? fmt.entered(l.quantity, l.unit, l.item.id) : `${Number(l.quantity)} bottles`),
+      // QR lines count packs; the unit only names the pack (Bottle, Pouch), so no conversion applies.
+      render: (l) =>
+        coded
+          ? `${Number(l.quantity)} ${l.unit ? humanizeEnum(l.unit).toLowerCase() : "packs"}`
+          : fmt.entered(l.quantity, l.unit ?? l.item.unit, l.item.id),
       numeric: true,
     },
     ...(coded
@@ -153,9 +156,18 @@ export function SaleDetailPage() {
             rowKey={(l) => l.id}
             empty={{ icon: Receipt, title: "No line items" }}
           />
+          {(sale.discount_type || sale.items.some((l) => l.discount_type)) && (
+            <p className="mt-3 text-sm text-muted-foreground tabular-nums">
+              Line totals are after their own discounts.
+              {sale.discount_type &&
+                ` Overall discount ${sale.discount_type === "PERCENT" ? `${Number(sale.discount_value)}%` : formatTk(sale.discount_value ?? 0)}: −${formatTk(
+                  sale.items.reduce((sum, l) => sum + Number(l.total_price), 0) - Number(sale.total)
+                )}.`}
+            </p>
+          )}
           {coded && toScan > 0 && (
             <p className="mt-3 text-sm text-muted-foreground">
-              {toScan} {toScan === 1 ? "bottle" : "bottles"} still to scan on the phone.
+              {toScan} {toScan === 1 ? "pack" : "packs"} still to scan on the phone.
             </p>
           )}
         </CardContent>
@@ -164,7 +176,7 @@ export function SaleDetailPage() {
       {coded && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Scanned bottles</CardTitle>
+            <CardTitle className="text-base">Scanned packs</CardTitle>
           </CardHeader>
           <CardContent>
             <DataTable
@@ -173,8 +185,8 @@ export function SaleDetailPage() {
               rowKey={(b) => b.id}
               empty={{
                 icon: Receipt,
-                title: "No bottles scanned yet",
-                description: "A manager scans each bottle on the phone as it leaves.",
+                title: "No packs scanned yet",
+                description: "A manager scans each pack on the phone as it leaves.",
               }}
             />
           </CardContent>

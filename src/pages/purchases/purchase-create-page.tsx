@@ -32,10 +32,9 @@ import { DISCOUNT_TYPES, type DiscountType, type Purchase } from "@/pages/purcha
 import { BindCodesPrompt } from "@/pages/purchases/bind-codes-prompt";
 import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import { farmToday } from "@/lib/farm-day";
+import { DISCOUNT_TYPE_LABELS, discountAmount, lineNet } from "@/lib/discount";
 
 const CODED_CATEGORIES = ["MEDICINE", "VACCINE", "EQUIPMENT"];
-
-const DISCOUNT_TYPE_LABELS: Record<DiscountType, string> = { FLAT: "Flat amount", PERCENT: "Percent" };
 
 const lineSchema = z.object({
   item_id: z.string().min(1, "Select an item"),
@@ -73,28 +72,6 @@ function blankLine(): LineInput {
     mfg_date: "",
     expiration_date: "",
   };
-}
-
-/** Amount a discount removes from `gross` -- FLAT is a currency amount, PERCENT is 0-100 of gross.
- * Mirrors PurchaseService.computeDiscount so the on-page preview matches what the server will charge. */
-function discountAmount(gross: number, type: DiscountType | undefined, value: number | undefined): number {
-  if (type === undefined || value === undefined || !Number.isFinite(value)) return 0;
-  return type === "PERCENT" ? gross * (value / 100) : value;
-}
-
-function lineGross(line?: { quantity?: unknown; unit_price?: unknown }): number {
-  return (Number(line?.quantity) || 0) * (Number(line?.unit_price) || 0);
-}
-
-function lineNet(line?: {
-  quantity?: unknown;
-  unit_price?: unknown;
-  discount_type?: DiscountType;
-  discount_value?: unknown;
-}): number {
-  const gross = lineGross(line);
-  const value = line?.discount_value === undefined ? undefined : Number(line.discount_value);
-  return toCents(Math.max(0, gross - discountAmount(gross, line?.discount_type, value)));
 }
 
 type Admin = { id: string; profile: { id: string; name: string } };
