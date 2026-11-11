@@ -47,6 +47,8 @@ export type Item = {
   // true = individually QR-coded (StockUnit) -- medicine, vaccine, equipment. false = aggregate
   // quantity only (StockLedger) -- feed, husk, etc. Gates which item picker offers this item.
   is_unit_tracked: boolean;
+  /** made on the farm, never bought (litter): sold as a Farm-made sale, hidden from purchases */
+  is_farm_made: boolean;
   created_at: string;
   updated_at: string;
   itemUnits?: ItemUnit[];
@@ -90,7 +92,7 @@ export type Organization = {
 
 export type LowStockItem = Item & { current_balance: string };
 
-export const STOCK_UNIT_STATUSES = ["UNASSIGNED", "PRINTED", "BOUND", "IN_USE", "CONSUMED", "DISPOSED"] as const;
+export const STOCK_UNIT_STATUSES = ["UNASSIGNED", "PRINTED", "BOUND", "IN_USE", "CONSUMED", "DISPOSED", "SOLD"] as const;
 export type StockUnitStatus = (typeof STOCK_UNIT_STATUSES)[number];
 /** What "Change status" may pick -- UNASSIGNED/PRINTED only come from provisioning and the print sheet. */
 export const MANUAL_STOCK_UNIT_STATUSES = ["BOUND", "IN_USE", "CONSUMED", "DISPOSED"] as const;

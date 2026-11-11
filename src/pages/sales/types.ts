@@ -1,12 +1,16 @@
 export const BIRD_GRADES = ["HIGH", "LOW", "CULL"] as const;
 export type BirdGrade = (typeof BIRD_GRADES)[number];
 
+/** One kind per regular sale: QR bottles (scanned out on the phone), bought stock, or farm-made. */
+export type SaleKind = "CODED" | "STOCK" | "FARM_MADE";
+
 export type SaleItemLine = {
   id: string;
   sale_id: string;
   item_id: string;
   quantity: string;
-  unit: string;
+  /** null on QR lines: quantity is a count of bottles, each with its own size */
+  unit: string | null;
   unit_price: string;
   total_price: string;
   item: { id: string; name: string; category: string; unit: string };
@@ -14,6 +18,9 @@ export type SaleItemLine = {
 
 export type Sale = {
   id: string;
+  kind: SaleKind;
+  /** bought stock only: the warehouse it left from */
+  warehouse_id: string | null;
   customer_id: string | null;
   sale_date: string;
   total: string;
@@ -25,6 +32,26 @@ export type Sale = {
   // Sale's `include` is `customer: true` — the flat Customers row, no nested
   // Profile (same gotcha as Purchase.supplier). Look names up separately.
   customer: { id: string; company: string | null } | null;
+  /** QR sales only (list): bottles the sale needs and how many are scanned out so far */
+  scan?: { needed: number; scanned: number } | null;
+};
+
+/** A bottle scanned out on a QR sale. size is in its item's unit. */
+export type SoldBottle = {
+  id: string;
+  line_id: string;
+  size: string;
+  unit: string;
+  lot_date: string;
+  sold_by: string | null;
+  sold_at: string;
+};
+
+/** GET /sales/:id */
+export type SaleDetail = Omit<Sale, "items"> & {
+  items: (SaleItemLine & { scanned: number })[];
+  bottles: SoldBottle[];
+  warehouse: { id: string; name: string } | null;
 };
 
 export type BirdSale = {

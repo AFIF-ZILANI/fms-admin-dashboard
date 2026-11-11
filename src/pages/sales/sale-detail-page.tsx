@@ -34,7 +34,13 @@ export function SaleDetailPage() {
   const fmt = useFormatStock();
   const columns: Column<SaleItemLine>[] = [
     { key: "item", header: "Item", render: (l) => <TruncatedText text={l.item.name} className="max-w-48" /> },
-    { key: "quantity", header: "Quantity", render: (l) => fmt.entered(l.quantity, l.unit, l.item.id), numeric: true },
+    {
+      key: "quantity",
+      header: "Quantity",
+      // QR lines have no unit: their quantity is a count of bottles.
+      render: (l) => (l.unit ? fmt.entered(l.quantity, l.unit, l.item.id) : `${Number(l.quantity)} bottles`),
+      numeric: true,
+    },
     { key: "unit_price", header: "Unit price", render: (l) => formatTk(l.unit_price), numeric: true },
     { key: "total", header: "Total", render: (l) => formatTk(l.total_price), numeric: true },
   ];
