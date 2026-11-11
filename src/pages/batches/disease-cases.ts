@@ -1,6 +1,7 @@
 import { useGetData, type Paginated } from "@/lib/api";
 import type { LookupRow } from "@/pages/settings/lookup-types";
-import type { DiseaseCase, DiseaseOutcome, DiseaseSeverity } from "@/pages/batches/types";
+import { farmToday } from "@/lib/farm-day";
+import type { DiseaseCase, DiseaseOutcome, DiseaseSeverity, MortalityLog } from "@/pages/batches/types";
 import type { Tone } from "@/components/shared/status-badge";
 
 /** A batch's disease cases, newest first. Shared by the Diseases page and the "Disease case" pickers. */
@@ -14,7 +15,23 @@ export function useDiseases() {
   return data?.results ?? [];
 }
 
-export const SEVERITY_TONE: Record<DiseaseSeverity, Tone> = { LOW: "info", MEDIUM: "warning", HIGH: "critical" };
+/** Cases a death could have been from: this house, and active on the farm day the birds died. The server
+ *  checks the same window, so this list only spares the admin a refusal. */
+export function casesForLog(cases: DiseaseCase[], log: MortalityLog) {
+  const day = farmToday(new Date(log.date));
+  return cases.filter(
+    (c) =>
+      c.houses.some((h) => h.id === log.house_id) &&
+      c.noticed_on.slice(0, 10) <= day &&
+      (!c.resolved_on || day <= c.resolved_on.slice(0, 10))
+  );
+}
+
+export const SEVERITY_TONE: Record<DiseaseSeverity, Tone> = {
+  LOW: "info",
+  MEDIUM: "warning",
+  HIGH: "critical",
+};
 
 export const OUTCOME_LABEL: Record<DiseaseOutcome, string> = {
   RECOVERED: "Recovered",
