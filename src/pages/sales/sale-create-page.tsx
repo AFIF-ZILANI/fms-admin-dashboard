@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
@@ -12,7 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { FarmAccountSelect } from "@/components/shared/farm-account-select";
 import { useConfirm } from "@/components/shared/confirm-dialog";
 import { usePageTitle } from "@/components/layout/use-page-title";
-import { useGetData, usePostData, type Paginated } from "@/lib/api";
+import { apiFetch, useGetData, usePostData, type Paginated } from "@/lib/api";
+import { fetchAllPages } from "@/lib/all-pages";
 import { cn, formatTk } from "@/lib/utils";
 import { farmToday } from "@/lib/farm-day";
 import { ItemCombobox } from "@/pages/purchases/item-combobox";
@@ -59,7 +60,18 @@ export function SaleCreatePage() {
   const { data: batches } = useGetData<Paginated<Batch>>("/batches?limit=100", ["batches", "sale-picker"]);
   const openBatches = (batches?.results ?? []).filter((b) => b.status !== "CLOSED");
   const { data: warehouses } = useGetData<Paginated<Warehouse>>("/warehouses?limit=100", ["warehouses"]);
-  const { data: itemsData } = useGetData<Paginated<Item>>("/items?is_active=true&limit=100", ["items", "active"]);
+  // Only the chosen kind's items, every page of them: the picker searches in the browser.
+  const kindQuery =
+    kind === "CODED"
+      ? "&is_unit_tracked=true"
+      : kind === "FARM_MADE"
+        ? "&is_farm_made=true"
+        : "&is_unit_tracked=false&is_farm_made=false";
+  const { data: itemsData } = useQuery({
+    queryKey: ["items", "active", kind, "all"],
+    queryFn: () => fetchAllPages<Item>(`/items?is_active=true${kindQuery}`, (url) => apiFetch<Paginated<Item>>(url)),
+    enabled: kind !== null,
+  });
   const allItems = itemsData?.results ?? [];
   const kindItems = kind ? allItems.filter((i) => itemFitsKind(i, kind)) : [];
 

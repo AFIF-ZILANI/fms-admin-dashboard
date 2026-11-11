@@ -12,7 +12,8 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { usePageTitle } from "@/components/layout/use-page-title";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatDate, formatTk } from "@/lib/utils";
-import { paymentStatus, type Sale, type SaleItemLine } from "@/pages/sales/types";
+import { paymentStatus, type SaleDetail, type SoldBottle } from "@/pages/sales/types";
+import { SALE_KIND_LABEL } from "@/pages/sales/sale-kinds";
 import type { Customer } from "@/pages/customers/types";
 import { PaymentCreateDialog } from "@/pages/payments/payment-create-dialog";
 import { useOutstanding } from "@/pages/sales/use-outstanding";
@@ -23,7 +24,7 @@ export function SaleDetailPage() {
   const navigate = useNavigate();
   const [paymentOpen, setPaymentOpen] = useState(false);
 
-  const { data: sale, isLoading, isError } = useGetData<Sale>(`/sales/${id}`, ["sales", id]);
+  const { data: sale, isLoading, isError } = useGetData<SaleDetail>(`/sales/${id}`, ["sales", id]);
   usePageTitle(sale ? `Sale · ${formatDate(sale.sale_date)}` : "Sale");
 
   // Sale's own `customer` relation has no name (see types.ts) — look it up separately.
@@ -32,7 +33,8 @@ export function SaleDetailPage() {
   const { trueAmounts } = useOutstanding("SALE");
 
   const fmt = useFormatStock();
-  const columns: Column<SaleItemLine>[] = [
+  const coded = sale?.kind === "CODED";
+  const columns: Column<SaleDetail["items"][number]>[] = [
     { key: "item", header: "Item", render: (l) => <TruncatedText text={l.item.name} className="max-w-48" /> },
     {
       key: "quantity",
@@ -41,8 +43,30 @@ export function SaleDetailPage() {
       render: (l) => (l.unit ? fmt.entered(l.quantity, l.unit, l.item.id) : `${Number(l.quantity)} bottles`),
       numeric: true,
     },
+    ...(coded
+      ? [
+          {
+            key: "scanned",
+            header: "Scanned",
+            render: (l: SaleDetail["items"][number]) => `${l.scanned} of ${Number(l.quantity)}`,
+            numeric: true,
+          },
+        ]
+      : []),
     { key: "unit_price", header: "Unit price", render: (l) => formatTk(l.unit_price), numeric: true },
     { key: "total", header: "Total", render: (l) => formatTk(l.total_price), numeric: true },
+  ];
+  const bottleColumns: Column<SoldBottle>[] = [
+    { key: "code", header: "Code", render: (b) => <span className="tabular-nums">…{b.id.slice(-7)}</span> },
+    {
+      key: "item",
+      header: "Item",
+      render: (b) => sale?.items.find((l) => l.id === b.line_id)?.item.name ?? "",
+    },
+    { key: "size", header: "Size", render: (b) => `${Number(b.size)} ${b.unit.toLowerCase()}`, numeric: true },
+    { key: "lot", header: "Bought", render: (b) => formatDate(b.lot_date) },
+    { key: "by", header: "Scanned by", render: (b) => b.sold_by ?? "" },
+    { key: "when", header: "When", render: (b) => formatDate(b.sold_at), sortValue: (b) => b.sold_at },
   ];
 
   if (isLoading) {
@@ -73,6 +97,7 @@ export function SaleDetailPage() {
   }
 
   const amounts = trueAmounts(sale.id, sale.paid_amount, sale.due_amount);
+  const toScan = sale.items.reduce((sum, l) => sum + Math.max(0, Number(l.quantity) - l.scanned), 0);
   const status = paymentStatus(amounts.paid, amounts.due);
 
   return (
@@ -87,6 +112,10 @@ export function SaleDetailPage() {
           <div>
             <CardTitle className="text-xl">Sale · {formatDate(sale.sale_date)}</CardTitle>
             <p className="text-sm text-muted-foreground">{customerName ?? "No customer on file"}</p>
+            <p className="text-sm text-muted-foreground">
+              {SALE_KIND_LABEL[sale.kind]}
+              {sale.warehouse ? ` from ${sale.warehouse.name}` : ""}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge tone={status.tone} label={status.label} />
@@ -124,8 +153,33 @@ export function SaleDetailPage() {
             rowKey={(l) => l.id}
             empty={{ icon: Receipt, title: "No line items" }}
           />
+          {coded && toScan > 0 && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {toScan} {toScan === 1 ? "bottle" : "bottles"} still to scan on the phone.
+            </p>
+          )}
         </CardContent>
       </Card>
+
+      {coded && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Scanned bottles</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DataTable
+              columns={bottleColumns}
+              rows={sale.bottles}
+              rowKey={(b) => b.id}
+              empty={{
+                icon: Receipt,
+                title: "No bottles scanned yet",
+                description: "A manager scans each bottle on the phone as it leaves.",
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <PaymentCreateDialog open={paymentOpen} onOpenChange={setPaymentOpen} defaultRefType="SALE" defaultRefId={sale.id} />
     </div>
