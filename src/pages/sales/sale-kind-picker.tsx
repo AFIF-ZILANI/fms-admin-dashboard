@@ -6,7 +6,7 @@ import type { SaleKind } from "@/pages/sales/types";
 const KINDS: { kind: SaleKind; description: string }[] = [
   {
     kind: "CODED",
-    description: "Medicine, vaccine and other bottles with a code. Bottles are scanned out on the phone.",
+    description: "Medicine, vaccine and other items with a QR code. Each pack is scanned out on the phone.",
   },
   { kind: "STOCK", description: "Feed, rice husk and other stock sold by amount from a warehouse." },
   { kind: "FARM_MADE", description: "Litter and other things the farm makes. Nothing is taken from stock." },

@@ -1,3 +1,5 @@
+import type { DiscountType } from "@/pages/purchases/types";
+
 export const BIRD_GRADES = ["HIGH", "LOW", "CULL"] as const;
 export type BirdGrade = (typeof BIRD_GRADES)[number];
 
@@ -12,6 +14,9 @@ export type SaleItemLine = {
   /** null on QR lines: quantity is a count of bottles, each with its own size */
   unit: string | null;
   unit_price: string;
+  discount_type: DiscountType | null;
+  discount_value: string | null;
+  /** net of this line's own discount */
   total_price: string;
   item: { id: string; name: string; category: string; unit: string };
 };
@@ -23,6 +28,9 @@ export type Sale = {
   warehouse_id: string | null;
   customer_id: string | null;
   sale_date: string;
+  /** on the whole sale, after each line's own */
+  discount_type: DiscountType | null;
+  discount_value: string | null;
   total: string;
   paid_amount: string;
   due_amount: string;

@@ -17,20 +17,7 @@ export function itemFitsKind(item: KindedItem, kind: SaleKind): boolean {
   return !item.is_unit_tracked && !item.is_farm_made;
 }
 
-/** False once any chosen line is an item of another kind -- the form asks before switching kinds then. */
-export function linesValidForKind(
-  lines: { item_id: string }[],
-  items: (KindedItem & { id: string })[],
-  kind: SaleKind
-): boolean {
-  return lines.every((line) => {
-    if (!line.item_id) return true;
-    const item = items.find((i) => i.id === line.item_id);
-    return !item || itemFitsKind(item, kind);
-  });
-}
-
-/** "3 of 5 scanned" until every bottle of a QR sale is out; nothing for other kinds. */
+/** "3 of 5 scanned" until every pack of a QR sale is out; nothing for other kinds. */
 export function scanLabel(scan: { needed: number; scanned: number } | null): { tone: Tone; label: string } | null {
   if (!scan) return null;
   if (scan.scanned >= scan.needed) return { tone: "success", label: "Scanned" };
