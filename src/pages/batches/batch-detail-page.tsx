@@ -25,6 +25,7 @@ import { DiseasesTab } from "@/pages/batches/tabs/diseases-tab";
 import { FinancialsTab } from "@/pages/batches/tabs/financials-tab";
 import { ConsumptionTab } from "@/pages/batches/tabs/consumption-tab";
 import { cycleDay } from "@/pages/batches/cycle-day";
+import { useStartWeight } from "@/pages/batches/use-start-weight";
 
 const STATUS_TONE: Record<BatchStatus, Tone> = { RUNNING: "success", CLOSED: "neutral", SOLD: "neutral" };
 
@@ -67,6 +68,7 @@ export function BatchDetailPage() {
   const [chicksOpen, setChicksOpen] = useState(false);
 
   const { data: batch, isLoading } = useGetData<Batch>(`/batches/${id}`, ["batches", id]);
+  const startWeight = useStartWeight(id!).grams;
   const active = BATCH_SECTIONS.find((s) => s.value === (section ?? "overview"));
   usePageTitle(`${batch?.batch_code ?? "Batch"} · ${active?.label ?? ""}`);
 
@@ -132,7 +134,7 @@ export function BatchDetailPage() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             <Fact label="Live birds" value={liveBirdCount(batch).toLocaleString()} />
             <Fact label="Initial chicks" value={batch.initial_chick_count.toLocaleString()} />
-            <Fact label="Start weight" value={`${batch.init_chicks_avg_wt} g avg`} />
+            <Fact label="Start weight" value={startWeight === undefined ? "—" : `${startWeight.toLocaleString()} g avg`} />
             <Fact label="Age" value={`Day ${age}`} />
             <Fact label="Expected selling" value={formatDate(batch.expected_selling_date)} />
           </div>

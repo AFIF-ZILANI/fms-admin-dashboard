@@ -35,7 +35,6 @@ export type Batch = {
   expected_selling_date: string;
   actual_end_date: string | null;
   initial_chick_count: number;
-  init_chicks_avg_wt: number;
   created_at: string;
   updated_at: string;
   houseBalances: HouseBalance[];
