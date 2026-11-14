@@ -69,7 +69,20 @@ export function WeightTab({ batch }: { batch: Batch }) {
       sortValue: (w) => parseFloat(w.average_wt_grams),
     },
     { key: "sample", header: "Sample size", render: (w) => w.sample_size, numeric: true, sortValue: (w) => w.sample_size },
-    { key: "note", header: "Note", render: (w) => w.note ?? "", sortValue: (w) => w.note ?? "" },
+    {
+      key: "note",
+      header: "Note",
+      // Long notes cut off with an ellipsis (full text on hover); no note shows a dash.
+      render: (w) =>
+        w.note ? (
+          <span className="block max-w-[28ch] truncate" title={w.note}>
+            {w.note}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+      sortValue: (w) => w.note ?? "",
+    },
   ];
 
   return (
