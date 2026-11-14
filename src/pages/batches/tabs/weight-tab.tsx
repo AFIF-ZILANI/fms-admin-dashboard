@@ -69,6 +69,7 @@ export function WeightTab({ batch }: { batch: Batch }) {
       sortValue: (w) => parseFloat(w.average_wt_grams),
     },
     { key: "sample", header: "Sample size", render: (w) => w.sample_size, numeric: true, sortValue: (w) => w.sample_size },
+    { key: "note", header: "Note", render: (w) => w.note ?? "", sortValue: (w) => w.note ?? "" },
   ];
 
   return (
