@@ -26,6 +26,7 @@ const weightSchema = z.object({
   average_wt_grams: z.coerce.number().positive("Must be a positive number"),
   sample_size: z.coerce.number().int().positive("Must be a positive number"),
   date: z.string().min(1, "Date is required"),
+  note: z.string().trim().max(200, "At most 200 characters").optional(),
 });
 
 type WeightFormInput = z.input<typeof weightSchema>;
@@ -48,6 +49,7 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
       average_wt_grams: undefined,
       sample_size: undefined,
       date: farmToday(),
+      note: "",
     },
   });
 
@@ -60,6 +62,7 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
         average_wt_grams: undefined,
         sample_size: undefined,
         date: farmToday(),
+        note: "",
       });
     }
   }, [open, reset]);
@@ -73,7 +76,8 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
 
   const onSubmit = (values: WeightFormValues) => {
     return createWeightRecord.mutate(
-      { ...values, batch_id: batch.id },
+      // The API refuses an empty note, so a blank box is left out.
+      { ...values, note: values.note || undefined, batch_id: batch.id },
       {
         onSuccess: () => {
           toast.success("Weight logged");
@@ -81,7 +85,7 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
         },
         onError: (error) => {
           let hadFieldError = false;
-          for (const key of ["house_id", "average_wt_grams", "sample_size", "date"] as const) {
+          for (const key of ["house_id", "average_wt_grams", "sample_size", "date", "note"] as const) {
             const message = error.fieldError(key);
             if (message) {
               setError(key, { message });
@@ -162,6 +166,12 @@ export function WeightFormDialog({ open, onOpenChange, batch }: WeightFormDialog
               />
               {errors.sample_size && <p className="text-xs text-destructive">{errors.sample_size.message}</p>}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="note">Note (optional)</Label>
+            <Input id="note" placeholder="e.g. estimated, not measured" {...register("note")} aria-invalid={!!errors.note} />
+            {errors.note && <p className="text-xs text-destructive">{errors.note.message}</p>}
           </div>
 
           <DialogFooter>
