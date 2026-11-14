@@ -44,11 +44,13 @@ export function WeightTab({ batch }: { batch: Batch }) {
   // tower over one over 7 days at the same growth rate. The total stays as the bar's label.
   const gainSeries = useMemo(() => {
     const points = growthSeries.map(({ date, weight }) => ({ day: cycleDay(batch.starting_date, new Date(date)), weight }));
-    return points.slice(1).map(({ day, weight }, i) => {
-      const prev = points[i]!;
+    return points.map(({ day, weight }, i) => {
+      // The first point is the Day-1 start weight: the baseline, a zero-height bar labelled with the weight itself.
+      if (i === 0) return { day: `Day ${day}`, gain: 0, days: 0, perDay: 0, start: Math.round(weight), label: `${Math.round(weight)}g` };
+      const prev = points[i - 1]!;
       const gain = weight - prev.weight;
       const days = Math.max(day - prev.day, 1);
-      return { day: `Day ${day}`, gain: Math.round(gain), days, perDay: Math.round((gain / days) * 10) / 10 };
+      return { day: `Day ${day}`, gain: Math.round(gain), days, perDay: Math.round((gain / days) * 10) / 10, start: undefined, label: `${gain >= 0 ? "+" : ""}${Math.round(gain)}g` };
     });
   }, [growthSeries, batch.starting_date]);
 
@@ -128,16 +130,16 @@ export function WeightTab({ batch }: { batch: Batch }) {
                   <Tooltip
                     contentStyle={chartTooltipContentStyle}
                     formatter={(v: TooltipValueType | undefined, _name, item) => {
-                      const { days, gain } = item.payload as (typeof gainSeries)[number];
+                      const { days, gain, start } = item.payload as (typeof gainSeries)[number];
+                      if (start !== undefined) return [`${start} g at placement`, "Start weight"];
                       return [`${v} g/day · ${gain >= 0 ? "+" : ""}${gain} g over ${days} day${days === 1 ? "" : "s"}`, "Daily gain"];
                     }}
                   />
-                  <Bar dataKey="perDay" name="Daily gain (g/day)" fill={SINGLE_SERIES_STROKE} radius={[2, 2, 0, 0]}>
+                  <Bar dataKey="perDay" name="Daily gain (g/day)" fill={SINGLE_SERIES_STROKE} radius={[2, 2, 0, 0]} minPointSize={2}>
                     <LabelList
-                      dataKey="gain"
+                      dataKey="label"
                       position="top"
                       className="fill-muted-foreground text-xs tabular-nums"
-                      formatter={(v: unknown) => `${Number(v) >= 0 ? "+" : ""}${String(v)}g`}
                     />
                   </Bar>
                 </BarChart>
