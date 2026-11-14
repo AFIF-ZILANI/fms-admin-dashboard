@@ -8,6 +8,7 @@ import { useGetData, type Paginated } from "@/lib/api";
 import { formatDate, humanizeEnum } from "@/lib/utils";
 import { liveBirdCount, type Batch, type HouseBalance, type MortalityLog, type WeightRecord } from "@/pages/batches/types";
 import { cycleDay } from "@/pages/batches/cycle-day";
+import { useStartWeight } from "@/pages/batches/use-start-weight";
 
 /** Overview stat: icon chip + label on one line, value, then a hint line that always takes
  * its space so every tile in the grid is the same height. */
@@ -61,6 +62,7 @@ export function OverviewTab({ batch }: { batch: Batch }) {
     ["weight-records", batch.id],
   );
 
+  const startWeight = useStartWeight(batch.id).grams;
   const live = liveBirdCount(batch);
   const totalDied = (mortalityLogs?.results ?? []).reduce((sum, m) => sum + m.count_died, 0);
   const mortalityRate = batch.initial_chick_count > 0 ? (totalDied / batch.initial_chick_count) * 100 : 0;
@@ -118,7 +120,7 @@ export function OverviewTab({ batch }: { batch: Batch }) {
           tone={batch.status === "RUNNING" && daysToSelling < 0 ? "warning" : undefined}
           hint={batch.status === "RUNNING" ? `expected ${formatDate(batch.expected_selling_date)}` : "batch ended"}
         />
-        <Stat label="Start weight" value={`${batch.init_chicks_avg_wt} g`} icon={Scale} hint="at placement" />
+        <Stat label="Start weight" value={startWeight === undefined ? "—" : `${startWeight.toLocaleString()} g`} icon={Scale} isLoading={weightLoading} hint="at placement" />
       </div>
 
       <div className="flex flex-col gap-3">

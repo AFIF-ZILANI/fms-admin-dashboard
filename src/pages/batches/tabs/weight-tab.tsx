@@ -39,21 +39,18 @@ export function WeightTab({ batch }: { batch: Batch }) {
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [data]);
 
-  // Gain since the sample before, by batch day; the first sample counts from the chicks' start weight on day 0.
+  // Gain since the sample before, by batch day; the first point is the Day-1 start weight, so it has no bar.
   // Bars are g/day (average daily gain): samples aren't evenly spaced, so a total over 12 days would
   // tower over one over 7 days at the same growth rate. The total stays as the bar's label.
   const gainSeries = useMemo(() => {
-    const points = [
-      { day: 0, weight: batch.init_chicks_avg_wt },
-      ...growthSeries.map(({ date, weight }) => ({ day: cycleDay(batch.starting_date, new Date(date)), weight })),
-    ];
+    const points = growthSeries.map(({ date, weight }) => ({ day: cycleDay(batch.starting_date, new Date(date)), weight }));
     return points.slice(1).map(({ day, weight }, i) => {
       const prev = points[i]!;
       const gain = weight - prev.weight;
       const days = Math.max(day - prev.day, 1);
       return { day: `Day ${day}`, gain: Math.round(gain), days, perDay: Math.round((gain / days) * 10) / 10 };
     });
-  }, [growthSeries, batch.starting_date, batch.init_chicks_avg_wt]);
+  }, [growthSeries, batch.starting_date]);
 
   const latest = growthSeries.at(-1);
   const previous = growthSeries.at(-2);
@@ -118,7 +115,7 @@ export function WeightTab({ batch }: { batch: Batch }) {
                     contentStyle={chartTooltipContentStyle}
                     formatter={(v: TooltipValueType | undefined) => [`${v} g`, "Avg weight"]}
                   />
-                  <Line type="monotone" dataKey="weight" name="Avg weight (g)" stroke={SINGLE_SERIES_STROKE} strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="weight" name="Avg weight (g)" stroke={SINGLE_SERIES_STROKE} strokeWidth={2} dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             )}
