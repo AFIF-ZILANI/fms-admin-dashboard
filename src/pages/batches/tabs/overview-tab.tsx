@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { SectionHeader } from "@/components/shared/section-header";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatDate, formatTk, humanizeEnum } from "@/lib/utils";
+import { formatDate, humanizeEnum } from "@/lib/utils";
 import { liveBirdCount, type Batch, type HouseBalance, type MortalityLog, type WeightRecord } from "@/pages/batches/types";
 import { cycleDay } from "@/pages/batches/cycle-day";
 
@@ -105,7 +105,7 @@ export function OverviewTab({ batch }: { batch: Batch }) {
         />
         <Stat
           label="Latest avg weight"
-          value={latestWeight ? `${formatTk(latestWeight.average_wt_grams)} g` : "—"}
+          value={latestWeight ? `${latestWeight.average_wt_grams.toLocaleString()} g` : "—"}
           icon={TrendingUp}
           isLoading={weightLoading}
           hint={latestWeight ? `sampled ${formatDate(latestWeight.date)}` : "no samples yet"}
