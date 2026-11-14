@@ -70,6 +70,7 @@ export type WeightRecord = {
   sample_size: number;
   date: string;
   measured_by_id: string;
+  note: string | null;
 };
 
 export type BatchFeedingProgram = {
