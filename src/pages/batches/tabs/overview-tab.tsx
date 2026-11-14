@@ -1,12 +1,52 @@
-import { useState } from "react";
-import { Bird, Calendar, Home, Scale, Skull, TrendingUp } from "lucide-react";
-import { KPICard } from "@/components/shared/kpi-card";
+import { useState, type ReactNode } from "react";
+import { Bird, CalendarClock, CalendarDays, Home, Scale, Skull, TrendingUp, type LucideIcon } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { SectionHeader } from "@/components/shared/section-header";
 import { useGetData, type Paginated } from "@/lib/api";
 import { formatDate, formatTk, humanizeEnum } from "@/lib/utils";
 import { liveBirdCount, type Batch, type HouseBalance, type MortalityLog, type WeightRecord } from "@/pages/batches/types";
 import { cycleDay } from "@/pages/batches/cycle-day";
+
+/** Overview stat: icon chip + label on one line, value, then a hint line that always takes
+ * its space so every tile in the grid is the same height. */
+function Stat({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  isLoading,
+  tone,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: string;
+  icon: LucideIcon;
+  isLoading?: boolean;
+  tone?: "warning";
+}) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+            <Icon className="size-4" />
+          </span>
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        </div>
+        {isLoading ? (
+          <Skeleton className="h-8 w-20" />
+        ) : (
+          <p className={`text-3xl leading-none font-semibold tabular-nums ${tone === "warning" ? "text-warning" : ""}`}>
+            {value}
+          </p>
+        )}
+        <p className="min-h-4 text-xs text-muted-foreground">{!isLoading && hint}</p>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function OverviewTab({ batch }: { batch: Batch }) {
   // Captured once per mount: Date.now() during render is impure (each re-render would shift it).
@@ -54,30 +94,31 @@ export function OverviewTab({ batch }: { batch: Batch }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <KPICard label="Live birds" value={live.toLocaleString()} icon={Bird} hint={`of ${batch.initial_chick_count.toLocaleString()} placed`} />
-        <KPICard
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Stat label="Live birds" value={live.toLocaleString()} icon={Bird} hint={`of ${batch.initial_chick_count.toLocaleString()} placed`} />
+        <Stat
           label="Cumulative mortality"
           value={`${mortalityRate.toFixed(1)}%`}
           icon={Skull}
           isLoading={mortalityLoading}
-          hint={`${totalDied.toLocaleString()} birds`}
+          hint={`${totalDied.toLocaleString()} birds died`}
         />
-        <KPICard
+        <Stat
           label="Latest avg weight"
           value={latestWeight ? `${formatTk(latestWeight.average_wt_grams)} g` : "—"}
           icon={TrendingUp}
           isLoading={weightLoading}
           hint={latestWeight ? `sampled ${formatDate(latestWeight.date)}` : "no samples yet"}
         />
-        <KPICard label="Age" value={`Day ${cycleDay(batch.starting_date)}`} icon={Calendar} />
-        <KPICard
+        <Stat label="Age" value={`Day ${cycleDay(batch.starting_date)}`} icon={CalendarDays} hint={`placed ${formatDate(batch.starting_date)}`} />
+        <Stat
           label={batch.status === "RUNNING" && daysToSelling < 0 ? "Past selling date" : "Days to selling"}
           value={batch.status === "RUNNING" ? Math.abs(daysToSelling) : "—"}
-          icon={Calendar}
-          hint={batch.status === "RUNNING" ? undefined : "batch ended"}
+          icon={CalendarClock}
+          tone={batch.status === "RUNNING" && daysToSelling < 0 ? "warning" : undefined}
+          hint={batch.status === "RUNNING" ? `expected ${formatDate(batch.expected_selling_date)}` : "batch ended"}
         />
-        <KPICard label="Start weight" value={`${batch.init_chicks_avg_wt} g`} icon={Scale} hint="at placement" />
+        <Stat label="Start weight" value={`${batch.init_chicks_avg_wt} g`} icon={Scale} hint="at placement" />
       </div>
 
       <div className="flex flex-col gap-3">
