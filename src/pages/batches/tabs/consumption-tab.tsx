@@ -5,6 +5,7 @@ import type { TooltipValueType } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { KPICard } from "@/components/shared/kpi-card";
 import { SectionHeader } from "@/components/shared/section-header";
@@ -14,7 +15,7 @@ import { formatDate, formatTk, humanizeEnum, formatTkCompact } from "@/lib/utils
 import type { Batch } from "@/pages/batches/types";
 import type { Item } from "@/pages/inventory/types";
 import { bagSize, formatStock } from "@/pages/inventory/stock-qty";
-import { toWeeks, type DayRow, type WeekRow } from "@/pages/batches/tabs/weekly";
+import { toFeedPeriods, toWeeks, type DayRow, type FeedPeriod, type WeekRow } from "@/pages/batches/tabs/weekly";
 import {
   CATEGORICAL_COLORS,
   CHART_HEIGHT,
@@ -39,6 +40,15 @@ type ItemRow = Amounts & {
 };
 /** "Week 3 (days 15–21)" -- feed is recorded weekly, so the charts read by week of the batch. */
 const weekLabel = (w: number) => `Week ${w} (days ${(w - 1) * 7 + 1}–${w * 7})`;
+/** How the feed chart groups the batch's days. A month is 30 days of the batch, not a calendar month. */
+const FEED_VIEWS = [
+  { value: "daily", label: "Daily", days: 1 },
+  { value: "weekly", label: "Weekly", days: 7 },
+  { value: "ten_day", label: "10 days", days: 10 },
+  { value: "monthly", label: "Monthly", days: 30 },
+] as const;
+type FeedView = (typeof FEED_VIEWS)[number]["value"];
+const periodLabel = (p: Pick<FeedPeriod, "from" | "to">) => (p.from === p.to ? `${p.from}` : `${p.from}–${p.to}`);
 /** GET /analytics/batches/:id/stock */
 type BatchStock = {
   items: ItemRow[];
@@ -70,11 +80,12 @@ function inUseCell(r: Amounts, item: ItemRow) {
   );
 }
 
-function ChartCard({ title, empty, children }: { title: string; empty: string | null; children: React.ReactElement }) {
+function ChartCard({ title, empty, action, children }: { title: string; empty: string | null; action?: React.ReactNode; children: React.ReactElement }) {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        {action}
       </CardHeader>
       <CardContent>
         {empty ? (
@@ -235,6 +246,7 @@ function ItemHousesSheet({ item, stays, onClose }: { item: ItemRow | null; stays
 
 export function ConsumptionTab({ batch }: { batch: Batch }) {
   const [selected, setSelected] = useState<ItemRow | null>(null);
+  const [feedView, setFeedView] = useState<FeedView>("weekly");
   const { data, isLoading, isError } = useGetData<BatchStock>(`/analytics/batches/${batch.id}/stock`, [
     "analytics",
     "batch-stock",
@@ -256,6 +268,13 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
   );
   const weeks = toWeeks(daily);
   const feedPerBird = weeks.filter((w) => w.feed_g_per_bird !== null);
+  // Plotted in bags when the feed has a bag size (the tooltip still spells out bags + kg), else kg.
+  const feedUnit = feedBag ? bagSize(feedBag) : 1;
+  const feedPeriods = toFeedPeriods(daily, FEED_VIEWS.find((v) => v.value === feedView)!.days).map((p) => ({
+    ...p,
+    label: periodLabel(p),
+    amount: Number((p.feed_kg / feedUnit).toFixed(2)),
+  }));
   const houseCost = new Map<string, { house: string; cost: number }>();
   for (const i of items)
     for (const h of i.houses) {
@@ -418,6 +437,43 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
               />
             </LineChart>
           </ChartCard>
+
+          <div className="lg:col-span-2">
+            <ChartCard
+              title={`Feed used by day of the batch (${feedBag ? "bags" : "kg"})`}
+              empty={feedPeriods.some((p) => p.feed_kg > 0) ? null : "No feed used yet."}
+              action={
+                <Tabs value={feedView} onValueChange={(v) => setFeedView(v as FeedView)}>
+                  <TabsList>
+                    {FEED_VIEWS.map((v) => (
+                      <TabsTrigger key={v.value} value={v.value}>
+                        {v.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              }
+            >
+              <BarChart data={feedPeriods}>
+                <CartesianGrid {...chartGridProps} />
+                <XAxis dataKey="label" {...chartAxisProps} />
+                <YAxis {...chartAxisProps} />
+                <Tooltip
+                  contentStyle={chartTooltipContentStyle}
+                  labelFormatter={(_l, items) => {
+                    const p = items[0]?.payload as FeedPeriod | undefined;
+                    return p ? `${p.from === p.to ? "Day" : "Days"} ${periodLabel(p)}` : "";
+                  }}
+                  formatter={(_v, _name, entry) => {
+                    const p = entry.payload as FeedPeriod;
+                    const rate = p.feed_g_per_bird !== null ? ` · ${p.feed_g_per_bird} g per bird per day` : "";
+                    return [`${feed(p.feed_kg)} · ${tk(p.feed_cost)}${rate}`, "Feed"];
+                  }}
+                />
+                <Bar dataKey="amount" fill={CATEGORICAL_COLORS[0]} radius={[4, 4, 0, 0]} maxBarSize={48} />
+              </BarChart>
+            </ChartCard>
+          </div>
 
           <ChartCard title="Stock cost by house" empty={byHouse.some((h) => h.cost > 0) ? null : "No costed stock used yet."}>
             <BarChart data={byHouse} layout="vertical" margin={{ left: 8 }}>
