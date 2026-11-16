@@ -62,7 +62,6 @@ export type FeedPeriod = {
   from: number;
   to: number;
   feed_kg: number;
-  feed_cost: number;
   /** Average grams per live bird per day over the period; null with no feed or no birds. */
   feed_g_per_bird: number | null;
 };
@@ -73,17 +72,15 @@ export function toFeedPeriods(daily: DayRow[], size: number): FeedPeriod[] {
   const periods = new Map<number, FeedPeriod & { birdDays: number }>();
   for (const d of daily) {
     const key = Math.ceil(d.day / size);
-    const p = periods.get(key) ?? { from: d.day, to: d.day, feed_kg: 0, feed_cost: 0, feed_g_per_bird: null, birdDays: 0 };
+    const p = periods.get(key) ?? { from: d.day, to: d.day, feed_kg: 0, feed_g_per_bird: null, birdDays: 0 };
     p.to = d.day;
     p.feed_kg += d.feed_kg;
-    p.feed_cost += d.feed_cost;
     p.birdDays += d.birds;
     periods.set(key, p);
   }
   return [...periods.values()].map(({ birdDays, ...p }) => ({
     ...p,
     feed_kg: Number(p.feed_kg.toFixed(3)),
-    feed_cost: r2(p.feed_cost),
     feed_g_per_bird: birdDays > 0 && p.feed_kg > 0 ? Math.round((p.feed_kg * 1000) / birdDays) : null,
   }));
 }
