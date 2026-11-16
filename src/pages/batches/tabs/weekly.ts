@@ -56,3 +56,34 @@ export function toWeeks(daily: DayRow[]): WeekRow[] {
     feed_g_per_bird: birdDays > 0 && w.feed_kg > 0 ? Math.round((w.feed_kg * 1000) / birdDays) : null,
   }));
 }
+
+export type FeedPeriod = {
+  /** First and last day of the batch the period covers (a partial last period ends at the last day so far). */
+  from: number;
+  to: number;
+  feed_kg: number;
+  feed_cost: number;
+  /** Average grams per live bird per day over the period; null with no feed or no birds. */
+  feed_g_per_bird: number | null;
+};
+
+/** Feed only, grouped into blocks of `size` days of the batch (1 = daily, 7 = weekly, 10, 30 = monthly).
+ * Same bird-days rate as toWeeks, so a weekly entry still reads as a daily rate. */
+export function toFeedPeriods(daily: DayRow[], size: number): FeedPeriod[] {
+  const periods = new Map<number, FeedPeriod & { birdDays: number }>();
+  for (const d of daily) {
+    const key = Math.ceil(d.day / size);
+    const p = periods.get(key) ?? { from: d.day, to: d.day, feed_kg: 0, feed_cost: 0, feed_g_per_bird: null, birdDays: 0 };
+    p.to = d.day;
+    p.feed_kg += d.feed_kg;
+    p.feed_cost += d.feed_cost;
+    p.birdDays += d.birds;
+    periods.set(key, p);
+  }
+  return [...periods.values()].map(({ birdDays, ...p }) => ({
+    ...p,
+    feed_kg: Number(p.feed_kg.toFixed(3)),
+    feed_cost: r2(p.feed_cost),
+    feed_g_per_bird: birdDays > 0 && p.feed_kg > 0 ? Math.round((p.feed_kg * 1000) / birdDays) : null,
+  }));
+}
