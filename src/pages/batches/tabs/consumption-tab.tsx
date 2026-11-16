@@ -379,7 +379,11 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
               <Tooltip
                 contentStyle={chartTooltipContentStyle}
                 labelFormatter={(w) => weekLabel(Number(w))}
-                formatter={(v: TooltipValueType | undefined, name) => [tk(Number(v ?? 0)), name]}
+                formatter={(v: TooltipValueType | undefined, name, entry) => [
+                  // Feed also reads in bags; the other categories have no weekly quantity, so cost only.
+                  entry.dataKey === "feed_cost" ? `${tk(Number(v ?? 0))} · ${feed((entry.payload as WeekRow).feed_kg)}` : tk(Number(v ?? 0)),
+                  name,
+                ]}
               />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} itemSorter={null} />
               <Bar dataKey="feed_cost" name="Feed" stackId="c" fill={CATEGORICAL_COLORS[0]} />
