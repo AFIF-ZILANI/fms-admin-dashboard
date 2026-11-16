@@ -1,6 +1,6 @@
 // Run with `bun test src/pages/batches`.
 import { expect, test } from "bun:test";
-import { toFeedPeriods, toWeeks, type DayRow } from "./weekly";
+import { feedVsGain, toFeedPeriods, toWeeks, type DayRow } from "./weekly";
 
 const day = (d: number, feed_kg: number, birds: number, feed_cost = 0): DayRow => ({
   day: d,
@@ -34,4 +34,13 @@ test("feed periods group by block size; the last block stops at the last day so 
     { from: 1, to: 10, feed_kg: 30, feed_g_per_bird: 30 }, // 30 kg / 1000 bird-days
     { from: 11, to: 12, feed_kg: 20, feed_g_per_bird: 100 }, // 20 kg / 200 bird-days
   ]);
+});
+
+test("feed vs gain: weighed on day 8 counts days 1-7 of feed against the gain since day 1", () => {
+  // 100 birds days 1-7, 70 kg on day 7 -> 700 g/bird; 40 g -> 600 g = 560 g gain
+  const daily = [1, 2, 3, 4, 5, 6, 7, 8].map((d) => day(d, d === 7 ? 70 : d === 8 ? 99 : 0, 100));
+  expect(feedVsGain(daily, [{ day: 1, weight: 40 }, { day: 8, weight: 600 }])).toEqual([
+    { from: 1, to: 8, feed_g_per_bird: 700, gain_g: 560, fcr: 1.25 },
+  ]);
+  expect(feedVsGain(daily, [{ day: 1, weight: 40 }, { day: 8, weight: 30 }])[0]!.fcr).toBeNull(); // no gain
 });

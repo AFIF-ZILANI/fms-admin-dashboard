@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Plus, Scale } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, LabelList, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TooltipValueType } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,16 +13,23 @@ import { formatDate, formatMoney } from "@/lib/utils";
 import type { Batch, WeightRecord } from "@/pages/batches/types";
 import { WeightFormDialog } from "@/pages/batches/tabs/weight-form-dialog";
 import { cycleDay } from "@/pages/batches/cycle-day";
-import { CHART_HEIGHT, chartAxisProps, chartGridProps, chartTooltipContentStyle, SINGLE_SERIES_STROKE } from "@/pages/analytics/chart-theme";
+import { CATEGORICAL_COLORS, CHART_HEIGHT, chartAxisProps, chartGridProps, chartTooltipContentStyle, SINGLE_SERIES_STROKE } from "@/pages/analytics/chart-theme";
+import { feedVsGain, type DayRow, type FeedGainRow } from "@/pages/batches/tabs/weekly";
 
 export function WeightTab({ batch }: { batch: Batch }) {
   const [formOpen, setFormOpen] = useState(false);
-  const [chart, setChart] = useState<"curve" | "gain">("curve");
+  const [chart, setChart] = useState<"curve" | "gain" | "feed">("curve");
 
   const { data, isLoading } = useGetData<Paginated<WeightRecord>>(
     `/weight-records?batch_id=${batch.id}&limit=100`,
     ["weight-records", batch.id]
   );
+  // Same query as the Consumption tab, so it's shared from cache.
+  const { data: stock, isLoading: stockLoading } = useGetData<{ daily: DayRow[] }>(`/analytics/batches/${batch.id}/stock`, [
+    "analytics",
+    "batch-stock",
+    batch.id,
+  ]);
 
   const houseName = (id: string) => batch.houseBalances.find((b) => b.house_id === id)?.house.name ?? id;
 
@@ -53,6 +60,12 @@ export function WeightTab({ batch }: { batch: Batch }) {
       return { day: `Day ${day}`, gain: Math.round(gain), days, perDay: Math.round((gain / days) * 10) / 10, start: undefined, label: `${gain >= 0 ? "+" : ""}${Math.round(gain)}g` };
     });
   }, [growthSeries, batch.starting_date]);
+
+  // Each weighing against the feed eaten since the one before (weighed day 8 = feed of days 1-7).
+  const feedGain = feedVsGain(
+    stock?.daily ?? [],
+    growthSeries.map(({ date, weight }) => ({ day: cycleDay(batch.starting_date, new Date(date)), weight })),
+  ).map((r) => ({ ...r, day: `Day ${r.to}`, label: r.fcr === null ? "" : `FCR ${r.fcr}` }));
 
   const latest = growthSeries.at(-1);
   const previous = growthSeries.at(-2);
@@ -105,12 +118,13 @@ export function WeightTab({ batch }: { batch: Batch }) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {chart === "curve" ? "Growth curve" : "Daily weight gain between samples"}
+              {chart === "curve" ? "Growth curve" : chart === "gain" ? "Daily weight gain between samples" : "Feed eaten vs weight gained, per bird"}
             </CardTitle>
             <Tabs value={chart} onValueChange={(v) => setChart(v as typeof chart)}>
               <TabsList>
                 <TabsTrigger value="curve">Growth curve</TabsTrigger>
                 <TabsTrigger value="gain">Weight gain</TabsTrigger>
+                <TabsTrigger value="feed">Feed vs gain</TabsTrigger>
               </TabsList>
             </Tabs>
           </CardHeader>
@@ -155,6 +169,38 @@ export function WeightTab({ batch }: { batch: Batch }) {
                       position="top"
                       className="fill-muted-foreground text-xs tabular-nums"
                     />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+            {!isLoading && growthSeries.length > 0 && chart === "feed" && stockLoading && (
+              <Skeleton style={{ height: CHART_HEIGHT }} className="w-full" />
+            )}
+            {!isLoading && growthSeries.length > 0 && chart === "feed" && !stockLoading && feedGain.length === 0 && (
+              <div className="flex items-center justify-center text-sm text-muted-foreground" style={{ height: CHART_HEIGHT }}>
+                Needs two weighings: the gain between them is set against the feed eaten in those days.
+              </div>
+            )}
+            {!isLoading && chart === "feed" && !stockLoading && feedGain.length > 0 && (
+              <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                <BarChart data={feedGain} margin={{ top: 20 }}>
+                  <CartesianGrid {...chartGridProps} />
+                  <XAxis dataKey="day" {...chartAxisProps} />
+                  <YAxis {...chartAxisProps} unit=" g" />
+                  <Tooltip
+                    contentStyle={chartTooltipContentStyle}
+                    labelFormatter={(_l, items) => {
+                      const r = items[0]?.payload as FeedGainRow | undefined;
+                      if (!r) return "";
+                      const fcr = r.fcr === null ? "" : ` · FCR ${r.fcr}`;
+                      return `Weighed day ${r.to} · feed of days ${r.from}–${r.to - 1}${fcr}`;
+                    }}
+                    formatter={(v: TooltipValueType | undefined, name) => [`${v} g`, name]}
+                  />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="feed_g_per_bird" name="Feed per bird" fill={CATEGORICAL_COLORS[0]} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="gain_g" name="Weight gained" fill={SINGLE_SERIES_STROKE} radius={[2, 2, 0, 0]}>
+                    <LabelList dataKey="label" position="top" className="fill-muted-foreground text-xs tabular-nums" />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
