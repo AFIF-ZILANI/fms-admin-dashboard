@@ -44,7 +44,6 @@ type BatchStock = {
   items: ItemRow[];
   stays: { house_id: string; house_name: string; from: string; to: string }[];
   total_cost: number;
-  cost_by_category: { feed: number; medicine: number; vaccine: number; other: number };
   uncosted_items: string[];
   daily: DayRow[];
 };
@@ -265,6 +264,12 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
       houseCost.set(h.house_id, row);
     }
   const byHouse = [...houseCost.values()].map((r) => ({ ...r, cost: Number(r.cost.toFixed(2)) })).sort((a, b) => b.cost - a.cost);
+  // One bar per item category as stored (Medicine and Supplement stay apart), not the server's merged buckets.
+  const categoryCost = new Map<string, number>();
+  for (const i of items) if (i.cost) categoryCost.set(i.category, (categoryCost.get(i.category) ?? 0) + i.cost);
+  const byCategory = [...categoryCost]
+    .map(([c, cost]) => ({ name: humanizeEnum(c), cost: Number(cost.toFixed(2)) }))
+    .sort((a, b) => b.cost - a.cost);
 
   const columns: Column<ItemRow>[] = [
     {
@@ -424,16 +429,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
           </ChartCard>
 
           <ChartCard title="Where the money went" empty={data && data.total_cost > 0 ? null : "No costed stock used yet."}>
-            <BarChart
-              data={[
-                { name: "Feed", cost: data?.cost_by_category.feed ?? 0 },
-                { name: "Medicine & supplements", cost: data?.cost_by_category.medicine ?? 0 },
-                { name: "Vaccines", cost: data?.cost_by_category.vaccine ?? 0 },
-                { name: "Other", cost: data?.cost_by_category.other ?? 0 },
-              ]}
-              layout="vertical"
-              margin={{ left: 8 }}
-            >
+            <BarChart data={byCategory} layout="vertical" margin={{ left: 8 }}>
               <CartesianGrid {...chartGridProps} vertical horizontal={false} />
               <XAxis type="number" tickFormatter={formatTkCompact} {...chartAxisProps} />
               <YAxis type="category" dataKey="name" width={130} {...chartAxisProps} />
@@ -444,11 +440,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
                   "Cost",
                 ]}
               />
-              <Bar dataKey="cost" radius={[0, 4, 4, 0]} barSize={18}>
-                {CATEGORICAL_COLORS.map((c) => (
-                  <Cell key={c} fill={c} />
-                ))}
-              </Bar>
+              <Bar dataKey="cost" fill={SINGLE_SERIES_STROKE} radius={[0, 4, 4, 0]} barSize={18} />
             </BarChart>
           </ChartCard>
 
