@@ -84,3 +84,27 @@ export function toFeedPeriods(daily: DayRow[], size: number): FeedPeriod[] {
     feed_g_per_bird: birdDays > 0 && p.feed_kg > 0 ? Math.round((p.feed_kg * 1000) / birdDays) : null,
   }));
 }
+
+export type FeedGainRow = {
+  /** Weighed on `from` and again on `to`; the feed counted is days from..to-1 (weighed day 8 = days 1-7). */
+  from: number;
+  to: number;
+  feed_g_per_bird: number;
+  gain_g: number;
+  /** Grams of feed per gram gained; null when there's no feed or no gain to divide by. */
+  fcr: number | null;
+};
+
+/** Feed eaten between two weighings against the weight put on over them. Feed per bird divides by the
+ * interval's average live birds, so deaths and sales in the middle don't inflate it. */
+export function feedVsGain(daily: DayRow[], weighings: { day: number; weight: number }[]): FeedGainRow[] {
+  return weighings.slice(1).map((w, i) => {
+    const prev = weighings[i]!;
+    const span = daily.filter((d) => d.day >= prev.day && d.day < w.day);
+    const kg = span.reduce((s, d) => s + d.feed_kg, 0);
+    const birdDays = span.reduce((s, d) => s + d.birds, 0);
+    const feed = birdDays > 0 ? Math.round((kg * 1000 * span.length) / birdDays) : 0;
+    const gain = Math.round(w.weight - prev.weight);
+    return { from: prev.day, to: w.day, feed_g_per_bird: feed, gain_g: gain, fcr: feed > 0 && gain > 0 ? r2(feed / gain) : null };
+  });
+}
