@@ -28,10 +28,10 @@ test("a partial week divides by the days so far; a week with no feed has no rate
 });
 
 test("feed periods group by block size; the last block stops at the last day so far", () => {
-  const daily = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((d) => day(d, d === 3 ? 30 : d === 11 ? 20 : 0, 100, d === 3 ? 1500 : 0));
+  const daily = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((d) => day(d, d === 3 ? 30 : d === 11 ? 20 : 0, 100));
   expect(toFeedPeriods(daily, 1)).toHaveLength(12);
   expect(toFeedPeriods(daily, 10)).toEqual([
-    { from: 1, to: 10, feed_kg: 30, feed_cost: 1500, feed_g_per_bird: 30 }, // 30 kg / 1000 bird-days
-    { from: 11, to: 12, feed_kg: 20, feed_cost: 0, feed_g_per_bird: 100 }, // 20 kg / 200 bird-days
+    { from: 1, to: 10, feed_kg: 30, feed_g_per_bird: 30 }, // 30 kg / 1000 bird-days
+    { from: 11, to: 12, feed_kg: 20, feed_g_per_bird: 100 }, // 20 kg / 200 bird-days
   ]);
 });

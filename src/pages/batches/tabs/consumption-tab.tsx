@@ -467,7 +467,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
                   formatter={(_v, _name, entry) => {
                     const p = entry.payload as FeedPeriod;
                     const rate = p.feed_g_per_bird !== null ? ` · ${p.feed_g_per_bird} g per bird per day` : "";
-                    return [`${feed(p.feed_kg)} · ${tk(p.feed_cost)}${rate}`, "Feed"];
+                    return [`${feed(p.feed_kg)}${rate}`, "Feed"];
                   }}
                 />
                 <Bar dataKey="amount" fill={CATEGORICAL_COLORS[0]} radius={[4, 4, 0, 0]} maxBarSize={48} />
