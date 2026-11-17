@@ -30,9 +30,11 @@ export function formatTk(value: string | number): string {
   return n < 0 ? `-৳${formatMoney(-n)}` : `৳${formatMoney(n)}`
 }
 
-/** Short taka for chart axes: "৳12K", "৳1.5M". */
+/** Short taka for chart axes, Bangladeshi units: "৳12K", "৳1.5L" (lakh), "৳2Cr" (crore). */
 export function formatTkCompact(value: number): string {
-  const short = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(Math.abs(value))
+  const abs = Math.abs(value)
+  const [div, unit] = abs >= 1e7 ? [1e7, "Cr"] : abs >= 1e5 ? [1e5, "L"] : abs >= 1e3 ? [1e3, "K"] : [1, ""]
+  const short = `${parseFloat((abs / div).toFixed(1))}${unit}`
   return value < 0 ? `-৳${short}` : `৳${short}`
 }
 
