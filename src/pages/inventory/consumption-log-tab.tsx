@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { TruncatedText } from "@/components/shared/truncated-text";
-import { CalendarDays, ChevronDown, Coins, ListTree, Plus, QrCode, Tags, Wheat } from "lucide-react";
+import { CalendarDays, ChevronDown, Coins, ListTree, Pencil, Plus, QrCode, Tags, Wheat } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -16,6 +18,7 @@ import type { House } from "@/pages/houses/types";
 import { ConsumptionFormDialog } from "@/pages/inventory/consumption-form-dialog";
 import { CodedConsumptionDialog } from "@/pages/inventory/coded-consumption-dialog";
 import { formatEntered } from "@/pages/inventory/stock-qty";
+import { FixUsageDialog } from "@/pages/inventory/fix-usage-dialog";
 
 export function ConsumptionLogTab() {
   const [batchFilter, setBatchFilter] = useState<string>("ALL");
@@ -25,6 +28,7 @@ export function ConsumptionLogTab() {
   const [occurredTo, setOccurredTo] = useState("");
   const [recordOpen, setRecordOpen] = useState(false);
   const [codedOpen, setCodedOpen] = useState(false);
+  const [fixing, setFixing] = useState<Consumption | null>(null);
 
   const query = new URLSearchParams({ limit: "100" });
   if (batchFilter !== "ALL") query.set("batch_id", batchFilter);
@@ -70,7 +74,25 @@ export function ConsumptionLogTab() {
       render: (c) => new Date(c.date).toLocaleDateString(),
       sortValue: (c) => new Date(c.date).getTime(),
     },
-    { key: "item", header: "Item", render: (c) => <TruncatedText text={c.item.name} className="max-w-48" />, sortValue: (c) => c.item.name },
+    {
+      key: "item",
+      header: "Item",
+      render: (c) => (
+        <span className="flex items-center gap-2">
+          <TruncatedText text={c.item.name} className="max-w-48" />
+          {c.fixed_at && (
+            <Tooltip>
+              <TooltipTrigger render={<Badge variant="outline">Fixed</Badge>} />
+              <TooltipContent>
+                {c.fixed_by?.name ?? "Someone"}, {new Date(c.fixed_at).toLocaleDateString()}: {c.fix_reason}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </span>
+      ),
+      sortValue: (c) => c.item.name,
+      exportValue: (c) => c.item.name,
+    },
     { key: "quantity", header: "Quantity", render: (c) => formatEntered(c.quantity, c.unit, c.item), numeric: true, sortValue: (c) => Number(c.base_quantity) },
     { key: "house", header: "House", render: (c) => c.house.name },
     { key: "batch", header: "Batch", render: (c) => c.batch?.batch_code ?? "—" },
@@ -78,6 +100,17 @@ export function ConsumptionLogTab() {
       key: "coded_unit",
       header: "Coded unit",
       render: (c) => (c.stock_unit ? <span className="font-mono text-xs">{c.stock_unit.id.slice(0, 8)}</span> : "—"),
+    },
+    {
+      key: "fix",
+      header: "",
+      render: (c) => (
+        <Button variant="ghost" size="sm" onClick={() => setFixing(c)}>
+          <Pencil />
+          Fix
+        </Button>
+      ),
+      exportValue: () => null,
     },
   ];
 
@@ -192,6 +225,7 @@ export function ConsumptionLogTab() {
 
       <ConsumptionFormDialog open={recordOpen} onOpenChange={setRecordOpen} />
       <CodedConsumptionDialog open={codedOpen} onOpenChange={setCodedOpen} />
+      {fixing && <FixUsageDialog key={fixing.id} consumption={fixing} onClose={() => setFixing(null)} />}
     </div>
   );
 }
