@@ -95,11 +95,12 @@ export function FixUsageDialog({ consumption, onClose }: FixUsageDialogProps) {
     void queryClient.invalidateQueries({ predicate: (q) => !(q.queryKey[0] === "consumptions" && q.queryKey[1] === id) });
     onClose();
   };
-  const fix = usePatchData<unknown, Record<string, unknown>>(`/consumptions/${id}`, ["consumptions"], {
+  // The hook's own key matches nothing: done() refreshes everything except this record's read.
+  const fix = usePatchData<unknown, Record<string, unknown>>(`/consumptions/${id}`, ["fix-usage"], {
     onSuccess: () => done("Usage fixed"),
     onError: (e) => toast.error(e.message),
   });
-  const remove = usePostData<unknown, { reason: string }>(`/consumptions/${id}/remove`, ["consumptions"], {
+  const remove = usePostData<unknown, { reason: string }>(`/consumptions/${id}/remove`, ["fix-usage"], {
     onSuccess: () => done("Usage removed"),
     onError: (e) => toast.error(e.message),
   });
