@@ -240,6 +240,10 @@ export type Consumption = {
   house: House;
   item: Item;
   stock_unit: StockUnit | null;
+  /** Set by Fix usage: the record was corrected in place. */
+  fixed_at: string | null;
+  fix_reason: string | null;
+  fixed_by?: { id: string; name: string } | null;
 };
 
 /** A4 print layout -- must match the @media print grid in index.css (19mm codes, 2.5mm gaps, 8mm margins). */
