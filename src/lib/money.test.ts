@@ -7,5 +7,9 @@ test("money always carries the taka sign, before any minus", () => {
   expect(formatTk("99.5")).toBe("৳99.5");
   expect(formatTk(-1200)).toBe("-৳1,200");
   expect(formatTkCompact(12000)).toBe("৳12K");
-  expect(formatTkCompact(-1500000)).toBe("-৳1.5M");
+  expect(formatTkCompact(450)).toBe("৳450");
+  expect(formatTkCompact(100000)).toBe("৳1L");
+  expect(formatTkCompact(-150000)).toBe("-৳1.5L");
+  expect(formatTkCompact(10000000)).toBe("৳1Cr");
+  expect(formatTkCompact(-25000000)).toBe("-৳2.5Cr");
 });
