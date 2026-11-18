@@ -112,9 +112,9 @@ export function BirdSaleDetailPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Final amount" value={formatTk(Number(sale.total_amount) - Number(sale.discount_amount ?? 0))} icon={Bird} />
-        <KPICard label="Paid" value={formatTk(amounts.paid)} icon={Bird} />
-        <KPICard label="Due" value={formatTk(amounts.due)} icon={Bird} />
+        <KPICard label="Final amount" money={Number(sale.total_amount) - Number(sale.discount_amount ?? 0)} icon={Bird} />
+        <KPICard label="Paid" money={amounts.paid} icon={Bird} />
+        <KPICard label="Due" money={amounts.due} icon={Bird} />
       </div>
 
       <Card>

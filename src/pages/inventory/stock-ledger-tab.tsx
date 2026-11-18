@@ -95,7 +95,7 @@ export function StockLedgerTab() {
         <KPICard label="Total entries" value={summary?.total.toLocaleString()} hint="all time" icon={BookText} isLoading={summaryLoading} isError={summaryError} />
         <KPICard label="In (30 days)" value={summary?.in_30d.toLocaleString()} hint="stock received" icon={PackagePlus} isLoading={summaryLoading} isError={summaryError} />
         <KPICard label="Out (30 days)" value={summary?.out_30d.toLocaleString()} hint="stock used or moved out" icon={PackageMinus} isLoading={summaryLoading} isError={summaryError} />
-        <KPICard label="Received value" value={summary ? formatTk(summary.received_value_30d) : undefined} hint="last 30 days, costed entries" icon={Wallet} isLoading={summaryLoading} isError={summaryError} />
+        <KPICard label="Received value" money={summary?.received_value_30d} hint="last 30 days, costed entries" icon={Wallet} isLoading={summaryLoading} isError={summaryError} />
         <KPICard
           label="Wastage / expired"
           value={summary?.loss_30d.toLocaleString()}

@@ -73,8 +73,8 @@ export function PaymentsTab() {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Total payments" value={data?.total ?? payments.length} icon={Receipt} isLoading={isLoading} />
-        <KPICard label="Total incoming" value={formatTk(totalIncoming)} icon={ArrowDownLeft} isLoading={isLoading} />
-        <KPICard label="Total outgoing" value={formatTk(totalOutgoing)} icon={ArrowUpRight} isLoading={isLoading} />
+        <KPICard label="Total incoming" money={totalIncoming} icon={ArrowDownLeft} isLoading={isLoading} />
+        <KPICard label="Total outgoing" money={totalOutgoing} icon={ArrowUpRight} isLoading={isLoading} />
       </div>
 
       <div className="flex justify-end">

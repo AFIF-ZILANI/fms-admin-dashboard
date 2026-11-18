@@ -150,8 +150,8 @@ export function SupplierDetailPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Purchases" value={purchaseRows.length} icon={Package} />
-        <KPICard label="Total purchased" value={formatTk(totalPurchased)} icon={Receipt} />
-        <KPICard label="Outstanding due" value={formatTk(totalDue)} icon={Receipt} />
+        <KPICard label="Total purchased" money={totalPurchased} icon={Receipt} />
+        <KPICard label="Outstanding due" money={totalDue} icon={Receipt} />
       </div>
 
       <Card>

@@ -106,7 +106,7 @@ export function OverviewTab() {
   const cur = summary.data?.current;
   const prev = summary.data?.previous;
   const loading = summary.isLoading || !validCustom;
-  const tile = (pick: (p: FinancePeriod) => number) => (cur ? formatTk(pick(cur)) : "—");
+  const tile = (pick: (p: FinancePeriod) => number) => (cur ? pick(cur) : null);
   const hint = (pick: (p: FinancePeriod) => number) => (cur && prev ? change(pick(cur), pick(prev), period.compareLabel) : undefined);
 
   return (
@@ -164,20 +164,20 @@ export function OverviewTab() {
 
       {/* Am I making money, do I have cash, who owes whom */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <KPICard label="Cash in accounts" value={tile((p) => p.cash)} icon={Wallet} isLoading={loading} isError={summary.isError} hint={hint((p) => p.cash)} tone={cur && cur.cash < 0 ? "critical" : undefined} />
-        <KPICard label="Revenue" value={tile((p) => p.revenue)} icon={TrendingUp} isLoading={loading} isError={summary.isError} hint={hint((p) => p.revenue)} />
-        <KPICard label="Costs" value={tile((p) => p.costs)} icon={Receipt} isLoading={loading} isError={summary.isError} hint={hint((p) => p.costs)} />
+        <KPICard label="Cash in accounts" money={tile((p) => p.cash)} icon={Wallet} isLoading={loading} isError={summary.isError} hint={hint((p) => p.cash)} tone={cur && cur.cash < 0 ? "critical" : undefined} />
+        <KPICard label="Revenue" money={tile((p) => p.revenue)} icon={TrendingUp} isLoading={loading} isError={summary.isError} hint={hint((p) => p.revenue)} />
+        <KPICard label="Costs" money={tile((p) => p.costs)} icon={Receipt} isLoading={loading} isError={summary.isError} hint={hint((p) => p.costs)} />
         <KPICard
           label="Net profit"
-          value={tile((p) => p.net_profit)}
+          money={tile((p) => p.net_profit)}
           icon={Scale}
           isLoading={loading}
           isError={summary.isError}
           tone={cur && cur.net_profit < 0 ? "critical" : undefined}
           hint={cur ? `${cur.margin === null ? "No revenue" : `${(cur.margin * 100).toFixed(0)}% margin`}. ${hint((p) => p.net_profit) ?? ""}` : undefined}
         />
-        <KPICard label="Customers owe us" value={tile((p) => p.receivables)} icon={HandCoins} isLoading={loading} isError={summary.isError} hint={hint((p) => p.receivables)} />
-        <KPICard label="We owe" value={tile((p) => p.payables)} icon={Banknote} isLoading={loading} isError={summary.isError} hint={hint((p) => p.payables)} />
+        <KPICard label="Customers owe us" money={tile((p) => p.receivables)} icon={HandCoins} isLoading={loading} isError={summary.isError} hint={hint((p) => p.receivables)} />
+        <KPICard label="We owe" money={tile((p) => p.payables)} icon={Banknote} isLoading={loading} isError={summary.isError} hint={hint((p) => p.payables)} />
       </div>
 
       {/* Am I making money over time, and where does it go */}

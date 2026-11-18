@@ -182,9 +182,9 @@ function AssetRegister() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-3">
-        <KPICard label="Equipment cost" value={formatTk(totals.cost)} icon={Wrench} isLoading={isLoading} hint={`${rows.length} asset${rows.length === 1 ? "" : "s"}`} />
-        <KPICard label="Charged to batches" value={formatTk(totals.used)} icon={TrendingDown} isLoading={isLoading} hint="Through depreciation at batch close" />
-        <KPICard label="Value left in use" value={formatTk(totals.left)} icon={Wrench} isLoading={isLoading} hint="Active assets only" />
+        <KPICard label="Equipment cost" money={totals.cost} icon={Wrench} isLoading={isLoading} hint={`${rows.length} asset${rows.length === 1 ? "" : "s"}`} />
+        <KPICard label="Charged to batches" money={totals.used} icon={TrendingDown} isLoading={isLoading} hint="Through depreciation at batch close" />
+        <KPICard label="Value left in use" money={totals.left} icon={Wrench} isLoading={isLoading} hint="Active assets only" />
       </div>
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-3">

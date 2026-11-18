@@ -38,6 +38,11 @@ export function formatTkCompact(value: number): string {
   return value < 0 ? `-৳${short}` : `৳${short}`
 }
 
+/** KPI-tile taka: exact under ৳1,000 ("৳450.5"), short from the thousands up ("৳2K", "৳1.7Cr"). */
+export function formatTkShort(value: number): string {
+  return Math.abs(value) < 1000 ? formatTk(value) : formatTkCompact(value)
+}
+
 /** Round to the cents money columns store (Decimal(10,2)) -- float sums like 0.1 + 0.2 drift past them. */
 export function toCents(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100

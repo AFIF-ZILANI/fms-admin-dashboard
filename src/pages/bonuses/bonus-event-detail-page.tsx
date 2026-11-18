@@ -155,7 +155,7 @@ export function BonusEventDetailPage() {
             value={`${event.min_service_months} months`}
             hint={event.prorate ? "Prorated below that" : "Nothing below that"}
           />
-          <KPICard label="Granted" value={formatTk(grantedTotal)} hint={`${granted.length} employee${granted.length === 1 ? "" : "s"}`} />
+          <KPICard label="Granted" money={grantedTotal} hint={`${granted.length} employee${granted.length === 1 ? "" : "s"}`} />
         </div>
       )}
 

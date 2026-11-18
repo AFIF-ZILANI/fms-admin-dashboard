@@ -51,8 +51,8 @@ export function AssetsTab() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Active assets" value={activeCount} icon={CheckCircle2} isLoading={isLoading} />
-        <KPICard label="Purchase cost" value={formatTk(totalCost)} hint="active assets" icon={Receipt} isLoading={isLoading} />
-        <KPICard label="Book value" value={formatTk(totalBookValue)} hint="what they're worth now" icon={Wallet} isLoading={isLoading} />
+        <KPICard label="Purchase cost" money={totalCost} hint="active assets" icon={Receipt} isLoading={isLoading} />
+        <KPICard label="Book value" money={totalBookValue} hint="what they're worth now" icon={Wallet} isLoading={isLoading} />
         <KPICard label="Depreciated" value={depreciatedPct === null ? "—" : `${depreciatedPct.toFixed(0)}%`} hint="of purchase cost written off" icon={Percent} isLoading={isLoading} />
         <KPICard label="Nearing end of life" value={nearingEnd} hint="one batch or less left" tone={nearingEnd > 0 ? "warning" : undefined} icon={Hourglass} isLoading={isLoading} />
         <KPICard label="Avg batches left" value={avgLeft === null ? "—" : avgLeft.toFixed(1)} hint="of useful life" icon={Boxes} isLoading={isLoading} />

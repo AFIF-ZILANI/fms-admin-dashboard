@@ -34,14 +34,14 @@ export function EmployeesListPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPICard
           label="Wage bill this month"
-          value={formatTk(data?.wage_bill_projected ?? 0)}
+          money={data?.wage_bill_projected ?? 0}
           icon={Banknote}
           hint={`${data?.active_employees ?? 0} active · projected with allowances`}
           {...tile}
         />
         <KPICard
           label="Unpaid wages"
-          value={formatTk(data?.unpaid_wages ?? 0)}
+          money={data?.unpaid_wages ?? 0}
           icon={WalletCards}
           tone={data?.payout_overdue ? "critical" : data?.unpaid_wages ? "warning" : undefined}
           hint={
@@ -53,7 +53,7 @@ export function EmployeesListPage() {
         />
         <KPICard
           label="Labour cost per bird"
-          value={data?.labour_cost_per_bird == null ? "—" : formatTk(data.labour_cost_per_bird)}
+          money={data?.labour_cost_per_bird}
           icon={Bird}
           hint={
             data?.live_birds

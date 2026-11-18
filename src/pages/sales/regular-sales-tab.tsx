@@ -160,14 +160,14 @@ export function RegularSalesTab() {
         />
         <KPICard
           label="Total revenue"
-          value={formatTk(summary?.total_revenue ?? 0)}
+          money={summary?.total_revenue ?? 0}
           icon={Wallet}
           isLoading={summaryLoading}
           isError={summaryError}
         />
         <KPICard
           label="Outstanding due"
-          value={formatTk(summary?.total_due ?? 0)}
+          money={summary?.total_due ?? 0}
           icon={Receipt}
           isLoading={summaryLoading}
           isError={summaryError}

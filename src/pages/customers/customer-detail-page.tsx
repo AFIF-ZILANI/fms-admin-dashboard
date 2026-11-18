@@ -152,8 +152,8 @@ export function CustomerDetailPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Sales" value={saleRows.length} icon={Receipt} />
-        <KPICard label="Total sold" value={formatTk(totalSold)} icon={Receipt} />
-        <KPICard label="Outstanding receivable" value={formatTk(totalReceivable)} icon={Receipt} />
+        <KPICard label="Total sold" money={totalSold} icon={Receipt} />
+        <KPICard label="Outstanding receivable" money={totalReceivable} icon={Receipt} />
       </div>
 
       <Card>

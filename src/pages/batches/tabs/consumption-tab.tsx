@@ -338,10 +338,10 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KPICard label="Stock cost" value={data ? tk(data.total_cost) : ""} isLoading={isLoading} hint="used + in use" />
+        <KPICard label="Stock cost" money={data?.total_cost} isLoading={isLoading} hint="used + in use" />
         <KPICard
           label="Cost per bird"
-          value={data && placed > 0 ? tk(Number((data.total_cost / placed).toFixed(2))) : "—"}
+          money={data && placed > 0 ? data.total_cost / placed : null}
           isLoading={isLoading}
           hint={`of ${placed.toLocaleString()} placed`}
         />
@@ -353,7 +353,7 @@ export function ConsumptionTab({ batch }: { batch: Batch }) {
         />
         <KPICard
           label="Open stock"
-          value={tk(Number(openValue.toFixed(2)))}
+          money={openValue}
           isLoading={isLoading}
           hint="left in opened bottles, counted in cost"
         />
