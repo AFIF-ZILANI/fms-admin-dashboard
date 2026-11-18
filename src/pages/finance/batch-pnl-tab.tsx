@@ -185,13 +185,13 @@ function Statement({ s }: { s: BatchStatement }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPICard label={running ? "Net profit so far" : "Net profit"} value={formatTk(s.net_profit)} tone={s.net_profit < 0 ? "critical" : undefined} hint={s.margin === null ? "No sales yet" : `${pct(s.margin)} of revenue`} />
+        <KPICard label={running ? "Net profit so far" : "Net profit"} money={s.net_profit} tone={s.net_profit < 0 ? "critical" : undefined} hint={s.margin === null ? "No sales yet" : `${pct(s.margin)} of revenue`} />
         <KPICard
           label="Profit per bird"
-          value={maybe(profitPerBird(s))}
+          money={profitPerBird(s)}
           hint={running ? "Shown once the batch is sold" : `${s.birds.sold.toLocaleString()} birds sold`}
         />
-        <KPICard label="Cost per kg" value={maybe(s.per_unit.cost_per_kg)} hint={s.per_unit.avg_price_per_kg === null ? undefined : `Sold at ${formatTk(s.per_unit.avg_price_per_kg)} / kg`} />
+        <KPICard label="Cost per kg" money={s.per_unit.cost_per_kg} hint={s.per_unit.avg_price_per_kg === null ? undefined : `Sold at ${formatTk(s.per_unit.avg_price_per_kg)} / kg`} />
         <KPICard label="FCR" value={s.per_unit.fcr === null ? "—" : s.per_unit.fcr.toFixed(2)} hint={s.kg.feed === null ? undefined : `${s.kg.feed.toLocaleString()} kg feed`} />
       </div>
 

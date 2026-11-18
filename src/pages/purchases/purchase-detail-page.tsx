@@ -168,9 +168,9 @@ export function PurchaseDetailPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Total" value={formatTk(purchase.total_amount)} icon={Receipt} />
-        <KPICard label="Paid" value={formatTk(amounts.paid)} icon={Receipt} />
-        <KPICard label="Due" value={formatTk(amounts.due)} icon={Receipt} />
+        <KPICard label="Total" money={purchase.total_amount} icon={Receipt} />
+        <KPICard label="Paid" money={amounts.paid} icon={Receipt} />
+        <KPICard label="Due" money={amounts.due} icon={Receipt} />
       </div>
 
       <Card>

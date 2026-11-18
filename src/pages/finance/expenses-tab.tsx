@@ -218,7 +218,7 @@ export function ExpensesTab() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
           label="Total spent"
-          value={summary ? formatTk(summary.total) : "—"}
+          money={summary?.total}
           icon={Wallet}
           isLoading={summaryLoading}
           isError={summaryError}
@@ -231,7 +231,7 @@ export function ExpensesTab() {
         />
         <KPICard
           label="Still to pay"
-          value={summary ? formatTk(summary.unpaid) : "—"}
+          money={summary?.unpaid}
           icon={CreditCard}
           isLoading={summaryLoading}
           isError={summaryError}
@@ -240,7 +240,7 @@ export function ExpensesTab() {
         />
         <KPICard
           label="Charged to batches"
-          value={summary ? formatTk(summary.direct) : "—"}
+          money={summary?.direct}
           icon={Receipt}
           isLoading={summaryLoading}
           isError={summaryError}
@@ -248,7 +248,7 @@ export function ExpensesTab() {
         />
         <KPICard
           label="Farm-wide"
-          value={summary ? formatTk(summary.shared + summary.capital) : "—"}
+          money={summary ? summary.shared + summary.capital : null}
           icon={Layers}
           isLoading={summaryLoading}
           isError={summaryError}

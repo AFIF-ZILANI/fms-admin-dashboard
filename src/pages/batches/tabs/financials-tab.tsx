@@ -69,10 +69,10 @@ export function FinancialsTab({ batch }: { batch: Batch }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KPICard label="Revenue" value={formatTk(pnl.revenue)} hint="bird + other sales" />
-        <KPICard label="Profit" value={formatTk(pnl.profit)} hint={margin !== null ? `${margin.toFixed(1)}% margin` : "no revenue yet"} />
-        <KPICard label="Cost per live bird" value={costPerBird !== null ? formatTk(costPerBird) : "—"} hint={`${live.toLocaleString()} live birds`} />
-        <KPICard label="Unallocated shared costs" value={formatTk(pnl.shared_period_expenses_unallocated)} hint="not in profit" />
+        <KPICard label="Revenue" money={pnl.revenue} hint="bird + other sales" />
+        <KPICard label="Profit" money={pnl.profit} hint={margin !== null ? `${margin.toFixed(1)}% margin` : "no revenue yet"} />
+        <KPICard label="Cost per live bird" money={costPerBird} hint={`${live.toLocaleString()} live birds`} />
+        <KPICard label="Unallocated shared costs" money={pnl.shared_period_expenses_unallocated} hint="not in profit" />
       </div>
 
       <div className="flex flex-col gap-3">

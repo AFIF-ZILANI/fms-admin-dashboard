@@ -338,19 +338,13 @@ export function EmployeeDetailPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPICard
           label="Reference salary"
-          value={
-            employee.reference_salary
-              ? formatTk(employee.reference_salary)
-              : formatTk(role?.reference_salary ?? 0)
-          }
+          money={employee.reference_salary || (role?.reference_salary ?? 0)}
           hint={employee.reference_salary ? "Override" : "Role standard"}
           icon={Wallet}
         />
         <KPICard
           label="Fixed wage (guaranteed)"
-          value={formatTk(
-            FIXED_WAGE_RATIO * Number(employee.reference_salary ?? role?.reference_salary ?? 0)
-          )}
+          money={FIXED_WAGE_RATIO * Number(employee.reference_salary ?? role?.reference_salary ?? 0)}
           icon={ShieldCheck}
         />
         <KPICard label="MTD score sum" value={mtdSum > 0 ? `+${mtdSum}` : mtdSum} icon={Award} />

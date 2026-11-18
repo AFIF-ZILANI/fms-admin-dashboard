@@ -119,8 +119,8 @@ export function ConsumptionLogTab() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KPICard label="Total draws" value={allConsumptions?.total ?? 0} hint="all time" icon={ListTree} isLoading={allLoading} />
         <KPICard label="Draws (30 days)" value={monthConsumptions?.total ?? 0} icon={CalendarDays} isLoading={monthLoading} />
-        <KPICard label="Value consumed" value={formatTk(monthValue)} hint="last 30 days, at avg purchase cost" icon={Coins} isLoading={categoryLoading} isError={categoryError} />
-        <KPICard label="Avg per day" value={formatTk(monthValue / 30)} hint="consumption value" icon={Wheat} isLoading={categoryLoading} isError={categoryError} />
+        <KPICard label="Value consumed" money={monthValue} hint="last 30 days, at avg purchase cost" icon={Coins} isLoading={categoryLoading} isError={categoryError} />
+        <KPICard label="Avg per day" money={monthValue / 30} hint="consumption value" icon={Wheat} isLoading={categoryLoading} isError={categoryError} />
         <KPICard label="Top category" value={topCategory ? humanizeEnum(topCategory.category) : "—"} hint={topCategory ? formatTk(topCategory.total) + ", last 30 days" : "no consumption yet"} icon={Tags} isLoading={categoryLoading} isError={categoryError} />
       </div>
 

@@ -26,11 +26,11 @@ export function SharedCostsTab() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <KPICard label="Farm-wide costs" value={formatTk(total)} icon={Layers} isLoading={isLoading} hint={`Over ${months.length} month${months.length === 1 ? "" : "s"}`} />
-        <KPICard label="Shared to batches" value={formatTk(allocated)} icon={Split} isLoading={isLoading} hint="In each batch's net profit" />
+        <KPICard label="Farm-wide costs" money={total} icon={Layers} isLoading={isLoading} hint={`Over ${months.length} month${months.length === 1 ? "" : "s"}`} />
+        <KPICard label="Shared to batches" money={allocated} icon={Split} isLoading={isLoading} hint="In each batch's net profit" />
         <KPICard
           label="Farm overhead"
-          value={formatTk(overhead)}
+          money={overhead}
           icon={Warehouse}
           isLoading={isLoading}
           hint="Months with no birds on the farm"

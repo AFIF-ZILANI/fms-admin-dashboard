@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Package, Receipt, Wallet } from "lucide-react";
 import { KPICard } from "@/components/shared/kpi-card";
 import { useGetData, type Paginated } from "@/lib/api";
-import { formatTk } from "@/lib/utils";
 import { DayRangeToggle } from "@/pages/analytics/day-range-toggle";
 import type { PurchasesByCategoryRow } from "@/pages/analytics/types";
 import type { Purchase } from "@/pages/purchases/types";
@@ -51,11 +50,11 @@ export function PurchasesAnalyticsSection() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <KPICard label="Spend" value={formatTk(totalSpend)} icon={Wallet} isLoading={kpiLoading} />
+        <KPICard label="Spend" money={totalSpend} icon={Wallet} isLoading={kpiLoading} />
         <KPICard label="Purchases" value={purchaseCount} icon={Package} isLoading={kpiLoading} />
         <KPICard
           label="Outstanding payable"
-          value={formatTk(outstandingDue)}
+          money={outstandingDue}
           icon={Receipt}
           isLoading={kpiLoading}
           hint="All time, not the selected range"
