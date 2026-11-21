@@ -22,7 +22,7 @@
 
 ---
 
-The dashboard is where the farm's owner and admins run the business: buy and sell, track every bottle of medicine, follow each batch from chick to sale, close the month's payroll, and read the numbers. Field staff use the [ZFarm mobile app](https://github.com/AFIF-ZILANI/fms-exe-mobile) instead. Both talk to the same [API](https://github.com/AFIF-ZILANI/fms-backend).
+The dashboard is where the farm's owner and admins run the business: buy and sell, track every bottle of medicine, follow each batch from chick to sale, close the month's payroll, and read the numbers. Field staff use the [ZFarm mobile app](https://github.com/AFIF-ZILANI/zfarm-executor) instead. Both talk to the same [API](https://github.com/AFIF-ZILANI/zfarm-api).
 
 ## Contents
 
@@ -70,7 +70,7 @@ Every table sorts and paginates and can be exported to CSV. The whole UI works i
 
 ## Getting started
 
-**Prerequisites:** [Bun](https://bun.sh) (or Node 20.19+ / 22.12+, Vite's minimum) and the [API](https://github.com/AFIF-ZILANI/fms-backend) running locally.
+**Prerequisites:** [Bun](https://bun.sh) (or Node 20.19+ / 22.12+, Vite's minimum) and the [API](https://github.com/AFIF-ZILANI/zfarm-api) running locally.
 
 ```bash
 bun install
@@ -143,6 +143,6 @@ Hosted on **Vercel**. Every push to `main` builds and deploys to production; `ve
 | --- | --- |
 | [`docs/PRD.md`](docs/PRD.md) | Every page: layout, fields, actions, states and the endpoints it calls |
 | [`docs/design.md`](docs/design.md) | The design system: colour, type, spacing, components |
-| API [`docs/FEATURES.md`](https://github.com/AFIF-ZILANI/fms-backend/blob/main/docs/FEATURES.md) | The feature set and permission matrix |
-| API [`docs/api.md`](https://github.com/AFIF-ZILANI/fms-backend/blob/main/docs/api.md) | Conventions, field meanings and the rules of each feature |
-| API [`docs/endpoints.md`](https://github.com/AFIF-ZILANI/fms-backend/blob/main/docs/endpoints.md) | Every route: who may call it, its status and its inputs |
+| API [`docs/FEATURES.md`](https://github.com/AFIF-ZILANI/zfarm-api/blob/main/docs/FEATURES.md) | The feature set and permission matrix |
+| API [`docs/api.md`](https://github.com/AFIF-ZILANI/zfarm-api/blob/main/docs/api.md) | Conventions, field meanings and the rules of each feature |
+| API [`docs/endpoints.md`](https://github.com/AFIF-ZILANI/zfarm-api/blob/main/docs/endpoints.md) | Every route: who may call it, its status and its inputs |
