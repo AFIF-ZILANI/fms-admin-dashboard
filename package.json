@@ -1,5 +1,24 @@
 {
-  "name": "web",
+  "name": "fms-admin-dashboard",
+  "description": "Admin dashboard for the ZeroD Farms Management System: poultry flocks, stock, finance and payroll",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AFIF-ZILANI/fms-admin-dashboard.git"
+  },
+  "homepage": "https://dashboard.zfarms.zerod.bd",
+  "bugs": {
+    "url": "https://github.com/AFIF-ZILANI/fms-admin-dashboard/issues"
+  },
+  "keywords": [
+    "poultry",
+    "farm-management",
+    "dashboard",
+    "react",
+    "vite",
+    "typescript",
+    "tailwindcss",
+    "tanstack-query"
+  ],
   "private": true,
   "version": "0.0.0",
   "type": "module",
