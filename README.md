@@ -36,6 +36,7 @@ The dashboard is where the farm's owner and admins run the business: buy and sel
 - [Contributing](#contributing)
 - [Deployment](#deployment)
 - [Documentation](#documentation)
+- [License](#license)
 
 ## Features
 
@@ -146,3 +147,7 @@ Hosted on **Vercel**. Every push to `main` builds and deploys to production; `ve
 | API [`docs/FEATURES.md`](https://github.com/AFIF-ZILANI/zfarm-api/blob/main/docs/FEATURES.md) | The feature set and permission matrix |
 | API [`docs/api.md`](https://github.com/AFIF-ZILANI/zfarm-api/blob/main/docs/api.md) | Conventions, field meanings and the rules of each feature |
 | API [`docs/endpoints.md`](https://github.com/AFIF-ZILANI/zfarm-api/blob/main/docs/endpoints.md) | Every route: who may call it, its status and its inputs |
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE). Copyright 2026 Afif Zilani. See [`NOTICE`](NOTICE) for attribution.
