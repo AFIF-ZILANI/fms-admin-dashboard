@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="public/logo-light.svg" height="56" alt="ZFarms" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/logo-dark.svg" />
+  <img src="public/logo-light.svg" height="56" alt="ZFarms" />
+</picture>
 
 # ZFarms Admin Dashboard
 
@@ -30,6 +33,7 @@ The dashboard is where the farm's owner and admins run the business: buy and sel
 - [Scripts](#scripts)
 - [Project structure](#project-structure)
 - [Conventions](#conventions)
+- [Contributing](#contributing)
 - [Deployment](#deployment)
 - [Documentation](#documentation)
 
@@ -38,15 +42,15 @@ The dashboard is where the farm's owner and admins run the business: buy and sel
 | Area | What you can do |
 | --- | --- |
 | **Analytics** | Farm-wide KPIs and trends: mortality, feed and FCR, stock, spend, sales and payroll cost |
-| **Batches** | Place a batch across houses and follow it tab by tab: houses, mortality, weight, feeding program, treatments, vaccine schedule, environment, consumption, financials |
-| **Houses** | Occupancy, turnaround phase, what stock each house holds |
-| **Inventory** | Item catalog with unit conversions, stock ledger, low stock, consumption log (by quantity or by QR code), adjustments, warehouses, organizations, assets and depreciation, stock analytics |
+| **Batches** | Place a batch across houses and follow it section by section: houses, mortality, weight, feeding program, treatments, vaccine schedule, **disease cases**, environment, consumption, financials. A sold batch stays open for late costs and income, then is finalised (by hand or automatically) |
+| **Houses** | Occupancy, turnaround phase, what stock each house holds, houses that share a drinking-water line |
+| **Inventory** | Item catalog with unit conversions, stock ledger, low stock, consumption log (by quantity or by QR code, with **Fix usage** to correct or remove a wrong record), adjustments, warehouses, organizations, assets and depreciation, stock analytics |
 | **QR-coded units** | Provision and print labels (A4 sheets), bind them to purchase lots, follow each bottle's location and status, reprint |
 | **Purchases** | Record deliveries with per-line discounts and extra charges (landed cost), view each lot's QR codes, pay suppliers, remove a purchase entered by mistake |
-| **Sales** | Product sales and bird sales per house, payments received, outstanding receivables |
+| **Sales** | Bird sales per house and regular sales by kind (QR-coded bottles, bought stock, farm-made), line and whole-sale discounts, payments received, outstanding receivables, and an **Incoming** inbox for sales posted by the PoultryScale device |
 | **Finance** | Cash book and cost book, payables and receivables, expenses, payment instruments |
 | **People** | Employees and their roles and salaries, tasks and assignments, bonuses, monthly payroll and payouts, admin accounts with temporary passwords |
-| **Operations** | Alerts and a notifications inbox, the audit log, settings (categories and units, vaccine templates, farm day start, scale devices) |
+| **Operations** | Alerts and a notifications inbox, the audit log, and settings: categories and units, vaccine templates (with the vaccine purpose and disease lookups), farm day start, settlement window, roles and salaries, paired devices |
 
 Every table sorts and paginates and can be exported to CSV. The whole UI works in light and dark themes.
 
@@ -66,7 +70,7 @@ Every table sorts and paginates and can be exported to CSV. The whole UI works i
 
 ## Getting started
 
-**Prerequisites:** [Bun](https://bun.sh) (or Node 20+) and the [API](https://github.com/AFIF-ZILANI/fms-backend) running locally.
+**Prerequisites:** [Bun](https://bun.sh) (or Node 20.19+ / 22.12+, Vite's minimum) and the [API](https://github.com/AFIF-ZILANI/fms-backend) running locally.
 
 ```bash
 bun install
@@ -125,6 +129,10 @@ A page folder holds the page, its tabs, its dialogs and sheets, and its charts, 
 - **React Compiler:** read an optional chain into a local before using it inside a closure (`const id = unit?.id`), which works around a compiler crash with optional chains captured in callbacks.
 - **Status colours** come from `components/shared/status-tone.ts`, shared with the mobile app's vocabulary.
 
+## Contributing
+
+Work on a branch, not on `main`: a push to `main` deploys to production. Before merging, run `bun run lint`, `bun run build` (it type-checks) and `bun test src`, and click through the change against a local API. Commit messages follow [Conventional Commits](https://www.conventionalcommits.org): `feat(scope): …`, `fix(scope): …`, `docs: …`.
+
 ## Deployment
 
 Hosted on **Vercel**. Every push to `main` builds and deploys to production; `vercel.json` rewrites every path to `index.html` so client-side routes load directly. Set `VITE_API_BASE_URL` to the production API in the Vercel project's environment variables.
@@ -136,4 +144,5 @@ Hosted on **Vercel**. Every push to `main` builds and deploys to production; `ve
 | [`docs/PRD.md`](docs/PRD.md) | Every page: layout, fields, actions, states and the endpoints it calls |
 | [`docs/design.md`](docs/design.md) | The design system: colour, type, spacing, components |
 | API [`docs/FEATURES.md`](https://github.com/AFIF-ZILANI/fms-backend/blob/main/docs/FEATURES.md) | The feature set and permission matrix |
-| API [`docs/api.md`](https://github.com/AFIF-ZILANI/fms-backend/blob/main/docs/api.md) | Endpoint reference |
+| API [`docs/api.md`](https://github.com/AFIF-ZILANI/fms-backend/blob/main/docs/api.md) | Conventions, field meanings and the rules of each feature |
+| API [`docs/endpoints.md`](https://github.com/AFIF-ZILANI/fms-backend/blob/main/docs/endpoints.md) | Every route: who may call it, its status and its inputs |

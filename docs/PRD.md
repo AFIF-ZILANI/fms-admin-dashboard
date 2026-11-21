@@ -1,6 +1,7 @@
 # ZeroD Farms Management System — Admin Web Dashboard PRD
 
-**Status:** Build-ready blueprint · **Scope:** Admin Web Dashboard only (15 pages)
+**Status:** Built. This is the original blueprint, with what was added since listed in §8 ·
+**Scope:** Admin Web Dashboard only (15 pages when written)
 **Companion docs:** `server/docs/FEATURES.md` (functional spec this PRD is built on), `docs/design.md`
 (design system this PRD applies), `server/docs/api.md` (endpoints this PRD wires up),
 `server/prisma/schema.prisma` (data model this PRD's fields are drawn from).
@@ -315,7 +316,7 @@ two tracking models: coded per-unit (QR-tagged bottles/equipment) and aggregate 
 | **Low-Stock** | Filtered `DataTable`, no create action | Items where current stock < `reorder_level`, sourced from aggregate `StockLedger` balance or `StockUnit` count. Feeds an Alert automatically. |
 | **Coded Units** | List + detail drawer | List: code, item, status badge, house, remaining qty. Detail: full consumption history, bound-by/when, "Relocate" and "Mark disposed" actions. "+ Provision blank codes" (batch-prints a run of `UNASSIGNED` codes). "Bind code" flow (scan or manual entry) attaches a code to a `PurchaseItem` lot. |
 | **Assets** | `DataTable` + detail | Equipment: name, purchase cost, useful life (batches), status badge, per-batch depreciation history, assign-to-batch/house action. |
-| **Stock Ledger** | Read-only `DataTable` | IN/OUT movement log, filter by item/date/reason. "Record opening balance" is the only write action here. |
+| **Stock Ledger** | Read-only `DataTable` | IN/OUT movement log, filter by item/date/reason. Fully read-only: stock enters only through purchases, so there are no opening balances. |
 | **Adjustments** | `DataTable` + "+ New adjustment" | Correction entries: `quantity_before/after`, reason, note — always audited, never edits history. |
 | **Warehouses** | Simple `DataTable` + form | CRUD storage locations (name only). |
 | **Organizations** | `DataTable` + form | Manufacturer/importer/distributor per item, for recall tracing; link an Item to an Organization with a role. |
@@ -667,9 +668,30 @@ Build in dependency order, not spec order:
 
 Built since this PRD was written: auth and role enforcement, FCR, bird-days shared-cost
 allocation, audit-log writes (with who made each entry), a Tasks page (assignments and the
-task catalog), a Doctors page, CSV export on every table, and a selling-date alert.
+task catalog), a Doctors page, a Bonuses page, CSV export on every table, and a selling-date
+alert. From late October:
+
+- **Batches:** a vaccine schedule section (apply a template, reschedule, cancel, see what is
+  confirmed), a Diseases section (cases with houses, severity, symptoms, outcome, and the
+  treatments and deaths linked to each, with a timeline), and the start weight recorded as
+  the Day-1 weight. A sold batch stays open for late entries, shows "Open for
+  late entries until <date>", and is finalised by hand or automatically.
+- **Inventory:** *Fix usage* on the Consumption log (a manager or admin corrects or removes a
+  wrong usage record, with a reason), coded-unit actions (bind, reprint, relocate), and stock
+  shown in the units people use (bags as well as kg).
+- **Sales:** a sale is one kind (QR-coded bottles, bought stock, or farm-made), with line and
+  whole-sale discounts and payment at the time of sale. The **Incoming** tab holds sales posted
+  by the PoultryScale device until an admin confirms or dismisses them.
+- **Purchases:** extra charges are split across the lines (landed cost), and a purchase entered
+  by mistake can be removed.
+- **Settings** is grouped: *Catalog* (categories and units, vaccine templates, with the Vaccine
+  purposes and Diseases lookups), *Farm* (farm day start hour, settlement window), *People &
+  devices* (roles and salaries, paired devices) and *Account*.
+- Money shows in lakh and crore (`1.7Cr`, `2K`) with the exact amount on hover.
+
+Still open:
 
 - Recurring tasks — managers and admins create each assignment.
-- Intern role — not in the schema or the permission matrix.
+- Intern role — it exists in the roles table (Settings → Roles & salaries) but has no permissions yet, so an Intern can sign in and do nothing.
 - Employer accruals (bonus, gratuity, provident fund) — not modelled.
 - Environment and sensor alerts — deferred until they are designed.
